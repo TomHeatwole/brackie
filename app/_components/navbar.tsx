@@ -1,11 +1,9 @@
-import LogoutButton from "./logout-button";
+import UserMenu from "./user-menu";
 
 const NAV_TABS = [
-  { label: "My Bracket", href: "/" },
+  { label: "Dashboard", href: "/" },
+  { label: "My Brackets", href: "/brackets" },
   { label: "Pools", href: "/pools" },
-  { label: "Leaderboard", href: "/leaderboard" },
-  { label: "Teams", href: "/teams" },
-  { label: "Results", href: "/results" },
 ];
 
 interface NavbarProps {
@@ -13,7 +11,7 @@ interface NavbarProps {
   activeTab?: string;
 }
 
-export default function Navbar({ userEmail, activeTab = "My Bracket" }: NavbarProps) {
+export default function Navbar({ userEmail, activeTab = "Dashboard" }: NavbarProps) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex h-12 items-center justify-between bg-stone-950 px-4 shadow-lg border-b border-stone-800">
       {/* Brand */}
@@ -43,14 +41,9 @@ export default function Navbar({ userEmail, activeTab = "My Bracket" }: NavbarPr
         })}
       </div>
 
-      {/* User info + sign out */}
-      <div className="flex items-center gap-3 shrink-0">
-        {userEmail && (
-          <span className="text-stone-500 text-xs max-w-[160px] truncate hidden sm:block">
-            {userEmail}
-          </span>
-        )}
-        {userEmail && <LogoutButton />}
+      {/* User menu */}
+      <div className="shrink-0">
+        {userEmail && <UserMenu userEmail={userEmail} />}
       </div>
     </nav>
   );

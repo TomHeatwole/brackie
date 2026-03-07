@@ -15,7 +15,7 @@ export default async function Home() {
 
   return (
     <div className="min-h-screen bg-stone-950">
-      <Navbar userEmail={user.email} activeTab="My Bracket" />
+      <Navbar userEmail={user.email} activeTab="Dashboard" />
       <main className="pt-12 min-h-screen" />
     </div>
   );
