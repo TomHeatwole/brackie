@@ -1,9 +1,6 @@
-import { createClient } from "@supabase/supabase-js";
-
-const supabase = createClient(
-  process.env.SB_URL!,
-  process.env.SB_PUBLIC_KEY!
-);
+import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
+import LogoutButton from "./_components/logout-button";
 
 const randomPhrases = [
   "gerbils on a Tuesday",
@@ -14,6 +11,16 @@ const randomPhrases = [
 ];
 
 export default async function Home() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
   const hello_world =
     randomPhrases[Math.floor(Math.random() * randomPhrases.length)];
 
@@ -23,8 +30,6 @@ export default async function Home() {
 
   if (insertError) {
     console.error("Insert error:", insertError);
-  } else {
-    console.log("Inserted row with hello_world:", hello_world);
   }
 
   const { data: rows, error: selectError } = await supabase
@@ -33,21 +38,29 @@ export default async function Home() {
 
   if (selectError) {
     console.error("Select error:", selectError);
-  } else {
-    console.log("test_db_table rows:", rows);
   }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col gap-12 py-32 px-16 bg-white dark:bg-black">
-        <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
-          test_db_table
-        </h1>
+        <div className="flex items-center justify-between">
+          <h1 className="text-3xl font-semibold tracking-tight text-black dark:text-zinc-50">
+            test_db_table
+          </h1>
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              {user.email}
+            </span>
+            <LogoutButton />
+          </div>
+        </div>
 
         {selectError ? (
           <div className="rounded-lg border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
             <p className="font-medium">Error fetching rows</p>
-            <pre className="mt-2 text-sm">{JSON.stringify(selectError, null, 2)}</pre>
+            <pre className="mt-2 text-sm">
+              {JSON.stringify(selectError, null, 2)}
+            </pre>
           </div>
         ) : (
           <div className="flex flex-col gap-3">
