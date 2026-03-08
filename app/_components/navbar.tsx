@@ -2,7 +2,7 @@ import UserMenu from "./user-menu";
 
 const NAV_TABS = [
   { label: "Dashboard", href: "/" },
-  { label: "My Brackets", href: "/brackets" },
+  { label: "Brackets", href: "/brackets" },
   { label: "Pools", href: "/pools" },
 ];
 

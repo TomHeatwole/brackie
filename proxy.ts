@@ -1,5 +1,14 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { getUserInfo, isProfileComplete } from "@/utils/user-info";
+
+const PUBLIC_PATHS = ["/login", "/auth", "/finish-signing-up"];
+
+function isPublicPath(pathname: string) {
+  return PUBLIC_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request });
@@ -31,12 +40,36 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute =
-    pathname.startsWith("/login") || pathname.startsWith("/auth");
 
-  if (!user && !isAuthRoute) {
+  if (!user) {
+    // If Supabase redirected the magic link to /login?code=... instead of
+    // /auth/callback?code=..., forward it so the code gets exchanged properly.
+    if (pathname === "/login" && request.nextUrl.searchParams.has("code")) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/callback";
+      return NextResponse.redirect(url);
+    }
+
+    if (isPublicPath(pathname)) return supabaseResponse;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
+
+  // Logged-in user visiting /login — send to / for the profile check.
+  if (pathname === "/login") {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
+
+  // Let /auth/callback and /finish-signing-up through without profile check.
+  if (isPublicPath(pathname)) return supabaseResponse;
+
+  const userInfo = await getUserInfo(supabase, user.id);
+  if (!isProfileComplete(userInfo)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/finish-signing-up";
     return NextResponse.redirect(url);
   }
 
