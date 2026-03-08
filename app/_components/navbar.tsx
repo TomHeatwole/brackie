@@ -12,7 +12,7 @@ interface NavbarProps {
   activeTab?: string;
 }
 
-export default function Navbar({ userEmail, username, activeTab = "Dashboard" }: NavbarProps) {
+export default function Navbar({ userEmail, username, activeTab }: NavbarProps) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex h-12 items-center justify-between bg-stone-950 px-4 shadow-lg border-b border-stone-800">
       {/* Brand */}

@@ -22,13 +22,28 @@ export async function updateProfile(
   const username = (formData.get("username") as string | null)?.trim() ?? "";
 
   const fieldErrors: ProfileFormState["fieldErrors"] = {};
-  if (!firstName) fieldErrors.first_name = "First name is required.";
-  if (!lastName) fieldErrors.last_name = "Last name is required.";
+
+  if (!firstName) {
+    fieldErrors.first_name = "First name is required.";
+  } else if (firstName.length > 50) {
+    fieldErrors.first_name = "First name must be 50 characters or fewer.";
+  }
+
+  if (!lastName) {
+    fieldErrors.last_name = "Last name is required.";
+  } else if (lastName.length > 50) {
+    fieldErrors.last_name = "Last name must be 50 characters or fewer.";
+  }
+
   if (!username) {
     fieldErrors.username = "Username is required.";
-  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
+  } else if (username.length < 3) {
+    fieldErrors.username = "Username must be at least 3 characters.";
+  } else if (username.length > 30) {
+    fieldErrors.username = "Username must be 30 characters or fewer.";
+  } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
     fieldErrors.username =
-      "Username must be 3–30 characters and can only contain letters, numbers, and underscores.";
+      "Username can only contain letters, numbers, and underscores.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -46,6 +61,17 @@ export async function updateProfile(
     return { error: "You must be logged in to update your profile." };
   }
 
+  const { data: existing } = await supabase
+    .from("user_info")
+    .select("id")
+    .eq("username", username)
+    .neq("id", user.id)
+    .maybeSingle();
+
+  if (existing) {
+    return { fieldErrors: { username: "That username is already taken." } };
+  }
+
   const { error: upsertError } = await supabase.from("user_info").upsert({
     id: user.id,
     first_name: firstName,
@@ -54,9 +80,6 @@ export async function updateProfile(
   });
 
   if (upsertError) {
-    if (upsertError.code === "23505") {
-      return { fieldErrors: { username: "That username is already taken." } };
-    }
     return { error: "Something went wrong saving your profile. Please try again." };
   }
 

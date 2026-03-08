@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { updateProfile, ProfileFormState } from "../actions";
 
 const initialState: ProfileFormState = {};
@@ -10,7 +10,8 @@ interface FieldProps {
   label: string;
   name: string;
   placeholder: string;
-  defaultValue?: string;
+  value: string;
+  onChange: (v: string) => void;
   error?: string;
   autoComplete?: string;
 }
@@ -20,7 +21,8 @@ function Field({
   label,
   name,
   placeholder,
-  defaultValue,
+  value,
+  onChange,
   error,
   autoComplete,
 }: FieldProps) {
@@ -29,7 +31,7 @@ function Field({
       <label
         htmlFor={id}
         className="block mb-1.5 text-xs font-medium"
-        style={{ color: "#a8a29e" }}
+        style={{ color: "#d6d3d1" }}
       >
         {label}
       </label>
@@ -39,18 +41,19 @@ function Field({
         type="text"
         autoComplete={autoComplete}
         placeholder={placeholder}
-        defaultValue={defaultValue ?? ""}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
         style={{
           backgroundColor: "#1c1a18",
-          border: `1px solid ${error ? "#f87171" : "#3a3530"}`,
+          border: `1px solid ${error ? "#f87171" : "#57534e"}`,
           color: "#e7e5e4",
         }}
         onFocus={(e) =>
           (e.currentTarget.style.borderColor = error ? "#f87171" : "#AE4E02")
         }
         onBlur={(e) =>
-          (e.currentTarget.style.borderColor = error ? "#f87171" : "#3a3530")
+          (e.currentTarget.style.borderColor = error ? "#f87171" : "#57534e")
         }
       />
       {error && (
@@ -73,6 +76,9 @@ interface ProfileFormProps {
 
 export default function ProfileForm({ email, initialValues }: ProfileFormProps) {
   const [state, action, isPending] = useActionState(updateProfile, initialState);
+  const [firstName, setFirstName] = useState(initialValues.firstName ?? "");
+  const [lastName, setLastName] = useState(initialValues.lastName ?? "");
+  const [username, setUsername] = useState(initialValues.username ?? "");
 
   return (
     <form action={action} noValidate className="flex flex-col gap-4">
@@ -80,21 +86,21 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
       <div>
         <label
           className="block mb-1.5 text-xs font-medium"
-          style={{ color: "#a8a29e" }}
+          style={{ color: "#d6d3d1" }}
         >
           Email address
         </label>
         <div
           className="w-full rounded-lg px-3 py-2 text-sm"
           style={{
-            backgroundColor: "#111110",
-            border: "1px solid #2a2825",
-            color: "#78716c",
+            backgroundColor: "#1c1a18",
+            border: "1px solid #57534e",
+            color: "#a8a29e",
           }}
         >
           {email}
         </div>
-        <p className="mt-1.5 text-xs" style={{ color: "#44403c" }}>
+        <p className="mt-1.5 text-xs" style={{ color: "#78716c" }}>
           Email cannot be changed here.
         </p>
       </div>
@@ -107,7 +113,8 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
             name="first_name"
             placeholder="Jane"
             autoComplete="given-name"
-            defaultValue={initialValues.firstName ?? ""}
+            value={firstName}
+            onChange={setFirstName}
             error={state.fieldErrors?.first_name}
           />
         </div>
@@ -118,7 +125,8 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
             name="last_name"
             placeholder="Smith"
             autoComplete="family-name"
-            defaultValue={initialValues.lastName ?? ""}
+            value={lastName}
+            onChange={setLastName}
             error={state.fieldErrors?.last_name}
           />
         </div>
@@ -130,7 +138,8 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
         name="username"
         placeholder="janesmith"
         autoComplete="username"
-        defaultValue={initialValues.username ?? ""}
+        value={username}
+        onChange={setUsername}
         error={state.fieldErrors?.username}
       />
 

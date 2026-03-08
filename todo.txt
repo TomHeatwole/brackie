@@ -1,0 +1,4 @@
+- Actual Avatar upload support via Firebase
+- Pools
+- Brackets
+- ESPN Scrape

@@ -1,0 +1,24 @@
+import { redirect } from "next/navigation";
+import { createClient } from "@/utils/supabase/server";
+import Navbar from "../../_components/navbar";
+
+export default async function CreatePoolPage() {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  return (
+    <div className="min-h-screen bg-stone-950">
+      <Navbar userEmail={user.email} activeTab="Pools" />
+      <main className="pt-12 min-h-screen flex items-center justify-center">
+        <p className="text-stone-500">TODO: Create Pool</p>
+      </main>
+    </div>
+  );
+}
