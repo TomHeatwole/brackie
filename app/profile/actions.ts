@@ -1,9 +1,10 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 
 export interface ProfileFormState {
+  success?: boolean;
   error?: string;
   fieldErrors?: {
     first_name?: string;
@@ -12,7 +13,7 @@ export interface ProfileFormState {
   };
 }
 
-export async function finishSigningUp(
+export async function updateProfile(
   _prevState: ProfileFormState,
   formData: FormData
 ): Promise<ProfileFormState> {
@@ -21,28 +22,13 @@ export async function finishSigningUp(
   const username = (formData.get("username") as string | null)?.trim() ?? "";
 
   const fieldErrors: ProfileFormState["fieldErrors"] = {};
-
-  if (!firstName) {
-    fieldErrors.first_name = "First name is required.";
-  } else if (firstName.length > 50) {
-    fieldErrors.first_name = "First name must be 50 characters or fewer.";
-  }
-
-  if (!lastName) {
-    fieldErrors.last_name = "Last name is required.";
-  } else if (lastName.length > 50) {
-    fieldErrors.last_name = "Last name must be 50 characters or fewer.";
-  }
-
+  if (!firstName) fieldErrors.first_name = "First name is required.";
+  if (!lastName) fieldErrors.last_name = "Last name is required.";
   if (!username) {
     fieldErrors.username = "Username is required.";
-  } else if (username.length < 3) {
-    fieldErrors.username = "Username must be at least 3 characters.";
-  } else if (username.length > 30) {
-    fieldErrors.username = "Username must be 30 characters or fewer.";
-  } else if (!/^[a-zA-Z0-9_]+$/.test(username)) {
+  } else if (!/^[a-zA-Z0-9_]{3,30}$/.test(username)) {
     fieldErrors.username =
-      "Username can only contain letters, numbers, and underscores.";
+      "Username must be 3–30 characters and can only contain letters, numbers, and underscores.";
   }
 
   if (Object.keys(fieldErrors).length > 0) {
@@ -57,18 +43,7 @@ export async function finishSigningUp(
   } = await supabase.auth.getUser();
 
   if (userError || !user) {
-    return { error: "You must be logged in to complete this step." };
-  }
-
-  const { data: existing } = await supabase
-    .from("user_info")
-    .select("id")
-    .eq("username", username)
-    .neq("id", user.id)
-    .maybeSingle();
-
-  if (existing) {
-    return { fieldErrors: { username: "That username is already taken." } };
+    return { error: "You must be logged in to update your profile." };
   }
 
   const { error: upsertError } = await supabase.from("user_info").upsert({
@@ -79,8 +54,12 @@ export async function finishSigningUp(
   });
 
   if (upsertError) {
+    if (upsertError.code === "23505") {
+      return { fieldErrors: { username: "That username is already taken." } };
+    }
     return { error: "Something went wrong saving your profile. Please try again." };
   }
 
-  redirect("/");
+  revalidatePath("/profile");
+  return { success: true };
 }

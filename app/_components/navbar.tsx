@@ -8,10 +8,11 @@ const NAV_TABS = [
 
 interface NavbarProps {
   userEmail?: string | null;
+  username?: string | null;
   activeTab?: string;
 }
 
-export default function Navbar({ userEmail, activeTab = "Dashboard" }: NavbarProps) {
+export default function Navbar({ userEmail, username, activeTab = "Dashboard" }: NavbarProps) {
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 flex h-12 items-center justify-between bg-stone-950 px-4 shadow-lg border-b border-stone-800">
       {/* Brand */}
@@ -43,7 +44,7 @@ export default function Navbar({ userEmail, activeTab = "Dashboard" }: NavbarPro
 
       {/* User menu */}
       <div className="shrink-0">
-        {userEmail && <UserMenu userEmail={userEmail} />}
+        {userEmail && <UserMenu userEmail={userEmail} username={username} />}
       </div>
     </nav>
   );

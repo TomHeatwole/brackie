@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
-import { finishSigningUp, ProfileFormState } from "../actions";
+import { updateProfile, ProfileFormState } from "../actions";
 
 const initialState: ProfileFormState = {};
 
@@ -10,30 +10,36 @@ interface FieldProps {
   label: string;
   name: string;
   placeholder: string;
+  defaultValue?: string;
   error?: string;
   autoComplete?: string;
-  hint?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
 }
 
-function Field({ id, label, name, placeholder, error, autoComplete, hint, onChange }: FieldProps) {
+function Field({
+  id,
+  label,
+  name,
+  placeholder,
+  defaultValue,
+  error,
+  autoComplete,
+}: FieldProps) {
   return (
     <div>
-      <div className="flex items-baseline justify-between mb-1.5">
-        <label htmlFor={id} className="text-xs font-medium" style={{ color: "#a8a29e" }}>
-          {label}
-        </label>
-        {hint && !error && (
-          <span className="text-xs" style={{ color: "#57534e" }}>{hint}</span>
-        )}
-      </div>
+      <label
+        htmlFor={id}
+        className="block mb-1.5 text-xs font-medium"
+        style={{ color: "#a8a29e" }}
+      >
+        {label}
+      </label>
       <input
         id={id}
         name={name}
         type="text"
         autoComplete={autoComplete}
         placeholder={placeholder}
-        onChange={onChange}
+        defaultValue={defaultValue ?? ""}
         className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
         style={{
           backgroundColor: "#1c1a18",
@@ -56,22 +62,43 @@ function Field({ id, label, name, placeholder, error, autoComplete, hint, onChan
   );
 }
 
-function filterUsername(value: string) {
-  return value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 30);
+interface ProfileFormProps {
+  email: string;
+  initialValues: {
+    firstName: string | null;
+    lastName: string | null;
+    username: string | null;
+  };
 }
 
-export default function FinishSigningUpForm() {
-  const [state, action, isPending] = useActionState(finishSigningUp, initialState);
-
-  function handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const filtered = filterUsername(e.target.value);
-    if (filtered !== e.target.value) {
-      e.target.value = filtered;
-    }
-  }
+export default function ProfileForm({ email, initialValues }: ProfileFormProps) {
+  const [state, action, isPending] = useActionState(updateProfile, initialState);
 
   return (
     <form action={action} noValidate className="flex flex-col gap-4">
+      {/* Email — read only */}
+      <div>
+        <label
+          className="block mb-1.5 text-xs font-medium"
+          style={{ color: "#a8a29e" }}
+        >
+          Email address
+        </label>
+        <div
+          className="w-full rounded-lg px-3 py-2 text-sm"
+          style={{
+            backgroundColor: "#111110",
+            border: "1px solid #2a2825",
+            color: "#78716c",
+          }}
+        >
+          {email}
+        </div>
+        <p className="mt-1.5 text-xs" style={{ color: "#44403c" }}>
+          Email cannot be changed here.
+        </p>
+      </div>
+
       <div className="flex gap-3">
         <div className="flex-1">
           <Field
@@ -80,6 +107,7 @@ export default function FinishSigningUpForm() {
             name="first_name"
             placeholder="Jane"
             autoComplete="given-name"
+            defaultValue={initialValues.firstName ?? ""}
             error={state.fieldErrors?.first_name}
           />
         </div>
@@ -90,6 +118,7 @@ export default function FinishSigningUpForm() {
             name="last_name"
             placeholder="Smith"
             autoComplete="family-name"
+            defaultValue={initialValues.lastName ?? ""}
             error={state.fieldErrors?.last_name}
           />
         </div>
@@ -101,14 +130,26 @@ export default function FinishSigningUpForm() {
         name="username"
         placeholder="janesmith"
         autoComplete="username"
-        hint="Letters, numbers, underscores only"
+        defaultValue={initialValues.username ?? ""}
         error={state.fieldErrors?.username}
-        onChange={handleUsernameChange}
       />
 
       {state.error && (
         <p className="text-sm" style={{ color: "#f87171" }}>
           {state.error}
+        </p>
+      )}
+
+      {state.success && (
+        <p
+          className="text-sm rounded-lg px-3 py-2"
+          style={{
+            backgroundColor: "rgba(74, 222, 128, 0.08)",
+            border: "1px solid rgba(74, 222, 128, 0.2)",
+            color: "#4ade80",
+          }}
+        >
+          Profile saved successfully.
         </p>
       )}
 
@@ -124,7 +165,7 @@ export default function FinishSigningUpForm() {
           if (!isPending) e.currentTarget.style.backgroundColor = "#AE4E02";
         }}
       >
-        {isPending ? "Saving…" : "Finish Signing Up"}
+        {isPending ? "Saving…" : "Save Changes"}
       </button>
     </form>
   );

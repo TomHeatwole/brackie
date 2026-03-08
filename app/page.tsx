@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
+import { getUserInfo } from "@/utils/user-info";
 import Navbar from "./_components/navbar";
 
 export default async function Home() {
@@ -13,9 +14,11 @@ export default async function Home() {
     redirect("/login");
   }
 
+  const userInfo = await getUserInfo(supabase, user.id);
+
   return (
     <div className="min-h-screen bg-stone-950">
-      <Navbar userEmail={user.email} activeTab="Dashboard" />
+      <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Dashboard" />
       <main className="pt-12 min-h-screen flex justify-center">
         <div className="w-full max-w-5xl flex">
           {/* Your Brackets */}
