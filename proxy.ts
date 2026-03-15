@@ -2,7 +2,12 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getUserInfo, isProfileComplete } from "@/utils/user-info";
 
-const PUBLIC_PATHS = ["/login", "/auth", "/finish-signing-up"];
+const PUBLIC_PATHS = [
+  "/login",
+  "/auth",
+  "/finish-signing-up",
+  "/robots.txt",
+];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -10,7 +15,21 @@ function isPublicPath(pathname: string) {
   );
 }
 
+/** Paths that skip auth entirely (static/public); no config matcher so Next can compile. */
+function isStaticOrPublicPath(pathname: string) {
+  if (isPublicPath(pathname)) return true;
+  if (pathname.startsWith("/_next/static") || pathname.startsWith("/_next/image")) return true;
+  if (pathname === "/favicon.ico" || pathname === "/robots.txt" || pathname === "/manifest.webmanifest") return true;
+  if (pathname === "/2026-teams.json") return true;
+  if (/\.(ico|png|jpg|jpeg|gif|webp|svg|webmanifest)$/i.test(pathname)) return true;
+  if (/sitemap\.xml$/i.test(pathname)) return true;
+  return false;
+}
+
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  if (isStaticOrPublicPath(pathname)) return NextResponse.next({ request });
+
   let supabaseResponse = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -38,8 +57,6 @@ export async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
 
   if (!user) {
     // If Supabase redirected the magic link to /login?code=... instead of
@@ -83,7 +100,3 @@ export async function proxy(request: NextRequest) {
 
   return supabaseResponse;
 }
-
-export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
-};

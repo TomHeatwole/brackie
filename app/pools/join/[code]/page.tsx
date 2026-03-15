@@ -14,14 +14,14 @@ export async function generateMetadata(): Promise<Metadata> {
     openGraph: {
       title: SHARE_TITLE,
       description: SHARE_DESCRIPTION,
-      images: [{ url: "/logo.png", width: 512, height: 512, alt: "Brackie!" }],
+      images: [{ url: "/share_logo.png", width: 512, height: 512, alt: "Brackie!" }],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
       title: SHARE_TITLE,
       description: SHARE_DESCRIPTION,
-      images: ["/logo.png"],
+      images: ["/share_logo.png"],
     },
   };
 }

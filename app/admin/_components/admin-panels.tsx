@@ -14,8 +14,10 @@ import {
   setGameWinnerAction,
   getTournamentTeamsForAdminAction,
   updateTeamAction,
+  bulkUpdateTeamsFromConfigAction,
   AdminActionResult,
   GameWithTeamNames,
+  TeamConfigEntry,
 } from "../actions";
 
 const emptyResult: AdminActionResult = { success: false, message: "" };
@@ -219,7 +221,7 @@ export function TournamentManagerPanel({
             variant="danger"
             onClick={async () => {
               if (!confirm("Delete all teams and games for this tournament?")) return;
-              setClearMsg(await clearTournamentDataAction(selectedId));
+              setClearMsg(await clearTournamentDataAction(tournamentId));
             }}
           >
             Clear Teams &amp; Games
@@ -228,7 +230,7 @@ export function TournamentManagerPanel({
             variant="danger"
             onClick={async () => {
               if (!confirm("Delete this entire tournament and all related data?")) return;
-              setDeleteMsg(await deleteTournamentAction(selectedId));
+              setDeleteMsg(await deleteTournamentAction(tournamentId));
             }}
           >
             Delete Tournament
@@ -370,6 +372,7 @@ interface TeamRow {
 export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [loadConfigPending, setLoadConfigPending] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editName, setEditName] = useState("");
   const [editIconUrl, setEditIconUrl] = useState("");
@@ -431,9 +434,34 @@ export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
     );
   }
 
+  async function load2026Teams() {
+    setMsg(null);
+    setLoadConfigPending(true);
+    try {
+      const res = await fetch("/2026-teams.json");
+      if (!res.ok) throw new Error("Failed to fetch 2026-teams.json");
+      const config = (await res.json()) as TeamConfigEntry[];
+      const result = await bulkUpdateTeamsFromConfigAction(tournamentId, config);
+      setMsg(result);
+      if (result.success) {
+        getTournamentTeamsForAdminAction(tournamentId).then((r) => setTeams(r.teams));
+      }
+    } catch (e) {
+      setMsg({ success: false, message: e instanceof Error ? e.message : "Load failed." });
+    } finally {
+      setLoadConfigPending(false);
+    }
+  }
+
   return (
     <Card title="Teams (names & pictures)">
       <p className="text-stone-500 text-xs mb-3">Edit team name and icon URL. Changes apply across pools and brackets.</p>
+      <div className="flex items-center gap-2 mb-3">
+        <Btn type="button" onClick={load2026Teams} pending={loadConfigPending} disabled={loadConfigPending}>
+          Load 2026 teams
+        </Btn>
+        <span className="text-stone-500 text-xs">Overwrites names and logos from public/2026-teams.json</span>
+      </div>
       {msg && <StatusBadge result={msg} />}
       <div className="overflow-x-auto max-h-[420px] overflow-y-auto space-y-2">
         {teams.map((t) => (

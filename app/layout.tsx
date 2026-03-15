@@ -24,14 +24,14 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Brackie!",
     description: "March Madness brackets and pools",
-    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Brackie!" }],
+    images: [{ url: "/share_logo.png", width: 512, height: 512, alt: "Brackie!" }],
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
     title: "Brackie!",
     description: "March Madness brackets and pools",
-    images: ["/logo.png"],
+    images: ["/share_logo.png"],
   },
 };
 

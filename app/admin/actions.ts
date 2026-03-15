@@ -396,3 +396,56 @@ export async function updateTeamAction(
   revalidatePath("/brackets");
   return { success: true, message: "Team updated." };
 }
+
+// ── Bulk load teams from config (e.g. 2026-teams.json) ──
+
+export interface TeamConfigEntry {
+  region: string;
+  seed: number;
+  name: string;
+  icon_url: string;
+}
+
+export async function bulkUpdateTeamsFromConfigAction(
+  tournamentId: string,
+  config: TeamConfigEntry[]
+): Promise<AdminActionResult> {
+  if (!tournamentId || !config?.length) {
+    return { success: false, message: "Tournament and config are required." };
+  }
+
+  const supabase = await createClient();
+  const { data: teams, error: fetchErr } = await supabase
+    .from("teams")
+    .select("id, region, seed")
+    .eq("tournament_id", tournamentId);
+
+  if (fetchErr || !teams?.length) {
+    return { success: false, message: fetchErr?.message ?? "No teams found for this tournament." };
+  }
+
+  const configKey = (r: string, s: number) => `${r}-${s}`;
+  const configByKey = new Map<string, TeamConfigEntry>();
+  for (const c of config) {
+    configByKey.set(configKey(c.region, c.seed), c);
+  }
+
+  let updated = 0;
+  for (const t of teams) {
+    const entry = configByKey.get(configKey(t.region, t.seed));
+    if (!entry) continue;
+    const { error } = await supabase
+      .from("teams")
+      .update({
+        name: entry.name.trim(),
+        icon_url: entry.icon_url?.trim() || null,
+      })
+      .eq("id", t.id);
+    if (!error) updated++;
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  revalidatePath("/brackets");
+  return { success: true, message: `Updated ${updated} teams from config.` };
+}
