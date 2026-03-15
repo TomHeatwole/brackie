@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { BracketWithPicks } from "@/lib/types";
 import { deleteBracketAction } from "../actions";
+import TeamIcon from "@/app/_components/team-icon";
 
 interface Props {
   bracket: BracketWithPicks;
@@ -48,9 +49,18 @@ export default function BracketCard({ bracket, modeParam }: Props) {
       {bracket.champion_name ? (
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[10px] uppercase tracking-widest text-muted font-semibold">Champion</span>
-          <span className="text-sm font-medium text-accent">
-            ({bracket.champion_seed}) {bracket.champion_name}
-          </span>
+          <div className="flex items-center gap-2">
+            <TeamIcon
+              team={{
+                name: bracket.champion_name,
+                icon_url: bracket.champion_icon_url ?? null,
+              }}
+              size="xs"
+            />
+            <span className="text-sm font-medium text-accent">
+              ({bracket.champion_seed}) {bracket.champion_name}
+            </span>
+          </div>
         </div>
       ) : (
         <div className="mt-2 text-xs text-stone-600 italic">No champion picked yet</div>

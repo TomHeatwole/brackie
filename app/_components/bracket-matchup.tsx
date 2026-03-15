@@ -1,6 +1,7 @@
 "use client";
 
 import { Team } from "@/lib/types";
+import TeamIcon from "./team-icon";
 
 interface Props {
   team1: Team | null;
@@ -38,6 +39,7 @@ function TeamSlot({
           height: "26px",
         }}
       >
+        <span className="w-5 shrink-0" aria-hidden />
         <span className="text-stone-700 text-[10px] w-4 text-right">--</span>
         <span className="text-stone-700 truncate italic">TBD</span>
       </div>
@@ -73,6 +75,7 @@ function TeamSlot({
         }
       }}
     >
+      <TeamIcon team={team} size="xs" className="shrink-0" />
       <span
         className="text-[10px] w-4 text-right font-semibold tabular-nums"
         style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}

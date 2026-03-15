@@ -14,6 +14,8 @@ export interface Team {
   name: string;
   seed: number;
   region: string;
+  /** Optional icon URL (e.g. transparent logo). When null, UI shows circular initial. */
+  icon_url?: string | null;
 }
 
 export interface TournamentGame {
@@ -78,12 +80,16 @@ export interface Pool {
   created_at: string;
 }
 
+export type GoodyInputType = "bracket_derived" | "user_input";
+
 export interface GoodyType {
   id: string;
   key: string;
   name: string;
   description: string | null;
   default_points: number;
+  input_type: GoodyInputType;
+  config: Record<string, unknown> | null;
   created_at: string;
 }
 
@@ -92,7 +98,30 @@ export interface PoolGoody {
   pool_id: string;
   goody_type_id: string;
   points: number;
+  stroke_rule_enabled: boolean;
 }
+
+/** User-input goody answer per (pool_bracket, goody_type). value shape varies by goody key. */
+export interface PoolBracketGoodyAnswer {
+  id: string;
+  pool_bracket_id: string;
+  goody_type_id: string;
+  value: Record<string, unknown>;
+}
+
+/** Elite conferences for "First conference out" goody. */
+export const ELITE_CONFERENCES = [
+  "ACC",
+  "Big Ten",
+  "Big 12",
+  "SEC",
+  "Big East",
+  "Pac-12",
+  "American",
+  "Mountain West",
+  "WCC",
+] as const;
+export type EliteConferenceKey = (typeof ELITE_CONFERENCES)[number];
 
 export interface PoolMember {
   id: string;
@@ -128,6 +157,7 @@ export interface BracketWithPicks extends Bracket {
   pick_count: number;
   champion_name?: string;
   champion_seed?: number;
+  champion_icon_url?: string | null;
 }
 
 export const REGIONS = ["East", "West", "South", "Midwest"] as const;

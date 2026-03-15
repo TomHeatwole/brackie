@@ -2,6 +2,7 @@
 
 import { Team, TournamentGame, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
 import BracketMatchup from "./bracket-matchup";
+import TeamIcon from "./team-icon";
 
 interface Props {
   games: TournamentGame[];
@@ -95,8 +96,9 @@ export default function BracketFinalFour({
                 <div className="text-[10px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
                   Champion
                 </div>
-                <div className="inline-block rounded-md px-3 py-1.5 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
-                  ({champWinner.seed}) {champWinner.name}
+                <div className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
+                  <TeamIcon team={champWinner} size="sm" />
+                  <span>({champWinner.seed}) {champWinner.name}</span>
                 </div>
               </div>
             )}

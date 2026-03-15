@@ -1,9 +1,0 @@
-create table public.tournaments (
-  id uuid not null default gen_random_uuid(),
-  created_at timestamp with time zone not null default now(),
-  name character varying not null,
-  year integer not null,
-  lock_date timestamp with time zone null,
-  status character varying not null default 'upcoming',
-  constraint tournaments_pkey primary key (id)
-) TABLESPACE pg_default;

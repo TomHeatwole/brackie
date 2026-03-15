@@ -104,6 +104,7 @@ function buildTeams(): Team[] {
         name: TEAM_NAMES[region][seed - 1],
         seed,
         region,
+        icon_url: null,
       });
     }
   }

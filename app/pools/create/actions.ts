@@ -40,12 +40,21 @@ function parseUpsetMultipliers(formData: FormData): UpsetMultipliers {
   return multipliers;
 }
 
-function parseGoodies(formData: FormData): { goody_type_id: string; points: number }[] {
+function parseGoodies(formData: FormData): {
+  goody_type_id: string;
+  points: number;
+  stroke_rule_enabled: boolean;
+}[] {
   const ids = formData.getAll("goody_ids") as string[];
   return ids.map((id) => {
     const raw = formData.get(`goody_points_${id}`);
     const pts = raw ? Number(raw) : 5;
-    return { goody_type_id: id, points: isNaN(pts) || pts < 0 ? 5 : pts };
+    const strokeRule = formData.get(`goody_stroke_rule_${id}`) === "true";
+    return {
+      goody_type_id: id,
+      points: isNaN(pts) || pts < 0 ? 5 : pts,
+      stroke_rule_enabled: strokeRule,
+    };
   });
 }
 

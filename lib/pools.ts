@@ -4,6 +4,7 @@ import {
   PoolWithDetails,
   PoolMemberWithInfo,
   PoolGoody,
+  PoolBracketGoodyAnswer,
   RoundPoints,
   UpsetMultipliers,
   DEFAULT_ROUND_POINTS,
@@ -186,7 +187,7 @@ export async function createPool(
       tournament_id: tournamentId,
       invite_code: inviteCode,
       round_points: scoring?.round_points ?? DEFAULT_ROUND_POINTS,
-      upset_points_enabled: scoring?.upset_points_enabled ?? false,
+      upset_points_enabled: scoring?.upset_points_enabled ?? true,
       upset_multipliers: scoring?.upset_multipliers ?? DEFAULT_UPSET_MULTIPLIERS,
       goodies_enabled: scoring?.goodies_enabled ?? false,
       ...(imageUrl ? { image_url: imageUrl } : {}),
@@ -270,7 +271,7 @@ export async function getPoolGoodies(
 export async function setPoolGoodies(
   supabase: SupabaseClient,
   poolId: string,
-  goodies: { goody_type_id: string; points: number }[]
+  goodies: { goody_type_id: string; points: number; stroke_rule_enabled: boolean }[]
 ): Promise<{ success: boolean; error?: string }> {
   const { error: deleteError } = await supabase
     .from("pool_goodies")
@@ -288,6 +289,7 @@ export async function setPoolGoodies(
     pool_id: poolId,
     goody_type_id: g.goody_type_id,
     points: g.points,
+    stroke_rule_enabled: g.stroke_rule_enabled ?? false,
   }));
 
   const { error: insertError } = await supabase
@@ -300,6 +302,38 @@ export async function setPoolGoodies(
   }
 
   return { success: true };
+}
+
+/** Pool goody with joined goody type (for knowing input_type). */
+export interface PoolGoodyWithType extends PoolGoody {
+  goody_types: GoodyTypeRow | null;
+}
+
+interface GoodyTypeRow {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  default_points: number;
+  input_type: string;
+  config: Record<string, unknown> | null;
+}
+
+export async function getPoolGoodiesWithTypes(
+  supabase: SupabaseClient,
+  poolId: string
+): Promise<PoolGoodyWithType[]> {
+  const { data } = await supabase
+    .from("pool_goodies")
+    .select("*, goody_types(*)")
+    .eq("pool_id", poolId);
+
+  if (!data) return [];
+
+  return data.map((row: PoolGoody & { goody_types: GoodyTypeRow | null }) => ({
+    ...row,
+    goody_types: row.goody_types ?? null,
+  }));
 }
 
 export async function joinPool(
@@ -346,7 +380,7 @@ export async function submitBracketToPool(
   poolId: string,
   bracketId: string,
   userId: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; pool_bracket_id?: string; error?: string }> {
   const { data: pool } = await supabase
     .from("pools")
     .select("tournament_id")
@@ -379,18 +413,68 @@ export async function submitBracketToPool(
     if (error) {
       return { success: false, error: "Failed to update bracket submission" };
     }
-    return { success: true };
+    return { success: true, pool_bracket_id: existing.id };
   }
 
-  const { error } = await supabase.from("pool_brackets").insert({
-    pool_id: poolId,
-    bracket_id: bracketId,
-    user_id: userId,
-  });
+  const { data: inserted, error } = await supabase
+    .from("pool_brackets")
+    .insert({
+      pool_id: poolId,
+      bracket_id: bracketId,
+      user_id: userId,
+    })
+    .select("id")
+    .single();
 
   if (error) {
     console.error("Error submitting bracket to pool:", error);
     return { success: false, error: "Failed to submit bracket" };
+  }
+
+  return { success: true, pool_bracket_id: inserted?.id };
+}
+
+export async function getPoolBracketGoodyAnswers(
+  supabase: SupabaseClient,
+  poolBracketId: string
+): Promise<PoolBracketGoodyAnswer[]> {
+  const { data } = await supabase
+    .from("pool_bracket_goody_answers")
+    .select("*")
+    .eq("pool_bracket_id", poolBracketId);
+  return data ?? [];
+}
+
+export async function setPoolBracketGoodyAnswers(
+  supabase: SupabaseClient,
+  poolBracketId: string,
+  answers: { goody_type_id: string; value: Record<string, unknown> }[]
+): Promise<{ success: boolean; error?: string }> {
+  const { error: deleteError } = await supabase
+    .from("pool_bracket_goody_answers")
+    .delete()
+    .eq("pool_bracket_id", poolBracketId);
+
+  if (deleteError) {
+    console.error("Error clearing goody answers:", deleteError);
+    return { success: false, error: "Failed to save goody answers." };
+  }
+
+  if (answers.length === 0) return { success: true };
+
+  const rows = answers.map((a) => ({
+    pool_bracket_id: poolBracketId,
+    goody_type_id: a.goody_type_id,
+    value: a.value,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("pool_bracket_goody_answers")
+    .insert(rows);
+
+  if (insertError) {
+    console.error("Error inserting goody answers:", insertError);
+    return { success: false, error: "Failed to save goody answers." };
   }
 
   return { success: true };

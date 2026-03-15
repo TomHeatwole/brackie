@@ -30,7 +30,7 @@ export default function ScoringSettingsForm({
   goodyTypes,
   poolGoodies: initialPoolGoodies,
 }: ScoringSettingsFormProps) {
-  const [upsetEnabled, setUpsetEnabled] = useState(initialUpsetEnabled ?? false);
+  const [upsetEnabled, setUpsetEnabled] = useState(initialUpsetEnabled ?? true);
   const [goodiesEnabled, setGoodiesEnabled] = useState(initialGoodiesEnabled ?? false);
 
   const rp = initialRoundPoints ?? DEFAULT_ROUND_POINTS;
@@ -41,6 +41,9 @@ export default function ScoringSettingsForm({
   );
   const goodyPointsMap = new Map(
     (initialPoolGoodies ?? []).map((pg) => [pg.goody_type_id, pg.points])
+  );
+  const goodyStrokeRuleMap = new Map(
+    (initialPoolGoodies ?? []).map((pg) => [pg.goody_type_id, pg.stroke_rule_enabled])
   );
 
   const [selectedGoodies, setSelectedGoodies] = useState<Set<string>>(enabledGoodyIds);
@@ -184,9 +187,19 @@ export default function ScoringSettingsForm({
                   </div>
                   {isSelected && (
                     <div
-                      className="flex items-center gap-1.5 shrink-0"
+                      className="flex items-center gap-3 shrink-0 flex-wrap"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          name={`goody_stroke_rule_${goody.id}`}
+                          value="true"
+                          defaultChecked={goodyStrokeRuleMap.get(goody.id) ?? false}
+                          className="rounded border-card-border"
+                        />
+                        <span className="text-xs text-muted-foreground">Stroke rule</span>
+                      </label>
                       <label
                         htmlFor={`goody_points_${goody.id}`}
                         className="text-xs text-muted-foreground"

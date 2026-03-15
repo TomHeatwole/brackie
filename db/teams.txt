@@ -1,9 +1,0 @@
-create table public.teams (
-  id uuid not null default gen_random_uuid(),
-  tournament_id uuid not null,
-  name character varying not null,
-  seed integer not null,
-  region character varying not null,
-  constraint teams_pkey primary key (id),
-  constraint teams_tournament_id_fkey foreign key (tournament_id) references public.tournaments (id) on update cascade on delete cascade
-) TABLESPACE pg_default;

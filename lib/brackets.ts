@@ -49,14 +49,18 @@ export async function getUserBrackets(
     }
   }
 
-  const teamMap = new Map<string, { name: string; seed: number }>();
+  const teamMap = new Map<string, { name: string; seed: number; icon_url: string | null }>();
   if (champTeamIds.size > 0) {
     const { data: teams } = await supabase
       .from("teams")
       .select("id, name, seed")
       .in("id", [...champTeamIds]);
     for (const t of teams ?? []) {
-      teamMap.set(t.id, { name: t.name, seed: t.seed });
+      teamMap.set(t.id, {
+        name: t.name,
+        seed: t.seed,
+        icon_url: null,
+      });
     }
   }
 
@@ -74,6 +78,7 @@ export async function getUserBrackets(
       pick_count: bracketPicks.length,
       champion_name: champTeam?.name,
       champion_seed: champTeam?.seed,
+      champion_icon_url: champTeam?.icon_url ?? null,
     };
   });
 }

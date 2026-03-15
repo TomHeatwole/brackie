@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Team, TournamentGame, REGIONS, ROUND_NAMES, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
+import TeamIcon from "./team-icon";
 
 interface Props {
   teams: Team[];
@@ -35,6 +36,7 @@ function MobileMatchup({
     if (!team) {
       return (
         <div className="flex items-center gap-3 px-3 py-2.5 bg-card border border-card-border first:rounded-t-lg last:rounded-b-lg first:border-b-0">
+          <span className="w-5 shrink-0" aria-hidden />
           <span className="text-muted text-xs w-5 text-right font-mono">--</span>
           <span className="text-muted text-sm italic">TBD</span>
         </div>
@@ -58,6 +60,7 @@ function MobileMatchup({
           boxShadow: isPicked ? "0 0 12px rgba(194, 85, 10, 0.2)" : "none",
         }}
       >
+        <TeamIcon team={team} size="sm" className="shrink-0" />
         <span
           className="text-xs w-5 text-right font-mono font-semibold tabular-nums"
           style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}
@@ -227,8 +230,9 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
             <div className="text-[10px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
               Champion
             </div>
-            <div className="inline-block rounded-lg px-4 py-2 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
-              ({winner.seed}) {winner.name}
+            <div className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
+              <TeamIcon team={winner} size="sm" />
+              <span>({winner.seed}) {winner.name}</span>
             </div>
           </div>
         );

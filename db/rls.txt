@@ -68,6 +68,12 @@ pool_goodies
 - UPDATE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_goodies.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 - DELETE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_goodies.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 
+pool_bracket_goody_answers
+- SELECT: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+- INSERT: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+- UPDATE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+- DELETE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+
 storage.objects (bucket: profiles)
 - SELECT: (bucket_id = 'profiles') — public, anyone can view
 - INSERT: (bucket_id = 'profiles') — authenticated users only

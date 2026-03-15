@@ -2,8 +2,14 @@ import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
-import { getPool, getPoolMembers } from "@/lib/pools";
+import {
+  getPool,
+  getPoolMembers,
+  getPoolGoodiesWithTypes,
+  getPoolBracketGoodyAnswers,
+} from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
+import { getTeams, getGames } from "@/lib/tournament";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
 import UserAvatar from "../../_components/user-avatar";
@@ -42,10 +48,25 @@ export default async function PoolDetailPage({
 
   const { data: poolBracketRow } = await supabase
     .from("pool_brackets")
-    .select("bracket_id")
+    .select("id, bracket_id")
     .eq("pool_id", poolId)
     .eq("user_id", user.id)
     .maybeSingle();
+
+  const poolGoodiesWithTypes = await getPoolGoodiesWithTypes(supabase, poolId);
+  const userInputGoodies = poolGoodiesWithTypes.filter(
+    (pg) => pg.goody_types?.input_type === "user_input"
+  );
+  const goodyAnswers =
+    poolBracketRow?.id != null
+      ? await getPoolBracketGoodyAnswers(supabase, poolBracketRow.id)
+      : [];
+
+  const [teams, allGames] = await Promise.all([
+    getTeams(supabase, pool.tournament_id, testMode),
+    getGames(supabase, pool.tournament_id, testMode),
+  ]);
+  const firstRoundGames = allGames.filter((g) => g.round === 1);
 
   const isMember = members.some((m) => m.user_id === user.id);
   const isCreator = pool.creator_id === user.id;
@@ -111,6 +132,10 @@ export default async function PoolDetailPage({
                     poolId={poolId}
                     brackets={userBrackets}
                     currentBracketId={poolBracketRow?.bracket_id}
+                    userInputGoodies={userInputGoodies}
+                    existingGoodyAnswers={goodyAnswers}
+                    teams={teams}
+                    firstRoundGames={firstRoundGames}
                   />
                   <Link
                     href={`/brackets/create${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
@@ -134,6 +159,10 @@ export default async function PoolDetailPage({
                         poolId={poolId}
                         brackets={userBrackets}
                         currentBracketId={poolBracketRow?.bracket_id}
+                        userInputGoodies={userInputGoodies}
+                        existingGoodyAnswers={goodyAnswers}
+                        teams={teams}
+                        firstRoundGames={firstRoundGames}
                       />
                     </div>
                   )}
