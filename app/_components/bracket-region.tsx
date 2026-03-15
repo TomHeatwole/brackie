@@ -102,15 +102,15 @@ export default function BracketRegion({
               <div
                 className="flex-1"
                 style={{
-                  [isLtr ? "borderRight" : "borderLeft"]: "1px solid #44403c",
-                  borderTop: "1px solid #44403c",
+                  [isLtr ? "borderRight" : "borderLeft"]: "1px solid var(--card-border-hover)",
+                  borderTop: "1px solid var(--card-border-hover)",
                 }}
               />
               <div
                 className="flex-1"
                 style={{
-                  [isLtr ? "borderRight" : "borderLeft"]: "1px solid #44403c",
-                  borderBottom: "1px solid #44403c",
+                  [isLtr ? "borderRight" : "borderLeft"]: "1px solid var(--card-border-hover)",
+                  borderBottom: "1px solid var(--card-border-hover)",
                 }}
               />
             </div>

@@ -1,26 +1,72 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #0c0a09;
+  --foreground: #e7e5e4;
+  --accent: #c2550a;
+  --accent-hover: #9a4408;
+  --card: #171412;
+  --card-border: #2e2a26;
+  --card-border-hover: #44403c;
+  --muted: #78716c;
+  --muted-foreground: #a8a29e;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-card: var(--card);
+  --color-card-border: var(--card-border);
+  --color-card-border-hover: var(--card-border-hover);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+}
+
+@layer utilities {
+  .btn-primary {
+    @apply rounded-lg py-2 px-4 text-sm font-medium text-white transition-all cursor-pointer disabled:opacity-60;
+    background-color: var(--accent);
+    &:hover:not(:disabled) {
+      background-color: var(--accent-hover);
+    }
+  }
+
+  .btn-outline {
+    @apply rounded-lg py-1.5 px-3 text-xs font-medium transition-all cursor-pointer border;
+    border-color: var(--card-border);
+    color: var(--muted-foreground);
+    &:hover {
+      border-color: var(--accent);
+      color: var(--foreground);
+    }
+  }
+
+  .input-field {
+    @apply w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors;
+    background-color: var(--card);
+    border: 1px solid var(--card-border);
+    color: var(--foreground);
+    &:focus {
+      border-color: var(--accent);
+    }
+  }
+
+  .card {
+    @apply rounded-lg transition-colors;
+    background-color: var(--card);
+    border: 1px solid var(--card-border);
+    &:hover {
+      border-color: var(--card-border-hover);
+    }
+  }
 }

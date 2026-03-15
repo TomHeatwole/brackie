@@ -20,11 +20,11 @@ function Field({ id, label, name, placeholder, error, autoComplete, hint, onChan
   return (
     <div>
       <div className="flex items-baseline justify-between mb-1.5">
-        <label htmlFor={id} className="text-xs font-medium" style={{ color: "#a8a29e" }}>
+        <label htmlFor={id} className="text-xs font-medium text-muted-foreground">
           {label}
         </label>
         {hint && !error && (
-          <span className="text-xs" style={{ color: "#57534e" }}>{hint}</span>
+          <span className="text-xs text-muted">{hint}</span>
         )}
       </div>
       <input
@@ -34,23 +34,11 @@ function Field({ id, label, name, placeholder, error, autoComplete, hint, onChan
         autoComplete={autoComplete}
         placeholder={placeholder}
         onChange={onChange}
-        className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
-        style={{
-          backgroundColor: "#1c1a18",
-          border: `1px solid ${error ? "#f87171" : "#3a3530"}`,
-          color: "#e7e5e4",
-        }}
-        onFocus={(e) =>
-          (e.currentTarget.style.borderColor = error ? "#f87171" : "#AE4E02")
-        }
-        onBlur={(e) =>
-          (e.currentTarget.style.borderColor = error ? "#f87171" : "#3a3530")
-        }
+        className="input-field"
+        style={error ? { borderColor: "#f87171" } : undefined}
       />
       {error && (
-        <p className="mt-1.5 text-xs" style={{ color: "#f87171" }}>
-          {error}
-        </p>
+        <p className="mt-1.5 text-xs text-red-400">{error}</p>
       )}
     </div>
   );
@@ -107,23 +95,10 @@ export default function FinishSigningUpForm() {
       />
 
       {state.error && (
-        <p className="text-sm" style={{ color: "#f87171" }}>
-          {state.error}
-        </p>
+        <p className="text-sm text-red-400">{state.error}</p>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 cursor-pointer"
-        style={{ backgroundColor: "#AE4E02" }}
-        onMouseEnter={(e) => {
-          if (!isPending) e.currentTarget.style.backgroundColor = "#8a3e01";
-        }}
-        onMouseLeave={(e) => {
-          if (!isPending) e.currentTarget.style.backgroundColor = "#AE4E02";
-        }}
-      >
+      <button type="submit" disabled={isPending} className="btn-primary w-full mt-2">
         {isPending ? "Saving…" : "Finish Signing Up"}
       </button>
     </form>

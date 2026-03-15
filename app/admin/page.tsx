@@ -23,7 +23,7 @@ export default async function AdminPage() {
     .order("year", { ascending: false });
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} username={userInfo?.username} />
       <main className="pt-16 pb-12 flex justify-center">
         <div className="w-full max-w-3xl px-4">

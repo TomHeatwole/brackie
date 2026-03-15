@@ -77,6 +77,7 @@ export interface PoolMemberWithInfo extends PoolMember {
   last_name?: string;
   bracket_submitted?: boolean;
   bracket_name?: string;
+  bracket_id?: string;
 }
 
 export interface BracketWithPicks extends Bracket {

@@ -21,34 +21,23 @@ export default async function FinishSigningUpPage() {
   }
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-background">
       <Navbar />
 
       <div className="flex min-h-screen items-center justify-center pt-12 px-4">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
-            <span
-              className="text-4xl font-bold select-none"
-              style={{ color: "#AE4E02" }}
-            >
-              [ ]
-            </span>
+            <span className="text-4xl font-bold select-none text-accent">[ ]</span>
             <h1 className="mt-3 text-2xl font-semibold tracking-tight text-white">
               brackie
             </h1>
           </div>
 
-          <div
-            className="rounded-xl p-8 shadow-xl"
-            style={{
-              backgroundColor: "#111110",
-              border: "1px solid rgba(174, 78, 2, 0.25)",
-            }}
-          >
-            <h2 className="mb-1 text-sm font-medium text-stone-400 uppercase tracking-widest">
+          <div className="rounded-xl p-8 shadow-xl bg-card border border-card-border">
+            <h2 className="mb-1 text-sm font-medium text-muted-foreground uppercase tracking-widest">
               Finish Signing Up
             </h2>
-            <p className="mb-6 text-xs text-stone-500">
+            <p className="mb-6 text-xs text-muted">
               Just a few details before you can start making brackets.
             </p>
 

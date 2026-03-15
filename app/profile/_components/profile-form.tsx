@@ -28,11 +28,7 @@ function Field({
 }: FieldProps) {
   return (
     <div>
-      <label
-        htmlFor={id}
-        className="block mb-1.5 text-xs font-medium"
-        style={{ color: "#d6d3d1" }}
-      >
+      <label htmlFor={id} className="block mb-1.5 text-xs font-medium text-stone-300">
         {label}
       </label>
       <input
@@ -43,23 +39,11 @@ function Field({
         placeholder={placeholder}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors"
-        style={{
-          backgroundColor: "#1c1a18",
-          border: `1px solid ${error ? "#f87171" : "#57534e"}`,
-          color: "#e7e5e4",
-        }}
-        onFocus={(e) =>
-          (e.currentTarget.style.borderColor = error ? "#f87171" : "#AE4E02")
-        }
-        onBlur={(e) =>
-          (e.currentTarget.style.borderColor = error ? "#f87171" : "#57534e")
-        }
+        className="input-field"
+        style={error ? { borderColor: "#f87171" } : undefined}
       />
       {error && (
-        <p className="mt-1.5 text-xs" style={{ color: "#f87171" }}>
-          {error}
-        </p>
+        <p className="mt-1.5 text-xs text-red-400">{error}</p>
       )}
     </div>
   );
@@ -84,23 +68,13 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
     <form action={action} noValidate className="flex flex-col gap-4">
       {/* Email — read only */}
       <div>
-        <label
-          className="block mb-1.5 text-xs font-medium"
-          style={{ color: "#d6d3d1" }}
-        >
+        <label className="block mb-1.5 text-xs font-medium text-stone-300">
           Email address
         </label>
-        <div
-          className="w-full rounded-lg px-3 py-2 text-sm"
-          style={{
-            backgroundColor: "#1c1a18",
-            border: "1px solid #57534e",
-            color: "#a8a29e",
-          }}
-        >
+        <div className="w-full rounded-lg px-3 py-2 text-sm bg-card border border-card-border text-muted-foreground">
           {email}
         </div>
-        <p className="mt-1.5 text-xs" style={{ color: "#78716c" }}>
+        <p className="mt-1.5 text-xs text-muted">
           Email cannot be changed here.
         </p>
       </div>
@@ -144,36 +118,16 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
       />
 
       {state.error && (
-        <p className="text-sm" style={{ color: "#f87171" }}>
-          {state.error}
-        </p>
+        <p className="text-sm text-red-400">{state.error}</p>
       )}
 
       {state.success && (
-        <p
-          className="text-sm rounded-lg px-3 py-2"
-          style={{
-            backgroundColor: "rgba(74, 222, 128, 0.08)",
-            border: "1px solid rgba(74, 222, 128, 0.2)",
-            color: "#4ade80",
-          }}
-        >
+        <p className="text-sm rounded-lg px-3 py-2 bg-green-500/8 border border-green-500/20 text-green-400">
           Profile saved successfully.
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={isPending}
-        className="mt-2 w-full rounded-lg py-2 text-sm font-medium text-white transition-colors disabled:opacity-60 cursor-pointer"
-        style={{ backgroundColor: "#AE4E02" }}
-        onMouseEnter={(e) => {
-          if (!isPending) e.currentTarget.style.backgroundColor = "#8a3e01";
-        }}
-        onMouseLeave={(e) => {
-          if (!isPending) e.currentTarget.style.backgroundColor = "#AE4E02";
-        }}
-      >
+      <button type="submit" disabled={isPending} className="btn-primary w-full mt-2">
         {isPending ? "Saving…" : "Save Changes"}
       </button>
     </form>

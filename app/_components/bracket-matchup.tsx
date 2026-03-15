@@ -32,14 +32,14 @@ function TeamSlot({
       <div
         className={`flex items-center gap-1.5 px-2 py-1 text-xs ${roundedClass} ${borderClass}`}
         style={{
-          backgroundColor: "#1c1a18",
-          border: "1px solid #2a2725",
-          minWidth: "150px",
-          height: "24px",
+          backgroundColor: "var(--card)",
+          border: "1px solid var(--card-border)",
+          width: "150px",
+          height: "26px",
         }}
       >
         <span className="text-stone-700 text-[10px] w-4 text-right">--</span>
-        <span className="text-stone-700 truncate">TBD</span>
+        <span className="text-stone-700 truncate italic">TBD</span>
       </div>
     );
   }
@@ -49,36 +49,37 @@ function TeamSlot({
   return (
     <div
       onClick={canClick ? onClick : undefined}
-      className={`flex items-center gap-1.5 px-2 py-1 text-xs ${roundedClass} ${borderClass} transition-colors ${
+      className={`flex items-center gap-1.5 px-2 py-1 text-xs ${roundedClass} ${borderClass} transition-all ${
         canClick ? "cursor-pointer" : ""
       }`}
       style={{
-        backgroundColor: isPicked ? "#AE4E02" : "#1c1a18",
-        border: `1px solid ${isPicked ? "#AE4E02" : "#2a2725"}`,
-        minWidth: "150px",
-        height: "24px",
-        color: isPicked ? "#fff" : "#e7e5e4",
+        backgroundColor: isPicked ? "var(--accent)" : "var(--card)",
+        border: `1px solid ${isPicked ? "var(--accent)" : "var(--card-border)"}`,
+        width: "150px",
+        height: "26px",
+        color: isPicked ? "#fff" : "var(--foreground)",
+        boxShadow: isPicked ? "0 0 8px rgba(194, 85, 10, 0.25)" : "none",
       }}
       onMouseEnter={(e) => {
         if (canClick && !isPicked) {
-          e.currentTarget.style.backgroundColor = "#292524";
-          e.currentTarget.style.borderColor = "#44403c";
+          e.currentTarget.style.backgroundColor = "#1f1c19";
+          e.currentTarget.style.borderColor = "var(--card-border-hover)";
         }
       }}
       onMouseLeave={(e) => {
         if (canClick && !isPicked) {
-          e.currentTarget.style.backgroundColor = "#1c1a18";
-          e.currentTarget.style.borderColor = "#2a2725";
+          e.currentTarget.style.backgroundColor = "var(--card)";
+          e.currentTarget.style.borderColor = "var(--card-border)";
         }
       }}
     >
       <span
-        className="text-[10px] w-4 text-right font-medium"
-        style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "#78716c" }}
+        className="text-[10px] w-4 text-right font-semibold tabular-nums"
+        style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}
       >
         {team.seed}
       </span>
-      <span className="truncate font-medium">{team.name}</span>
+      <span className="truncate font-medium min-w-0">{team.name}</span>
     </div>
   );
 }

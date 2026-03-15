@@ -128,23 +128,25 @@ export async function getPoolMembers(
     userInfoMap.set(u.id, u);
   }
 
-  const bracketMap = new Map<string, string>();
+  const bracketInfoMap = new Map<string, { name: string; id: string }>();
   for (const pb of poolBrackets ?? []) {
     const bracket = brackets?.find((b: { id: string; name: string }) => b.id === pb.bracket_id);
-    if (bracket) bracketMap.set(pb.user_id, bracket.name);
+    if (bracket) bracketInfoMap.set(pb.user_id, { name: bracket.name, id: bracket.id });
   }
 
   const poolBracketUserIds = new Set((poolBrackets ?? []).map((pb: { user_id: string }) => pb.user_id));
 
   return members.map((m: { id: string; pool_id: string; user_id: string; joined_at: string }) => {
     const info = userInfoMap.get(m.user_id);
+    const bracketInfo = bracketInfoMap.get(m.user_id);
     return {
       ...m,
       username: info?.username ?? undefined,
       first_name: info?.first_name ?? undefined,
       last_name: info?.last_name ?? undefined,
       bracket_submitted: poolBracketUserIds.has(m.user_id),
-      bracket_name: bracketMap.get(m.user_id),
+      bracket_name: bracketInfo?.name,
+      bracket_id: bracketInfo?.id,
     };
   });
 }

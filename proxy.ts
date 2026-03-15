@@ -53,6 +53,10 @@ export async function proxy(request: NextRequest) {
     if (isPublicPath(pathname)) return supabaseResponse;
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    const fullPath = request.nextUrl.pathname + request.nextUrl.search;
+    if (fullPath !== "/") {
+      url.searchParams.set("next", fullPath);
+    }
     return NextResponse.redirect(url);
   }
 

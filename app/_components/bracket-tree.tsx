@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
+import { useState, useCallback, useEffect } from "react";
+import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS } from "@/lib/types";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import BracketRegion from "./bracket-region";
 import BracketFinalFour from "./bracket-final-four";
+import BracketMobile from "./bracket-mobile";
 
 interface Props {
   teams: Team[];
@@ -12,6 +14,7 @@ interface Props {
   readOnly?: boolean;
   onSave?: (picks: Record<string, string>) => void;
   saving?: boolean;
+  saveLabel?: string;
 }
 
 function buildGameMap(games: TournamentGame[]): Map<string, TournamentGame> {
@@ -81,7 +84,9 @@ export default function BracketTree({
   readOnly = false,
   onSave,
   saving = false,
+  saveLabel,
 }: Props) {
+  const isMobile = useIsMobile();
   const [picks, setPicks] = useState<Record<string, string>>(initialPicks);
   const gameMap = buildGameMap(games);
 
@@ -112,7 +117,115 @@ export default function BracketTree({
     [readOnly, gameMap, games]
   );
 
+  const randomFillBracket = useCallback(() => {
+    if (readOnly || Object.keys(picks).length > 0) return;
+
+    const teamMap = new Map<string, Team>();
+    for (const t of teams) teamMap.set(t.id, t);
+
+    const newPicks: Record<string, string> = {};
+    const gamesByRound = new Map<number, TournamentGame[]>();
+    for (const g of games) {
+      const list = gamesByRound.get(g.round) ?? [];
+      list.push(g);
+      gamesByRound.set(g.round, list);
+    }
+
+    for (let round = 1; round <= 6; round++) {
+      const roundGames = gamesByRound.get(round) ?? [];
+      for (const game of roundGames) {
+        let t1Id: string | null = null;
+        let t2Id: string | null = null;
+
+        if (round === 1) {
+          t1Id = game.team1_id;
+          t2Id = game.team2_id;
+        } else if (round <= 4 && game.region) {
+          const prevGames = gamesByRound.get(round - 1) ?? [];
+          const feeder1 = prevGames.find(
+            (g) => g.region === game.region && g.position === game.position * 2
+          );
+          const feeder2 = prevGames.find(
+            (g) => g.region === game.region && g.position === game.position * 2 + 1
+          );
+          t1Id = feeder1 ? newPicks[feeder1.id] ?? null : null;
+          t2Id = feeder2 ? newPicks[feeder2.id] ?? null : null;
+        } else if (round === 5) {
+          const [regionA, regionB] = FINAL_FOUR_MATCHUPS[game.position];
+          const e8A = (gamesByRound.get(4) ?? []).find((g) => g.region === regionA);
+          const e8B = (gamesByRound.get(4) ?? []).find((g) => g.region === regionB);
+          t1Id = e8A ? newPicks[e8A.id] ?? null : null;
+          t2Id = e8B ? newPicks[e8B.id] ?? null : null;
+        } else if (round === 6) {
+          const ffGames = (gamesByRound.get(5) ?? []).sort((a, b) => a.position - b.position);
+          t1Id = ffGames[0] ? newPicks[ffGames[0].id] ?? null : null;
+          t2Id = ffGames[1] ? newPicks[ffGames[1].id] ?? null : null;
+        }
+
+        if (t1Id && t2Id) {
+          newPicks[game.id] = Math.random() < 0.5 ? t1Id : t2Id;
+        } else if (t1Id) {
+          newPicks[game.id] = t1Id;
+        } else if (t2Id) {
+          newPicks[game.id] = t2Id;
+        }
+      }
+    }
+
+    setPicks(newPicks);
+  }, [readOnly, picks, teams, games]);
+
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "j") {
+        e.preventDefault();
+        randomFillBracket();
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [randomFillBracket]);
+
   const pickCount = Object.keys(picks).length;
+
+  const statusBar = (
+    <div className="flex items-center justify-center px-2">
+      <div className="text-muted-foreground text-sm">
+        <span className="font-mono">{pickCount}</span>/63 picks
+        {pickCount === 63 && (
+          <span className="ml-2 text-green-400 font-medium">
+            Complete!
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="flex flex-col gap-4">
+        <BracketMobile
+          teams={teams}
+          games={games}
+          picks={picks}
+          onPick={handlePick}
+          readOnly={readOnly}
+        />
+        {pickCount === 63 && onSave && !readOnly && (
+          <div className="flex justify-center">
+            <button
+              onClick={() => onSave(picks)}
+              disabled={saving}
+              className="btn-primary"
+            >
+              {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
+            </button>
+          </div>
+        )}
+        {statusBar}
+      </div>
+    );
+  }
 
   const regionGames = (region: string) =>
     games.filter((g) => g.region === region);
@@ -127,44 +240,13 @@ export default function BracketTree({
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Header bar */}
-      <div className="flex items-center justify-between px-2">
-        <div className="text-stone-400 text-sm">
-          {pickCount}/63 picks
-          {pickCount === 63 && (
-            <span className="ml-2" style={{ color: "#4ade80" }}>
-              Complete!
-            </span>
-          )}
-        </div>
-        {onSave && !readOnly && (
-          <button
-            onClick={() => onSave(picks)}
-            disabled={saving}
-            className="px-4 py-1.5 rounded text-sm font-medium text-white transition-colors disabled:opacity-60 cursor-pointer"
-            style={{ backgroundColor: "#AE4E02" }}
-            onMouseEnter={(e) => {
-              if (!saving) e.currentTarget.style.backgroundColor = "#8a3e01";
-            }}
-            onMouseLeave={(e) => {
-              if (!saving) e.currentTarget.style.backgroundColor = "#AE4E02";
-            }}
-          >
-            {saving ? "Saving…" : "Save Bracket"}
-          </button>
-        )}
-      </div>
-
       {/* Bracket */}
       <div className="overflow-x-auto pb-4">
-        <div className="flex flex-col gap-2 min-w-fit">
-          {/* Top half: leftTop region + FF + rightTop region */}
-          <div className="flex items-stretch">
+        <div className="flex flex-col gap-4 w-full min-w-fit">
+          {/* Top half: leftTop + rightTop */}
+          <div className="flex justify-between">
             <div className="shrink-0">
-              <div
-                className="text-[10px] uppercase tracking-wider text-center mb-1 font-medium"
-                style={{ color: "#AE4E02" }}
-              >
+              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {leftTop}
               </div>
               <BracketRegion
@@ -178,22 +260,8 @@ export default function BracketTree({
               />
             </div>
 
-            <div className="shrink-0 flex items-center">
-              <BracketFinalFour
-                games={finalGames}
-                allGames={games}
-                teams={teams}
-                picks={picks}
-                onPick={handlePick}
-                readOnly={readOnly}
-              />
-            </div>
-
             <div className="shrink-0">
-              <div
-                className="text-[10px] uppercase tracking-wider text-center mb-1 font-medium"
-                style={{ color: "#AE4E02" }}
-              >
+              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {rightTop}
               </div>
               <BracketRegion
@@ -208,13 +276,31 @@ export default function BracketTree({
             </div>
           </div>
 
-          {/* Bottom half: leftBottom region + spacer + rightBottom region */}
-          <div className="flex items-stretch">
-            <div className="shrink-0">
-              <div
-                className="text-[10px] uppercase tracking-wider text-center mb-1 font-medium"
-                style={{ color: "#AE4E02" }}
+          {/* Center: Final Four + Championship + Save */}
+          <div className="flex flex-col items-center gap-4">
+            <BracketFinalFour
+              games={finalGames}
+              allGames={games}
+              teams={teams}
+              picks={picks}
+              onPick={handlePick}
+              readOnly={readOnly}
+            />
+            {pickCount === 63 && onSave && !readOnly && (
+              <button
+                onClick={() => onSave(picks)}
+                disabled={saving}
+                className="btn-primary"
               >
+                {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
+              </button>
+            )}
+          </div>
+
+          {/* Bottom half: leftBottom + rightBottom */}
+          <div className="flex justify-between">
+            <div className="shrink-0">
+              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {leftBottom}
               </div>
               <BracketRegion
@@ -228,14 +314,8 @@ export default function BracketTree({
               />
             </div>
 
-            {/* Spacer to match Final Four width */}
-            <div className="shrink-0" style={{ width: "200px" }} />
-
             <div className="shrink-0">
-              <div
-                className="text-[10px] uppercase tracking-wider text-center mb-1 font-medium"
-                style={{ color: "#AE4E02" }}
-              >
+              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {rightBottom}
               </div>
               <BracketRegion
@@ -251,6 +331,9 @@ export default function BracketTree({
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      {statusBar}
     </div>
   );
 }

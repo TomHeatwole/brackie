@@ -55,13 +55,13 @@ export default function BracketFinalFour({
   const champWinner = champGame ? getTeamById(teams, picks[champGame.id] ?? null) : null;
 
   return (
-    <div className="flex flex-col items-center justify-center gap-3 px-4">
+    <div className="flex items-start justify-center gap-6 px-4">
       {/* FF Game 1 */}
       {ffGames[0] && (() => {
         const [t1, t2] = resolveFfTeams(ffGames[0]);
         return (
           <div>
-            <div className="text-[10px] text-stone-600 text-center mb-1 uppercase tracking-wider">
+            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Final Four
             </div>
             <BracketMatchup
@@ -80,7 +80,7 @@ export default function BracketFinalFour({
         const [t1, t2] = resolveChampTeams();
         return (
           <div>
-            <div className="text-[10px] text-stone-600 text-center mb-1 uppercase tracking-wider">
+            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Championship
             </div>
             <BracketMatchup
@@ -91,14 +91,11 @@ export default function BracketFinalFour({
               readOnly={readOnly}
             />
             {champWinner && (
-              <div className="mt-2 text-center">
-                <div className="text-[10px] text-stone-600 uppercase tracking-wider mb-1">
+              <div className="mt-3 text-center">
+                <div className="text-[10px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
                   Champion
                 </div>
-                <div
-                  className="inline-block rounded px-3 py-1.5 text-sm font-bold"
-                  style={{ backgroundColor: "#AE4E02", color: "#fff" }}
-                >
+                <div className="inline-block rounded-md px-3 py-1.5 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
                   ({champWinner.seed}) {champWinner.name}
                 </div>
               </div>
@@ -112,7 +109,7 @@ export default function BracketFinalFour({
         const [t1, t2] = resolveFfTeams(ffGames[1]);
         return (
           <div>
-            <div className="text-[10px] text-stone-600 text-center mb-1 uppercase tracking-wider">
+            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Final Four
             </div>
             <BracketMatchup

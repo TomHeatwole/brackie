@@ -36,8 +36,7 @@ function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
       {...props}
-      className="w-full rounded px-2.5 py-1.5 text-sm outline-none"
-      style={{ backgroundColor: "#1c1a18", border: "1px solid #3a3530", color: "#e7e5e4" }}
+      className="input-field rounded py-1.5"
     />
   );
 }
@@ -46,8 +45,7 @@ function Select({ children, ...props }: React.SelectHTMLAttributes<HTMLSelectEle
   return (
     <select
       {...props}
-      className="w-full rounded px-2.5 py-1.5 text-sm outline-none cursor-pointer"
-      style={{ backgroundColor: "#1c1a18", border: "1px solid #3a3530", color: "#e7e5e4" }}
+      className="input-field rounded py-1.5 cursor-pointer"
     >
       {children}
     </select>
@@ -60,16 +58,13 @@ function Btn({
   variant = "primary",
   ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & { pending?: boolean; variant?: "primary" | "danger" }) {
-  const bg = variant === "danger" ? "#991b1b" : "#AE4E02";
-  const bgHover = variant === "danger" ? "#7f1d1d" : "#8a3e01";
   return (
     <button
       {...props}
       disabled={pending || props.disabled}
-      className="rounded px-3 py-1.5 text-sm font-medium text-white transition-colors disabled:opacity-60 cursor-pointer"
-      style={{ backgroundColor: bg }}
-      onMouseEnter={(e) => { if (!pending) e.currentTarget.style.backgroundColor = bgHover; }}
-      onMouseLeave={(e) => { if (!pending) e.currentTarget.style.backgroundColor = bg; }}
+      className={`rounded px-3 py-1.5 text-sm font-medium text-white transition-colors disabled:opacity-60 cursor-pointer ${
+        variant === "danger" ? "bg-red-900 hover:bg-red-800" : "btn-primary"
+      }`}
     >
       {pending ? "…" : children}
     </button>
@@ -78,7 +73,7 @@ function Btn({
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-lg p-4" style={{ backgroundColor: "#1c1a18", border: "1px solid #3a3530" }}>
+    <div className="card rounded-lg p-4">
       <h2 className="text-sm font-semibold text-stone-200 mb-3">{title}</h2>
       {children}
     </div>
@@ -235,7 +230,7 @@ export function RawTablePanel() {
   return (
     <Card title="Query Table">
       <form action={action} className="flex flex-col gap-3">
-        <div className="grid grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
           <div>
             <Label>Table</Label>
             <Select name="table">
@@ -273,7 +268,7 @@ export function RawTablePanel() {
             <thead>
               <tr>
                 {Object.keys(state.rows[0]).map((key) => (
-                  <th key={key} className="text-left px-2 py-1 text-stone-400 font-medium border-b" style={{ borderColor: "#3a3530" }}>
+                  <th key={key} className="text-left px-2 py-1 text-stone-400 font-medium border-b border-card-border">
                     {key}
                   </th>
                 ))}
@@ -283,7 +278,7 @@ export function RawTablePanel() {
               {state.rows.map((row, i) => (
                 <tr key={i} className="hover:bg-stone-900">
                   {Object.values(row).map((val, j) => (
-                    <td key={j} className="px-2 py-1 text-stone-300 border-b max-w-[200px] truncate font-mono" style={{ borderColor: "#292524" }}>
+                    <td key={j} className="px-2 py-1 text-stone-300 border-b border-card-border max-w-[200px] truncate font-mono">
                       {val === null ? <span className="text-stone-600">null</span> : String(val)}
                     </td>
                   ))}

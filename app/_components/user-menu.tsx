@@ -38,12 +38,9 @@ export default function UserMenu({ userEmail, username }: UserMenuProps) {
     <div ref={ref} className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 bg-stone-900 border border-stone-800 rounded-full pl-1 pr-3 py-1 transition-colors hover:border-stone-600 hover:bg-stone-800"
+        className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition-all hover:bg-white/5 border border-transparent hover:border-card-border"
       >
-        <div
-          className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-          style={{ backgroundColor: "#AE4E02" }}
-        >
+        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-accent">
           {avatarInitial}
         </div>
         <span className="text-stone-300 text-xs max-w-[140px] truncate hidden sm:block">
@@ -52,18 +49,18 @@ export default function UserMenu({ userEmail, username }: UserMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 mt-2 w-44 bg-stone-900 border border-stone-800 rounded-lg shadow-xl py-1 z-50">
+        <div className="absolute right-0 mt-2 w-44 rounded-lg shadow-2xl py-1 z-50 border border-card-border" style={{ backgroundColor: "var(--card)" }}>
           <Link
             href="/profile"
             onClick={() => setOpen(false)}
-            className="block w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+            className="block w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-white/5 hover:text-white transition-colors"
           >
             Profile
           </Link>
-          <div className="my-1 border-t border-stone-800" />
+          <div className="my-1 border-t border-card-border" />
           <button
             onClick={handleLogout}
-            className="w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-stone-800 hover:text-white transition-colors"
+            className="w-full text-left px-4 py-2 text-sm text-stone-300 hover:bg-white/5 hover:text-white transition-colors"
           >
             Sign out
           </button>

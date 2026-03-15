@@ -20,13 +20,13 @@ export default async function CreatePoolPage({
   const modeParam = testMode ? "?mode=test" : "";
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex flex-col items-center">
         <div className="w-full max-w-md px-4">
           <Link
             href={`/pools${modeParam}`}
-            className="text-stone-500 text-sm hover:text-stone-300 transition-colors"
+            className="text-muted text-sm hover:text-stone-300 transition-colors"
           >
             &larr; Back to Pools
           </Link>

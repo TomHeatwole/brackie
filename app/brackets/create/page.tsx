@@ -18,20 +18,21 @@ export default async function CreateBracketPage({
   const params = await searchParams;
   const testMode = params?.mode === "test";
   const modeParam = testMode ? "?mode=test" : "";
+  const poolId = typeof params?.pool === "string" ? params.pool : undefined;
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Brackets" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex flex-col items-center">
         <div className="w-full max-w-md px-4">
           <Link
             href={`/brackets${modeParam}`}
-            className="text-stone-500 text-sm hover:text-stone-300 transition-colors"
+            className="text-muted text-sm hover:text-stone-300 transition-colors"
           >
             &larr; Back to Brackets
           </Link>
           <h1 className="text-2xl font-semibold text-stone-100 mb-8 mt-4 text-center">Create a Bracket</h1>
-          <CreateBracketForm testMode={testMode} />
+          <CreateBracketForm testMode={testMode} poolId={poolId} />
         </div>
       </main>
     </div>

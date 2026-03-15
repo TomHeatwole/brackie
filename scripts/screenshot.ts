@@ -96,8 +96,9 @@ async function main() {
   console.log(`\n  Navigating to ${url}`);
   await page.goto(url, { waitUntil: "networkidle" });
 
-  // If we got redirected to login, auth has expired
-  if (page.url().includes("/login")) {
+  // If we got redirected to login when we didn't intend to go there, auth has expired
+  const intendedLogin = pagePath === "/login" || pagePath.startsWith("/login?");
+  if (!intendedLogin && page.url().includes("/login")) {
     console.error(
       "\n  Session expired — redirected to /login. Run `pnpm save-auth` again.\n"
     );

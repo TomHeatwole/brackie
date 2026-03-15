@@ -23,28 +23,24 @@ export default async function BracketsPage({
   const brackets = await getUserBrackets(supabase, user.id);
 
   return (
-    <div className="min-h-screen bg-stone-950">
+    <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Brackets" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-semibold text-stone-100">Your Brackets</h1>
-            <Link
-              href={`/brackets/create${modeParam}`}
-              className="px-4 py-2 rounded-lg text-sm font-medium text-white transition-colors"
-              style={{ backgroundColor: "#AE4E02" }}
-            >
+            <Link href={`/brackets/create${modeParam}`} className="btn-primary">
               Create a Bracket
             </Link>
           </div>
 
           {brackets.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-stone-500 text-sm">You haven&apos;t created any brackets yet.</p>
+            <div className="text-center py-20">
+              <div className="text-5xl mb-4 opacity-20">🏀</div>
+              <p className="text-muted-foreground text-sm">You haven&apos;t created any brackets yet.</p>
               <Link
                 href={`/brackets/create${modeParam}`}
-                className="mt-3 inline-block text-sm hover:underline"
-                style={{ color: "#AE4E02" }}
+                className="mt-3 inline-block text-sm text-accent hover:underline"
               >
                 Create your first bracket &rarr;
               </Link>
