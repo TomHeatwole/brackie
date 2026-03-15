@@ -14,14 +14,14 @@
   {
     "region": "East",
     "seed": 3,
-    "name": "Michigan St",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png"
+    "name": "Kansas",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2305.png"
   },
   {
     "region": "East",
     "seed": 4,
-    "name": "Kansas",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2305.png"
+    "name": "Louisville",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/97.png"
   },
   {
     "region": "East",
@@ -32,8 +32,8 @@
   {
     "region": "East",
     "seed": 6,
-    "name": "Louisville",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/97.png"
+    "name": "Michigan St",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/127.png"
   },
   {
     "region": "East",
@@ -62,8 +62,8 @@
   {
     "region": "East",
     "seed": 11,
-    "name": "South Florida",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/58.png"
+    "name": "N Dakota St",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2449.png"
   },
   {
     "region": "East",
@@ -74,14 +74,14 @@
   {
     "region": "East",
     "seed": 13,
-    "name": "CA Baptist",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2856.png"
+    "name": "South Florida",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/58.png"
   },
   {
     "region": "East",
     "seed": 14,
-    "name": "N Dakota St",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2449.png"
+    "name": "CA Baptist",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2856.png"
   },
   {
     "region": "East",
@@ -98,289 +98,289 @@
   {
     "region": "West",
     "seed": 1,
-    "name": "TBD",
+    "name": "Arizona",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/12.png"
   },
   {
     "region": "West",
     "seed": 2,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2511.png"
+    "name": "Purdue",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2509.png"
   },
   {
     "region": "West",
     "seed": 3,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/338.png"
-  },
-  {
-    "region": "West",
-    "seed": 4,
-    "name": "TBD",
+    "name": "Arkansas",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/8.png"
   },
   {
     "region": "West",
+    "seed": 4,
+    "name": "BYU",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/252.png"
+  },
+  {
+    "region": "West",
     "seed": 5,
-    "name": "TBD",
+    "name": "Wisconsin",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/275.png"
   },
   {
     "region": "West",
     "seed": 6,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/252.png"
+    "name": "Kennesaw St",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/338.png"
   },
   {
     "region": "West",
     "seed": 7,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/142.png"
+    "name": "Miami",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2390.png"
   },
   {
     "region": "West",
     "seed": 8,
-    "name": "TBD",
+    "name": "Villanova",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/222.png"
   },
   {
     "region": "West",
     "seed": 9,
-    "name": "TBD",
+    "name": "Utah State",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/328.png"
   },
   {
     "region": "West",
     "seed": 10,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2509.png"
+    "name": "Missouri",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/142.png"
   },
   {
     "region": "West",
     "seed": 11,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2250.png"
+    "name": "Play In",
+    "icon_url": null
   },
   {
     "region": "West",
     "seed": 12,
-    "name": "TBD",
+    "name": "High Point",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2272.png"
   },
   {
     "region": "West",
     "seed": 13,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/62.png"
+    "name": "Gonzaga",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2250.png"
   },
   {
     "region": "West",
     "seed": 14,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2390.png"
+    "name": "Hawai'i",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/62.png"
   },
   {
     "region": "West",
     "seed": 15,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/57.png"
+    "name": "Queens",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2511.png"
   },
   {
     "region": "West",
     "seed": 16,
-    "name": "TBD",
+    "name": "Long Island",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/112358.png"
   },
   {
     "region": "South",
     "seed": 1,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png"
+    "name": "Florida",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/57.png"
   },
   {
     "region": "South",
     "seed": 2,
-    "name": "Villanova",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/130.png"
+    "name": "Houston",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/248.png"
   },
   {
     "region": "South",
     "seed": 3,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2608.png"
+    "name": "Nebraska",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/158.png"
   },
   {
     "region": "South",
     "seed": 4,
-    "name": "TBD",
+    "name": "North Carolina",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/153.png"
   },
   {
     "region": "South",
     "seed": 5,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/158.png"
+    "name": "Vanderbilt",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/238.png"
   },
   {
     "region": "South",
     "seed": 6,
-    "name": "TBD",
+    "name": "Illinois",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/356.png"
   },
   {
     "region": "South",
     "seed": 7,
-    "name": "Arizona",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/248.png"
+    "name": "Saint Mary's",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2608.png"
   },
   {
     "region": "South",
     "seed": 8,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/238.png"
+    "name": "Clemson",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/228.png"
   },
   {
     "region": "South",
     "seed": 9,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2377.png"
+    "name": "Iowa",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2294.png"
   },
   {
     "region": "South",
     "seed": 10,
-    "name": "Long Island",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/70.png"
-  },
-  {
-    "region": "South",
-    "seed": 11,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/219.png"
-  },
-  {
-    "region": "South",
-    "seed": 12,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2653.png"
-  },
-  {
-    "region": "South",
-    "seed": 13,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2670.png"
-  },
-  {
-    "region": "South",
-    "seed": 14,
     "name": "TBD",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/245.png"
   },
   {
     "region": "South",
+    "seed": 11,
+    "name": "Penn",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/219.png"
+  },
+  {
+    "region": "South",
+    "seed": 12,
+    "name": "McNeese",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2377.png"
+  },
+  {
+    "region": "South",
+    "seed": 13,
+    "name": "VCU",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2670.png"
+  },
+  {
+    "region": "South",
+    "seed": 14,
+    "name": "Troy",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2653.png"
+  },
+  {
+    "region": "South",
     "seed": 15,
-    "name": "Utah State",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/61.png"
+    "name": "Idaho",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/70.png"
   },
   {
     "region": "South",
     "seed": 16,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2294.png"
+    "name": "Play In",
+    "icon_url": null
   },
   {
     "region": "Midwest",
     "seed": 1,
-    "name": "Wisconsin",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/139.png"
+    "name": "Michigan",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/130.png"
   },
   {
     "region": "Midwest",
     "seed": 2,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/193.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 3,
-    "name": "Purdue",
+    "name": "Iowa State",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/66.png"
   },
   {
     "region": "Midwest",
-    "seed": 4,
-    "name": "Gonzaga",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 5,
-    "name": "BYU",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2275.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 6,
-    "name": "Miami",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/96.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 7,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/251.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 8,
-    "name": "Arkansas",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2006.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 9,
-    "name": "Hawai'i",
+    "seed": 3,
+    "name": "Alabama",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/333.png"
   },
   {
     "region": "Midwest",
-    "seed": 10,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/152.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 11,
-    "name": "Missouri",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2541.png"
-  },
-  {
-    "region": "Midwest",
-    "seed": 12,
-    "name": "TBD",
+    "seed": 4,
+    "name": "Tennessee",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2633.png"
   },
   {
     "region": "Midwest",
-    "seed": 13,
-    "name": "Kennesaw St",
+    "seed": 5,
+    "name": "Texas Tech",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2641.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 6,
+    "name": "Wright St",
     "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2750.png"
   },
   {
     "region": "Midwest",
+    "seed": 7,
+    "name": "Kentucky",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/96.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 8,
+    "name": "Georgia",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/61.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 9,
+    "name": "Saint Louis",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/139.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 10,
+    "name": "Santa Clara",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2541.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 11,
+    "name": "Play In",
+    "icon_url": null
+  },
+  {
+    "region": "Midwest",
+    "seed": 12,
+    "name": "Akron",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2006.png"
+  },
+  {
+    "region": "Midwest",
+    "seed": 13,
+    "name": "Virginia",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/258.png"
+  },
+  {
+    "region": "Midwest",
     "seed": 14,
-    "name": "Queens",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2634.png"
+    "name": "Hofstra",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2275.png"
   },
   {
     "region": "Midwest",
     "seed": 15,
-    "name": "TBD",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2567.png"
+    "name": "Tennessee St",
+    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2634.png"
   },
   {
     "region": "Midwest",
     "seed": 16,
-    "name": "High Point",
-    "icon_url": "https://a.espncdn.com/i/teamlogos/ncaa/500/2641.png"
+    "name": "Play In",
+    "icon_url": null
   }
 ]

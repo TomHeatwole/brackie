@@ -118,6 +118,16 @@ export function CreateTournamentPanel() {
             </Select>
           </div>
         </div>
+        <div className="border-t border-card-border pt-3 mt-1">
+          <Label>Bracket layout (region names per quadrant)</Label>
+          <p className="text-xs text-stone-500 mb-2">Top-left, top-right, bottom-left, bottom-right. Determines who faces who in Final Four.</p>
+          <div className="grid grid-cols-2 gap-2">
+            <Input name="region_top_left" placeholder="East (top-left)" defaultValue="East" />
+            <Input name="region_top_right" placeholder="West (top-right)" defaultValue="West" />
+            <Input name="region_bottom_left" placeholder="South (bottom-left)" defaultValue="South" />
+            <Input name="region_bottom_right" placeholder="Midwest (bottom-right)" defaultValue="Midwest" />
+          </div>
+        </div>
         <Btn type="submit" pending={pending}>Create Tournament</Btn>
         <StatusBadge result={state} />
       </form>

@@ -11,6 +11,10 @@ create table public.tournaments (
   year integer not null,
   lock_date timestamp with time zone null,
   status character varying not null default 'upcoming',
+  region_top_left character varying not null default 'East',
+  region_top_right character varying not null default 'West',
+  region_bottom_left character varying not null default 'South',
+  region_bottom_right character varying not null default 'Midwest',
   constraint tournaments_pkey primary key (id)
 ) TABLESPACE pg_default;
 

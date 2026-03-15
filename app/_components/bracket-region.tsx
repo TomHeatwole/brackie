@@ -18,8 +18,8 @@ function getTeamById(teams: Team[], id: string | null): Team | null {
   return teams.find((t) => t.id === id) ?? null;
 }
 
-const TOTAL_HEIGHT = 480;
-const CONNECTOR_WIDTH = 20;
+const TOTAL_HEIGHT = 552; /* ~15% larger than 480 */
+const CONNECTOR_WIDTH = 23;
 
 function slotHeight(round: number): number {
   const gamesInRound = 8 / Math.pow(2, round - 1);

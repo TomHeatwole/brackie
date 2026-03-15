@@ -1,6 +1,6 @@
 "use client";
 
-import { Team, TournamentGame, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
+import { Team, TournamentGame } from "@/lib/types";
 import BracketMatchup from "./bracket-matchup";
 import TeamIcon from "./team-icon";
 
@@ -8,6 +8,8 @@ interface Props {
   games: TournamentGame[];
   allGames: TournamentGame[];
   teams: Team[];
+  /** Which regions feed each FF game: [game0pair, game1pair] */
+  finalFourMatchups: [string, string][];
   picks: Record<string, string>;
   onPick: (gameId: string, teamId: string) => void;
   readOnly: boolean;
@@ -22,6 +24,7 @@ export default function BracketFinalFour({
   games,
   allGames,
   teams,
+  finalFourMatchups,
   picks,
   onPick,
   readOnly,
@@ -31,7 +34,7 @@ export default function BracketFinalFour({
     .sort((a, b) => a.position - b.position);
   const champGame = games.find((g) => g.round === 6) ?? null;
 
-  function getElite8Winner(region: Region): Team | null {
+  function getElite8Winner(region: string): Team | null {
     const e8Game = allGames.find(
       (g) => g.round === 4 && g.region === region
     );
@@ -41,7 +44,7 @@ export default function BracketFinalFour({
   }
 
   function resolveFfTeams(game: TournamentGame): [Team | null, Team | null] {
-    const matchup = FINAL_FOUR_MATCHUPS[game.position];
+    const matchup = finalFourMatchups[game.position];
     if (!matchup) return [null, null];
     return [getElite8Winner(matchup[0]), getElite8Winner(matchup[1])];
   }
@@ -62,7 +65,7 @@ export default function BracketFinalFour({
         const [t1, t2] = resolveFfTeams(ffGames[0]);
         return (
           <div>
-            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
+            <div className="text-[12px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Final Four
             </div>
             <BracketMatchup
@@ -81,7 +84,7 @@ export default function BracketFinalFour({
         const [t1, t2] = resolveChampTeams();
         return (
           <div>
-            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
+            <div className="text-[12px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Championship
             </div>
             <BracketMatchup
@@ -93,10 +96,10 @@ export default function BracketFinalFour({
             />
             {champWinner && (
               <div className="mt-3 text-center">
-                <div className="text-[10px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
+                <div className="text-[12px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
                   Champion
                 </div>
-                <div className="inline-flex items-center gap-2 rounded-md px-3 py-1.5 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
+                <div className="inline-flex items-center gap-2 rounded-md px-3.5 py-2 text-base font-bold bg-accent text-white shadow-lg shadow-accent/20">
                   <TeamIcon team={champWinner} size="sm" />
                   <span>({champWinner.seed}) {champWinner.name}</span>
                 </div>
@@ -111,7 +114,7 @@ export default function BracketFinalFour({
         const [t1, t2] = resolveFfTeams(ffGames[1]);
         return (
           <div>
-            <div className="text-[10px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
+            <div className="text-[12px] text-muted text-center mb-1 uppercase tracking-widest font-semibold">
               Final Four
             </div>
             <BracketMatchup

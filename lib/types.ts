@@ -6,6 +6,22 @@ export interface Tournament {
   year: number;
   lock_date: string | null;
   status: TournamentStatus;
+  /** Region name in top-left quadrant */
+  region_top_left?: string;
+  /** Region name in top-right quadrant */
+  region_top_right?: string;
+  /** Region name in bottom-left quadrant */
+  region_bottom_left?: string;
+  /** Region name in bottom-right quadrant */
+  region_bottom_right?: string;
+}
+
+/** Quadrant layout and Final Four matchups derived from tournament bracket structure. */
+export interface BracketStructure {
+  /** [topLeft, topRight, bottomLeft, bottomRight] for display order and tabs */
+  regionsInOrder: [string, string, string, string];
+  /** FF game 0: [regionA, regionB], FF game 1: [regionC, regionD]. Default: [[topLeft, topRight], [bottomLeft, bottomRight]]. */
+  finalFourMatchups: [string, string][];
 }
 
 export interface Team {
@@ -199,3 +215,18 @@ export const FINAL_FOUR_MATCHUPS: [Region, Region][] = [
   ["East", "West"],
   ["South", "Midwest"],
 ];
+
+/** Build bracket structure from tournament. Uses defaults (East, West, South, Midwest) when fields missing. */
+export function getBracketStructure(tournament: Tournament | null): BracketStructure {
+  const topLeft = tournament?.region_top_left ?? "East";
+  const topRight = tournament?.region_top_right ?? "West";
+  const bottomLeft = tournament?.region_bottom_left ?? "South";
+  const bottomRight = tournament?.region_bottom_right ?? "Midwest";
+  return {
+    regionsInOrder: [topLeft, topRight, bottomLeft, bottomRight],
+    finalFourMatchups: [
+      [topLeft, topRight],
+      [bottomLeft, bottomRight],
+    ],
+  };
+}

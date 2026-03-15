@@ -46,6 +46,10 @@ export async function createTournamentAction(
   const year = parseInt(formData.get("year") as string, 10);
   const lockDate = (formData.get("lock_date") as string)?.trim() || null;
   const status = (formData.get("status") as string) || "upcoming";
+  const regionTopLeft = (formData.get("region_top_left") as string)?.trim() || "East";
+  const regionTopRight = (formData.get("region_top_right") as string)?.trim() || "West";
+  const regionBottomLeft = (formData.get("region_bottom_left") as string)?.trim() || "South";
+  const regionBottomRight = (formData.get("region_bottom_right") as string)?.trim() || "Midwest";
 
   if (!name || !year) {
     return { success: false, message: "Name and year are required." };
@@ -57,6 +61,10 @@ export async function createTournamentAction(
     year,
     lock_date: lockDate ? new Date(lockDate).toISOString() : null,
     status,
+    region_top_left: regionTopLeft,
+    region_top_right: regionTopRight,
+    region_bottom_left: regionBottomLeft,
+    region_bottom_right: regionBottomRight,
   });
 
   if (error) return { success: false, message: error.message };
@@ -135,6 +143,23 @@ export async function seedTournamentAction(
 
   const supabase = await createClient();
 
+  const { data: tournament, error: tournamentErr } = await supabase
+    .from("tournaments")
+    .select("region_top_left, region_top_right, region_bottom_left, region_bottom_right")
+    .eq("id", tournamentId)
+    .single();
+
+  if (tournamentErr || !tournament) {
+    return { success: false, message: "Tournament not found." };
+  }
+
+  const regions = [
+    tournament.region_top_left ?? "East",
+    tournament.region_top_right ?? "West",
+    tournament.region_bottom_left ?? "South",
+    tournament.region_bottom_right ?? "Midwest",
+  ] as string[];
+
   // Check if teams already exist
   const { data: existingTeams } = await supabase
     .from("teams")
@@ -146,13 +171,15 @@ export async function seedTournamentAction(
     return { success: false, message: "Tournament already has teams. Delete them first." };
   }
 
-  // Insert 64 teams
+  // Insert 64 teams (use default names by quadrant position: first region = East names, etc.)
   const teamRows: { tournament_id: string; name: string; seed: number; region: string }[] = [];
-  for (const region of REGIONS) {
+  for (let r = 0; r < regions.length; r++) {
+    const region = regions[r];
+    const nameTemplate = REGIONS[r];
     for (let seed = 1; seed <= 16; seed++) {
       teamRows.push({
         tournament_id: tournamentId,
-        name: DEFAULT_TEAM_NAMES[region][seed - 1],
+        name: DEFAULT_TEAM_NAMES[nameTemplate][seed - 1],
         seed,
         region,
       });
@@ -185,7 +212,7 @@ export async function seedTournamentAction(
   }[] = [];
 
   // Round 1: 8 games per region, teams pre-filled from seeding
-  for (const region of REGIONS) {
+  for (const region of regions) {
     for (let pos = 0; pos < SEED_MATCHUPS.length; pos++) {
       const [seedA, seedB] = SEED_MATCHUPS[pos];
       gameRows.push({
@@ -200,7 +227,7 @@ export async function seedTournamentAction(
   }
 
   // Rounds 2-4: regional games, teams TBD
-  for (const region of REGIONS) {
+  for (const region of regions) {
     for (let pos = 0; pos < 4; pos++) {
       gameRows.push({ tournament_id: tournamentId, round: 2, position: pos, region, team1_id: null, team2_id: null });
     }
@@ -210,8 +237,8 @@ export async function seedTournamentAction(
     gameRows.push({ tournament_id: tournamentId, round: 4, position: 0, region, team1_id: null, team2_id: null });
   }
 
-  // Round 5: Final Four (2 games)
-  for (let pos = 0; pos < FINAL_FOUR_MATCHUPS.length; pos++) {
+  // Round 5: Final Four (2 games: position 0 = top_left vs top_right, position 1 = bottom_left vs bottom_right)
+  for (let pos = 0; pos < 2; pos++) {
     gameRows.push({ tournament_id: tournamentId, round: 5, position: pos, region: null, team1_id: null, team2_id: null });
   }
 
@@ -403,7 +430,7 @@ export interface TeamConfigEntry {
   region: string;
   seed: number;
   name: string;
-  icon_url: string;
+  icon_url: string | null;
 }
 
 export async function bulkUpdateTeamsFromConfigAction(

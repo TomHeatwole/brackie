@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS } from "@/lib/types";
+import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS, BracketStructure, getBracketStructure } from "@/lib/types";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import BracketRegion from "./bracket-region";
 import BracketFinalFour from "./bracket-final-four";
@@ -10,6 +10,8 @@ import BracketMobile from "./bracket-mobile";
 interface Props {
   teams: Team[];
   games: TournamentGame[];
+  /** When provided, overrides default East/West/South/Midwest layout and Final Four matchups */
+  bracketStructure?: BracketStructure | null;
   initialPicks?: Record<string, string>;
   readOnly?: boolean;
   onSave?: (picks: Record<string, string>) => void;
@@ -26,23 +28,25 @@ function buildGameMap(games: TournamentGame[]): Map<string, TournamentGame> {
 function getDownstreamGameIds(
   gameId: string,
   gameMap: Map<string, TournamentGame>,
-  allGames: TournamentGame[]
+  allGames: TournamentGame[],
+  finalFourMatchups: [string, string][]
 ): string[] {
   const game = gameMap.get(gameId);
   if (!game) return [];
 
   const downstream: string[] = [];
-  const nextGame = findNextGame(game, allGames);
+  const nextGame = findNextGame(game, allGames, finalFourMatchups);
   if (nextGame) {
     downstream.push(nextGame.id);
-    downstream.push(...getDownstreamGameIds(nextGame.id, gameMap, allGames));
+    downstream.push(...getDownstreamGameIds(nextGame.id, gameMap, allGames, finalFourMatchups));
   }
   return downstream;
 }
 
 function findNextGame(
   game: TournamentGame,
-  allGames: TournamentGame[]
+  allGames: TournamentGame[],
+  finalFourMatchups: [string, string][]
 ): TournamentGame | null {
   if (game.round === 6) return null;
 
@@ -60,7 +64,7 @@ function findNextGame(
   }
 
   if (game.round === 4 && game.region) {
-    const ffIdx = FINAL_FOUR_MATCHUPS.findIndex(
+    const ffIdx = finalFourMatchups.findIndex(
       ([a, b]) => a === game.region || b === game.region
     );
     if (ffIdx >= 0) {
@@ -80,6 +84,7 @@ function findNextGame(
 export default function BracketTree({
   teams,
   games,
+  bracketStructure: bracketStructureProp,
   initialPicks = {},
   readOnly = false,
   onSave,
@@ -89,6 +94,8 @@ export default function BracketTree({
   const isMobile = useIsMobile();
   const [picks, setPicks] = useState<Record<string, string>>(initialPicks);
   const gameMap = buildGameMap(games);
+  const structure = bracketStructureProp ?? getBracketStructure(null);
+  const { regionsInOrder, finalFourMatchups } = structure;
 
   const handlePick = useCallback(
     (gameId: string, teamId: string) => {
@@ -103,7 +110,7 @@ export default function BracketTree({
         next[gameId] = teamId;
 
         if (oldPick && oldPick !== teamId) {
-          const downstreamIds = getDownstreamGameIds(gameId, gameMap, games);
+          const downstreamIds = getDownstreamGameIds(gameId, gameMap, games, finalFourMatchups);
           for (const dsId of downstreamIds) {
             if (next[dsId] === oldPick) {
               delete next[dsId];
@@ -151,7 +158,7 @@ export default function BracketTree({
           t1Id = feeder1 ? newPicks[feeder1.id] ?? null : null;
           t2Id = feeder2 ? newPicks[feeder2.id] ?? null : null;
         } else if (round === 5) {
-          const [regionA, regionB] = FINAL_FOUR_MATCHUPS[game.position];
+          const [regionA, regionB] = finalFourMatchups[game.position] ?? [null, null];
           const e8A = (gamesByRound.get(4) ?? []).find((g) => g.region === regionA);
           const e8B = (gamesByRound.get(4) ?? []).find((g) => g.region === regionB);
           t1Id = e8A ? newPicks[e8A.id] ?? null : null;
@@ -173,7 +180,7 @@ export default function BracketTree({
     }
 
     setPicks(newPicks);
-  }, [readOnly, picks, teams, games]);
+  }, [readOnly, picks, teams, games, finalFourMatchups]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -190,7 +197,7 @@ export default function BracketTree({
 
   const statusBar = (
     <div className="flex items-center justify-center px-2">
-      <div className="text-muted-foreground text-sm">
+      <div className="text-muted-foreground text-base">
         <span className="font-mono">{pickCount}</span>/63 picks
         {pickCount === 63 && (
           <span className="ml-2 text-green-400 font-medium">
@@ -207,6 +214,7 @@ export default function BracketTree({
         <BracketMobile
           teams={teams}
           games={games}
+          bracketStructure={structure}
           picks={picks}
           onPick={handlePick}
           readOnly={readOnly}
@@ -216,7 +224,7 @@ export default function BracketTree({
             <button
               onClick={() => onSave(picks)}
               disabled={saving}
-              className="rounded-lg py-2 px-5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
+              className="rounded-lg py-2.5 px-6 text-base font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
             >
               {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
             </button>
@@ -233,10 +241,7 @@ export default function BracketTree({
     teams.filter((t) => t.region === region);
   const finalGames = games.filter((g) => g.round >= 5);
 
-  const leftTop = REGIONS[0];
-  const rightTop = REGIONS[1];
-  const leftBottom = REGIONS[2];
-  const rightBottom = REGIONS[3];
+  const [leftTop, rightTop, leftBottom, rightBottom] = regionsInOrder;
 
   return (
     <div className="flex flex-col gap-4">
@@ -246,7 +251,7 @@ export default function BracketTree({
           {/* Top half: leftTop + rightTop */}
           <div className="flex justify-between">
             <div className="shrink-0">
-              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
+              <div className="text-[12px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {leftTop}
               </div>
               <BracketRegion
@@ -261,7 +266,7 @@ export default function BracketTree({
             </div>
 
             <div className="shrink-0">
-              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
+              <div className="text-[12px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {rightTop}
               </div>
               <BracketRegion
@@ -282,6 +287,7 @@ export default function BracketTree({
               games={finalGames}
               allGames={games}
               teams={teams}
+              finalFourMatchups={finalFourMatchups}
               picks={picks}
               onPick={handlePick}
               readOnly={readOnly}
@@ -290,7 +296,7 @@ export default function BracketTree({
               <button
                 onClick={() => onSave(picks)}
                 disabled={saving}
-                className="rounded-lg py-2 px-5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
+                className="rounded-lg py-2.5 px-6 text-base font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
               >
                 {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
               </button>
@@ -300,7 +306,7 @@ export default function BracketTree({
           {/* Bottom half: leftBottom + rightBottom */}
           <div className="flex justify-between">
             <div className="shrink-0">
-              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
+              <div className="text-[12px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {leftBottom}
               </div>
               <BracketRegion
@@ -315,7 +321,7 @@ export default function BracketTree({
             </div>
 
             <div className="shrink-0">
-              <div className="text-[10px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
+              <div className="text-[12px] uppercase tracking-widest text-center mb-1.5 font-semibold text-accent">
                 {rightBottom}
               </div>
               <BracketRegion

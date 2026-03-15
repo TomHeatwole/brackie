@@ -4,12 +4,13 @@ import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { joinPool } from "@/lib/pools";
 
-const SHARE_TITLE = "Join my pool on Brackie!";
-const SHARE_DESCRIPTION = "Join my pool on Brackie!";
+const TAB_TITLE = "Join my pool on Brackie!";
+const SHARE_TITLE = "Join my pool on brackie";
+const SHARE_DESCRIPTION = "Join my pool on brackie";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: SHARE_TITLE,
+    title: TAB_TITLE,
     description: SHARE_DESCRIPTION,
     openGraph: {
       title: SHARE_TITLE,

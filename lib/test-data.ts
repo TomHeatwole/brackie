@@ -213,6 +213,10 @@ export const TEST_TOURNAMENT: Tournament = {
   year: 2026,
   lock_date: "2026-03-19T12:00:00Z",
   status: "upcoming",
+  region_top_left: "East",
+  region_top_right: "West",
+  region_bottom_left: "South",
+  region_bottom_right: "Midwest",
 };
 
 export const TEST_TEAMS: Team[] = testTeams;

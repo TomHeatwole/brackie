@@ -18,12 +18,13 @@ import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
 
-const SHARE_TITLE = "Join my pool on Brackie!";
-const SHARE_DESCRIPTION = "Join my pool on Brackie!";
+const TAB_TITLE = "Join my pool on Brackie!";
+const SHARE_TITLE = "Join my pool on brackie";
+const SHARE_DESCRIPTION = "Join my pool on brackie";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
-    title: SHARE_TITLE,
+    title: TAB_TITLE,
     description: SHARE_DESCRIPTION,
     openGraph: {
       title: SHARE_TITLE,

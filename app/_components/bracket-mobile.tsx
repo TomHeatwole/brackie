@@ -1,23 +1,25 @@
 "use client";
 
 import { useState } from "react";
-import { Team, TournamentGame, REGIONS, ROUND_NAMES, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
+import { Team, TournamentGame, ROUND_NAMES, BracketStructure, getBracketStructure } from "@/lib/types";
 import TeamIcon from "./team-icon";
 
 interface Props {
   teams: Team[];
   games: TournamentGame[];
+  /** When provided, defines region tab order and Final Four matchups */
+  bracketStructure?: BracketStructure | null;
   picks: Record<string, string>;
   onPick: (gameId: string, teamId: string) => void;
   readOnly: boolean;
 }
 
+type TabType = string | "Final Four";
+
 function getTeamById(teams: Team[], id: string | null): Team | null {
   if (!id) return null;
   return teams.find((t) => t.id === id) ?? null;
 }
-
-type TabType = Region | "Final Four";
 
 function MobileMatchup({
   team1,
@@ -35,10 +37,10 @@ function MobileMatchup({
   function TeamRow({ team, isPicked }: { team: Team | null; isPicked: boolean }) {
     if (!team) {
       return (
-        <div className="flex items-center gap-3 px-3 py-2.5 bg-card border border-card-border first:rounded-t-lg last:rounded-b-lg first:border-b-0">
-          <span className="w-5 shrink-0" aria-hidden />
-          <span className="text-muted text-xs w-5 text-right font-mono">--</span>
-          <span className="text-muted text-sm italic">TBD</span>
+        <div className="flex items-center gap-3 px-3.5 py-3 bg-card border border-card-border first:rounded-t-lg last:rounded-b-lg first:border-b-0">
+          <span className="w-6 shrink-0" aria-hidden />
+          <span className="text-muted text-sm w-6 text-right font-mono">--</span>
+          <span className="text-muted text-base italic">TBD</span>
         </div>
       );
     }
@@ -50,7 +52,7 @@ function MobileMatchup({
         type="button"
         onClick={canClick ? () => onPick(team.id) : undefined}
         disabled={!canClick}
-        className={`flex items-center gap-3 px-3 py-2.5 w-full text-left transition-all first:rounded-t-lg last:rounded-b-lg first:border-b-0 ${
+        className={`flex items-center gap-3 px-3.5 py-3 w-full text-left transition-all first:rounded-t-lg last:rounded-b-lg first:border-b-0 ${
           canClick ? "active:scale-[0.98]" : ""
         }`}
         style={{
@@ -62,12 +64,12 @@ function MobileMatchup({
       >
         <TeamIcon team={team} size="sm" className="shrink-0" />
         <span
-          className="text-xs w-5 text-right font-mono font-semibold tabular-nums"
+          className="text-sm w-6 text-right font-mono font-semibold tabular-nums"
           style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}
         >
           {team.seed}
         </span>
-        <span className="font-medium text-sm flex-1 truncate">{team.name}</span>
+        <span className="font-medium text-base flex-1 truncate">{team.name}</span>
         {isPicked && (
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
             <polyline points="20 6 9 17 4 12" />
@@ -85,8 +87,10 @@ function MobileMatchup({
   );
 }
 
-export default function BracketMobile({ teams, games, picks, onPick, readOnly }: Props) {
-  const [activeTab, setActiveTab] = useState<TabType>(REGIONS[0]);
+export default function BracketMobile({ teams, games, bracketStructure, picks, onPick, readOnly }: Props) {
+  const structure = bracketStructure ?? getBracketStructure(null);
+  const { regionsInOrder, finalFourMatchups } = structure;
+  const [activeTab, setActiveTab] = useState<TabType>(regionsInOrder[0]);
   const [activeRound, setActiveRound] = useState(1);
 
   const isFinalFour = activeTab === "Final Four";
@@ -124,7 +128,7 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
     }
 
     if (game.round === 5) {
-      const matchup = FINAL_FOUR_MATCHUPS[game.position];
+      const matchup = finalFourMatchups[game.position];
       if (!matchup) return [null, null];
       const e8_1 = games.find((g) => g.round === 4 && g.region === matchup[0]);
       const e8_2 = games.find((g) => g.round === 4 && g.region === matchup[1]);
@@ -151,7 +155,7 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
     ];
   }
 
-  const tabs: TabType[] = [...REGIONS, "Final Four"];
+  const tabs: TabType[] = [...regionsInOrder, "Final Four"];
 
   return (
     <div className="flex flex-col gap-3">
@@ -164,7 +168,7 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
               setActiveTab(tab);
               setActiveRound(tab === "Final Four" ? 5 : 1);
             }}
-            className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+            className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-medium transition-all ${
               activeTab === tab
                 ? "bg-accent text-white"
                 : "text-muted-foreground hover:text-foreground bg-card border border-card-border"
@@ -184,7 +188,7 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><polyline points="15 18 9 12 15 6" /></svg>
         </button>
-        <span className="text-sm font-medium text-stone-200">
+        <span className="text-base font-medium text-stone-200">
           {ROUND_NAMES[currentRound] ?? `Round ${currentRound}`}
         </span>
         <button
@@ -212,7 +216,7 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
           );
         })}
         {roundGames.length === 0 && (
-          <div className="text-center py-8 text-muted text-sm">
+          <div className="text-center py-8 text-muted text-base">
             No games in this round
           </div>
         )}
@@ -227,10 +231,10 @@ export default function BracketMobile({ teams, games, picks, onPick, readOnly }:
         if (!winner) return null;
         return (
           <div className="text-center mt-2">
-            <div className="text-[10px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
+            <div className="text-[12px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
               Champion
             </div>
-            <div className="inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-bold bg-accent text-white shadow-lg shadow-accent/20">
+            <div className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-bold bg-accent text-white shadow-lg shadow-accent/20">
               <TeamIcon team={winner} size="sm" />
               <span>({winner.seed}) {winner.name}</span>
             </div>

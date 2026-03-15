@@ -7,10 +7,27 @@
 import * as fs from "fs";
 import * as path from "path";
 
+// Output order (and DB order): East, West, South, Midwest
 const REGIONS = ["East", "West", "South", "Midwest"] as const;
-// Bracket order per region: matchup 0 = seed 1 vs 16, 1 = 8 vs 9, ...
+// Tournament Challenge page shows regions in this order (so slot 16–31 = South, 32–47 = West)
+const REGIONS_TC = ["East", "South", "West", "Midwest"] as const;
+// Standard bracket order: 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
 const SEED_ORDER = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
+// Tournament Challenge page sometimes shows 3-seed matchup before 4-seed (positions 6 and 7 swapped)
+const SEED_ORDER_TC = [1, 16, 8, 9, 5, 12, 3, 14, 4, 13, 6, 11, 7, 10, 2, 15];
 const LOGO_BASE = "https://a.espncdn.com/i/teamlogos/ncaa/500";
+
+// First Four play-in slots: these get "Play In" and no logo; the scrape has 60 teams for the other 60 slots
+const PLAY_IN_SLOTS: Set<string> = new Set([
+  "South-16",
+  "Midwest-16",
+  "West-11",
+  "Midwest-11",
+]);
+
+function isPlayIn(region: string, seed: number): boolean {
+  return PLAY_IN_SLOTS.has(`${region}-${seed}`);
+}
 
 function main() {
   const htmlPath =
@@ -28,51 +45,114 @@ function main() {
     process.exit(1);
   }
 
-  const logoRe = /teamlogos\/ncaa\/500\/(\d+)\.png/g;
-  const nameRe = /BracketCell__Name truncate">([^<]+)/g;
+  const FALLBACK_LOGO_IDS = ["251", "152", "193", "2567"];
+  let first64Logos: string[];
+  let first64Names: string[];
 
-  const logoIds: string[] = [];
-  const names: string[] = [];
-
+  // Tournament Challenge (500-dark): logo and name are in the same block — pair by "logo URL then next </label>"
+  const darkLogoRe = /teamlogos\/ncaa\/500-dark\/(\d+)\.png/g;
+  const darkPairs: { id: string; name: string }[] = [];
   let m: RegExpExecArray | null;
-  while ((m = logoRe.exec(html)) !== null) logoIds.push(m[1]);
-  while ((m = nameRe.exec(html)) !== null) {
-    names.push(m[1].replace(/&amp;/g, "&"));
+  while ((m = darkLogoRe.exec(html)) !== null) {
+    const id = m[1];
+    const after = html.slice(m.index + m[0].length, m.index + m[0].length + 800);
+    const labelMatch = after.match(/>([A-Za-z0-9 .'&]+)<\/label>/);
+    const name = labelMatch
+      ? labelMatch[1].replace(/&amp;/g, "&").trim()
+      : "TBD";
+    if (name.length > 0 && name.length < 50) darkPairs.push({ id, name });
   }
 
-  if (logoIds.length < 64 || names.length < 64) {
-    console.error(
-      `Need at least 64 logos and 64 names; got ${logoIds.length} logos and ${names.length} names.`
-    );
-    process.exit(1);
+  const usedTcPairing = darkPairs.length >= 32;
+
+  if (usedTcPairing) {
+    // TC scrape: 60 teams; 4 slots are play-ins (South 16, Midwest 16, West 11, Midwest 11)
+    first64Logos = darkPairs.map((p) => p.id);
+    first64Names = darkPairs.map((p) => p.name);
+    // no padding — we have exactly 60 for the 60 non–play-in slots
+  } else {
+    // Original bracket (500): logos and names in document order
+    const logoRe = /teamlogos\/ncaa\/500\/(\d+)\.png/g;
+    const logoIds: string[] = [];
+    while ((m = logoRe.exec(html)) !== null) logoIds.push(m[1]);
+
+    const names: string[] = [];
+    const nameRe1 = /BracketCell__Name truncate">([^<]+)/g;
+    while ((m = nameRe1.exec(html)) !== null) {
+      names.push(m[1].replace(/&amp;/g, "&"));
+    }
+
+    first64Logos = logoIds.slice(0, 64);
+    first64Names = names.slice(0, 64);
+    while (first64Logos.length < 64) {
+      first64Logos.push(FALLBACK_LOGO_IDS[first64Logos.length - 60] ?? "12");
+    }
+    while (first64Names.length < 64) {
+      first64Names.push("TBD");
+    }
   }
 
-  const first64Logos = logoIds.slice(0, 64);
-  const first64Names = names.slice(0, 64);
+  const seedOrder = usedTcPairing ? SEED_ORDER_TC : SEED_ORDER;
 
-  // Bracket order: slot 0-15 East (seeds 1,16,8,9,...), 16-31 West, 32-47 South, 48-63 Midwest
-  const slotToEntry = (slot: number) => ({
-    region: REGIONS[Math.floor(slot / 16)],
-    seed: SEED_ORDER[slot % 16],
-    name: first64Names[slot],
-    icon_url: `${LOGO_BASE}/${first64Logos[slot]}.png`,
-  });
+  type Entry = { region: string; seed: number; name: string; icon_url: string | null };
+  const entries: Entry[] = [];
 
-  // Output order: East 1..16, West 1..16, South 1..16, Midwest 1..16 (for consistent JSON)
-  const entries: { region: string; seed: number; name: string; icon_url: string }[] = [];
-  for (const region of REGIONS) {
-    for (let seed = 1; seed <= 16; seed++) {
-      const bracketPos = SEED_ORDER.indexOf(seed);
-      const regionIndex = REGIONS.indexOf(region);
-      const slot = regionIndex * 16 + bracketPos;
-      entries.push(slotToEntry(slot));
+  if (usedTcPairing) {
+    // TC: 60 teams in page order = East (16), South (16), West (16), Midwest (16); 4 play-in slots get "Play In"
+    // Page order uses REGIONS_TC so slot 16–31 = South, 32–47 = West
+    let teamIndex = 0;
+    const entriesBySlot: Entry[] = [];
+    for (let slot = 0; slot < 64; slot++) {
+      const region = REGIONS_TC[Math.floor(slot / 16)];
+      const seed = seedOrder[slot % 16];
+      if (isPlayIn(region, seed)) {
+        entriesBySlot[slot] = { region, seed, name: "Play In", icon_url: null };
+      } else {
+        entriesBySlot[slot] = {
+          region,
+          seed,
+          name: first64Names[teamIndex],
+          icon_url: `${LOGO_BASE}/${first64Logos[teamIndex]}.png`,
+        };
+        teamIndex++;
+      }
+    }
+    // Output in standard REGIONS order (East, West, South, Midwest) for consistent JSON / DB
+    for (const region of REGIONS) {
+      for (let seed = 1; seed <= 16; seed++) {
+        const bracketPos = seedOrder.indexOf(seed);
+        const slot = REGIONS_TC.indexOf(region) * 16 + bracketPos;
+        entries.push(entriesBySlot[slot]);
+      }
+    }
+  } else {
+    const slotToEntry = (slot: number): Entry => {
+      const region = REGIONS[Math.floor(slot / 16)];
+      const seed = seedOrder[slot % 16];
+      if (isPlayIn(region, seed)) {
+        return { region, seed, name: "Play In", icon_url: null };
+      }
+      return {
+        region,
+        seed,
+        name: first64Names[slot],
+        icon_url: `${LOGO_BASE}/${first64Logos[slot]}.png`,
+      };
+    };
+    for (const region of REGIONS) {
+      for (let seed = 1; seed <= 16; seed++) {
+        const bracketPos = seedOrder.indexOf(seed);
+        const slot = REGIONS.indexOf(region) * 16 + bracketPos;
+        entries.push(slotToEntry(slot));
+      }
     }
   }
 
   fs.writeFileSync(outPath, JSON.stringify(entries, null, 2) + "\n", "utf-8");
   console.log("Wrote", outPath);
-  const nonTbd = entries.filter((e) => e.name !== "TBD").length;
-  console.log(`${nonTbd}/64 teams have non-TBD names.`);
+  const nonTbd = entries.filter((e) => e.name !== "TBD" && e.name !== "Play In").length;
+  const playInCount = entries.filter((e) => e.name === "Play In").length;
+  console.log(`${nonTbd}/64 teams with names; ${playInCount} play-in slots.`);
 }
 
 main();

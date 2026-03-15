@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getBracket } from "@/lib/brackets";
 import { getTeams, getGames, isTournamentLocked, getTournament } from "@/lib/tournament";
+import { getBracketStructure } from "@/lib/types";
 import { getPool } from "@/lib/pools";
 import Navbar from "../../_components/navbar";
 import BracketEditor from "./_components/bracket-editor";
@@ -80,6 +81,8 @@ export default async function BracketDetailPage({
     picksMap[pick.game_id] = pick.picked_team_id;
   }
 
+  const bracketStructure = tournament ? getBracketStructure(tournament) : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
@@ -98,6 +101,7 @@ export default async function BracketDetailPage({
             bracketName={bracket.name}
             teams={teams}
             games={games}
+            bracketStructure={bracketStructure}
             initialPicks={picksMap}
             locked={locked || !isOwner}
             poolId={pool ? poolId : undefined}

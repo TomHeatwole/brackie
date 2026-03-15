@@ -19,7 +19,7 @@ const baseUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(baseUrl),
-  title: "Brackie!",
+  title: "brackie",
   description: "March Madness brackets and pools",
   openGraph: {
     title: "Brackie!",
