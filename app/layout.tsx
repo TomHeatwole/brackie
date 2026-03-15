@@ -12,9 +12,27 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const baseUrl =
+  process.env.VERCEL_URL != null
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000";
+
 export const metadata: Metadata = {
-  title: "Brackie",
+  metadataBase: new URL(baseUrl),
+  title: "Brackie!",
   description: "March Madness brackets and pools",
+  openGraph: {
+    title: "Brackie!",
+    description: "March Madness brackets and pools",
+    images: [{ url: "/logo.png", width: 512, height: 512, alt: "Brackie!" }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Brackie!",
+    description: "March Madness brackets and pools",
+    images: ["/logo.png"],
+  },
 };
 
 export default function RootLayout({

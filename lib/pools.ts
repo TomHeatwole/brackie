@@ -54,19 +54,26 @@ export async function getUserPools(
   const creatorIds = [...new Set(pools.map((p: Pool) => p.creator_id))];
   const { data: creators } = await supabase
     .from("user_info")
-    .select("id, username")
+    .select("id, first_name, last_name")
     .in("id", creatorIds);
 
-  const creatorMap = new Map<string, string>();
+  const creatorMap = new Map<string, { first_name: string | null; last_name: string | null }>();
   for (const c of creators ?? []) {
-    if (c.username) creatorMap.set(c.id, c.username);
+    creatorMap.set(c.id, {
+      first_name: c.first_name ?? null,
+      last_name: c.last_name ?? null,
+    });
   }
 
-  return pools.map((p: Pool) => ({
-    ...p,
-    member_count: memberCounts.get(p.id) ?? 0,
-    creator_username: creatorMap.get(p.creator_id),
-  }));
+  return pools.map((p: Pool) => {
+    const creator = creatorMap.get(p.creator_id);
+    return {
+      ...p,
+      member_count: memberCounts.get(p.id) ?? 0,
+      creator_first_name: creator?.first_name ?? null,
+      creator_last_name: creator?.last_name ?? null,
+    };
+  });
 }
 
 export async function getPool(
@@ -88,14 +95,15 @@ export async function getPool(
 
   const { data: creator } = await supabase
     .from("user_info")
-    .select("username")
+    .select("first_name, last_name")
     .eq("id", pool.creator_id)
     .single();
 
   return {
     ...pool,
     member_count: members?.length ?? 0,
-    creator_username: creator?.username,
+    creator_first_name: creator?.first_name ?? null,
+    creator_last_name: creator?.last_name ?? null,
   };
 }
 

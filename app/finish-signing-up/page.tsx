@@ -4,20 +4,29 @@ import { getUserInfo, isProfileComplete } from "@/utils/user-info";
 import Navbar from "@/app/_components/navbar";
 import FinishSigningUpForm from "./_components/finish-signing-up-form";
 
-export default async function FinishSigningUpPage() {
+export default async function FinishSigningUpPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   const supabase = await createClient();
 
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
+  const params = await searchParams;
+  const nextParam = params?.next;
+  const next =
+    typeof nextParam === "string" ? nextParam : Array.isArray(nextParam) ? nextParam[0] : undefined;
+
   if (!user) {
-    redirect("/login");
+    redirect(next ? `/login?next=${encodeURIComponent(next)}` : "/login");
   }
 
   const userInfo = await getUserInfo(supabase, user.id);
   if (isProfileComplete(userInfo)) {
-    redirect("/");
+    redirect(next ?? "/");
   }
 
   return (
@@ -41,7 +50,7 @@ export default async function FinishSigningUpPage() {
               Just a few details before you can start making brackets.
             </p>
 
-            <FinishSigningUpForm />
+            <FinishSigningUpForm next={next} />
           </div>
         </div>
       </div>

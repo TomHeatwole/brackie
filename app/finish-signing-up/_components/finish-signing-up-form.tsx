@@ -49,7 +49,7 @@ function filterUsername(value: string) {
   return value.replace(/[^a-zA-Z0-9_]/g, "").slice(0, 30);
 }
 
-export default function FinishSigningUpForm() {
+export default function FinishSigningUpForm({ next }: { next?: string }) {
   const [state, action, isPending] = useActionState(finishSigningUp, initialState);
 
   function handleUsernameChange(e: React.ChangeEvent<HTMLInputElement>) {
@@ -61,6 +61,7 @@ export default function FinishSigningUpForm() {
 
   return (
     <form action={action} noValidate className="flex flex-col gap-4">
+      {next != null && <input type="hidden" name="next" value={next} />}
       <div className="flex gap-3">
         <div className="flex-1">
           <Field

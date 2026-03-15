@@ -12,13 +12,14 @@ const NAV_TABS = [
 
 interface NavbarProps {
   userEmail?: string | null;
-  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   avatarUrl?: string | null;
   activeTab?: string;
   modeParam?: string;
 }
 
-export default function Navbar({ userEmail, username, avatarUrl, activeTab, modeParam = "" }: NavbarProps) {
+export default function Navbar({ userEmail, firstName, lastName, avatarUrl, activeTab, modeParam = "" }: NavbarProps) {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -55,7 +56,7 @@ export default function Navbar({ userEmail, username, avatarUrl, activeTab, mode
         )}
 
         <div className="flex items-center gap-2 shrink-0">
-          {userEmail && <UserMenu userEmail={userEmail} username={username} avatarUrl={avatarUrl} />}
+          {userEmail && <UserMenu userEmail={userEmail} firstName={firstName} lastName={lastName} avatarUrl={avatarUrl} />}
           {isMobile && (
             <button
               onClick={() => setMenuOpen((v) => !v)}

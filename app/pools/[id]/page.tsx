@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import {
@@ -10,11 +11,34 @@ import {
 } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
 import { getTeams, getGames } from "@/lib/tournament";
+import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
 import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
+
+const SHARE_TITLE = "Join my pool on Brackie!";
+const SHARE_DESCRIPTION = "Join my pool on Brackie!";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return {
+    title: SHARE_TITLE,
+    description: SHARE_DESCRIPTION,
+    openGraph: {
+      title: SHARE_TITLE,
+      description: SHARE_DESCRIPTION,
+      images: [{ url: "/logo.png", width: 512, height: 512, alt: "Brackie!" }],
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: SHARE_TITLE,
+      description: SHARE_DESCRIPTION,
+      images: ["/logo.png"],
+    },
+  };
+}
 
 export default async function PoolDetailPage({
   params,
@@ -25,9 +49,28 @@ export default async function PoolDetailPage({
 }) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect("/login");
 
   const { id: poolId } = await params;
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
+        <h1 className="text-2xl font-semibold text-stone-100 text-center mb-2">
+          Join my pool on Brackie!
+        </h1>
+        <p className="text-muted text-center mb-6">
+          Sign in to join this pool and make your bracket.
+        </p>
+        <Link
+          href={`/login?next=${encodeURIComponent(`/pools/${poolId}`)}`}
+          className="btn-primary px-6 py-3 text-base font-medium"
+        >
+          Sign in to join
+        </Link>
+      </div>
+    );
+  }
+
   const sp = await searchParams;
   const testMode = sp?.mode === "test";
   const modeParam = testMode ? "?mode=test" : "";
@@ -73,7 +116,7 @@ export default async function PoolDetailPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <Link
@@ -93,8 +136,8 @@ export default async function PoolDetailPage({
                     <span className="text-muted text-sm">
                       {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
                     </span>
-                    {pool.creator_username && (
-                      <span className="text-muted text-sm">Created by {pool.creator_username}</span>
+                    {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name) && (
+                      <span className="text-muted text-sm">Created by {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name)}</span>
                     )}
                   </div>
                 </div>
@@ -184,11 +227,12 @@ export default async function PoolDetailPage({
                   <div className="flex items-center gap-2.5">
                     <UserAvatar
                       avatarUrl={member.avatar_url}
-                      username={member.username}
+                      firstName={member.first_name}
+                      lastName={member.last_name}
                       size="sm"
                     />
                     <span className="text-stone-200 text-sm">
-                      {member.username ?? member.first_name ?? "Anonymous"}
+                      {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
                     </span>
                     {member.user_id === pool.creator_id && (
                       <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">

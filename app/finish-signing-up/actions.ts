@@ -84,5 +84,6 @@ export async function finishSigningUp(
     return { error: "Something went wrong saving your profile. Please try again." };
   }
 
-  redirect("/");
+  const next = (formData.get("next") as string | null)?.trim();
+  redirect(next && next.startsWith("/") ? next : "/");
 }

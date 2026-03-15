@@ -139,7 +139,8 @@ export interface PoolBracket {
 
 export interface PoolWithDetails extends Pool {
   member_count: number;
-  creator_username?: string;
+  creator_first_name?: string | null;
+  creator_last_name?: string | null;
 }
 
 export interface PoolMemberWithInfo extends PoolMember {

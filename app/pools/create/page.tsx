@@ -23,7 +23,7 @@ export default async function CreatePoolPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex flex-col items-center pb-24">
         <div className="w-full max-w-md px-4 py-8">
           <Link

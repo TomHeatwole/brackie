@@ -4,15 +4,17 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { formatUserDisplayName } from "@/utils/display-name";
 import UserAvatar from "./user-avatar";
 
 interface UserMenuProps {
   userEmail: string;
-  username?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   avatarUrl?: string | null;
 }
 
-export default function UserMenu({ userEmail, username, avatarUrl }: UserMenuProps) {
+export default function UserMenu({ userEmail, firstName, lastName, avatarUrl }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -33,7 +35,7 @@ export default function UserMenu({ userEmail, username, avatarUrl }: UserMenuPro
     router.push("/login");
   }
 
-  const displayName = username ? `@${username}` : userEmail;
+  const displayName = formatUserDisplayName(firstName, lastName) || userEmail;
 
   return (
     <div ref={ref} className="relative">
@@ -41,7 +43,7 @@ export default function UserMenu({ userEmail, username, avatarUrl }: UserMenuPro
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition-all hover:bg-white/5 border border-transparent hover:border-card-border"
       >
-        <UserAvatar avatarUrl={avatarUrl} username={username} email={userEmail} size="sm" />
+        <UserAvatar avatarUrl={avatarUrl} firstName={firstName} lastName={lastName} email={userEmail} size="sm" />
         <span className="text-stone-300 text-xs max-w-[140px] truncate hidden sm:block">
           {displayName}
         </span>

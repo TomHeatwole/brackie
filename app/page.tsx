@@ -33,7 +33,7 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={modeParam} />
       <main className="pt-16 min-h-screen flex justify-center">
         <div className="w-full max-w-5xl flex flex-col md:flex-row">
           {/* Your Brackets */}

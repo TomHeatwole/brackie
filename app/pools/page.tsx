@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getUserPools } from "@/lib/pools";
+import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../_components/navbar";
 import PoolIcon from "../_components/pool-icon";
 import JoinPoolForm from "./_components/join-pool-form";
@@ -25,7 +26,7 @@ export default async function PoolsPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <div className="flex items-center justify-between mb-8">
@@ -63,7 +64,7 @@ export default async function PoolsPage({
                       </div>
                       <p className="text-muted text-xs mt-0.5">
                         {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
-                        {pool.creator_username && <> &middot; Created by {pool.creator_username}</>}
+                        {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name) && <> &middot; Created by {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name)}</>}
                       </p>
                     </div>
                   </div>

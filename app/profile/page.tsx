@@ -17,7 +17,7 @@ export default async function ProfilePage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} />
       <main className="pt-12 min-h-screen flex justify-center px-4">
         <div className="w-full max-w-sm py-16">
           <div className="mb-8">
