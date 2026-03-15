@@ -51,16 +51,27 @@ export async function getUserBrackets(
 
   const teamMap = new Map<string, { name: string; seed: number; icon_url: string | null }>();
   if (champTeamIds.size > 0) {
-    const { data: teams } = await supabase
+    const { data: teams, error } = await supabase
       .from("teams")
-      .select("id, name, seed")
+      .select("id, name, seed, icon_url")
       .in("id", [...champTeamIds]);
-    for (const t of teams ?? []) {
-      teamMap.set(t.id, {
-        name: t.name,
-        seed: t.seed,
-        icon_url: null,
-      });
+    if (error) {
+      const { data: fallback } = await supabase
+        .from("teams")
+        .select("id, name, seed")
+        .in("id", [...champTeamIds]);
+      for (const t of fallback ?? []) {
+        teamMap.set(t.id, { name: t.name, seed: t.seed, icon_url: null });
+      }
+    } else {
+      for (const t of teams ?? []) {
+        const row = t as { id: string; name: string; seed: number; icon_url?: string | null };
+        teamMap.set(row.id, {
+          name: row.name,
+          seed: row.seed,
+          icon_url: row.icon_url ?? null,
+        });
+      }
     }
   }
 

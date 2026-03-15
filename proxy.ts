@@ -15,8 +15,11 @@ function isPublicPath(pathname: string) {
   );
 }
 
+// Exclude static assets and OG image so middleware never runs for them (avoids 401 for crawlers).
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|share_logo\\.png|logo\\.png|robots\\.txt|manifest\\.webmanifest).*)",
+  ],
 };
 
 /** Paths that skip auth entirely (static/public). */
