@@ -5,6 +5,7 @@ create table public.user_info (
   last_name character varying null,
   username character varying null,
   avatar_url character varying null,
+  is_site_admin boolean not null default false,
   constraint user_info_pkey primary key (id),
   constraint user_info_id_fkey foreign KEY (id) references auth.users (id) on update RESTRICT on delete RESTRICT
 ) TABLESPACE pg_default;
