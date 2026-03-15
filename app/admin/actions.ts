@@ -282,3 +282,117 @@ export async function rawSelectAction(
 
   return { success: true, message: `${data.length} row(s) from "${table}"`, rows: data ?? [] };
 }
+
+// ── Game results (admin override) ──
+
+export interface GameWithTeamNames {
+  id: string;
+  round: number;
+  position: number;
+  region: string | null;
+  team1_id: string | null;
+  team2_id: string | null;
+  winner_id: string | null;
+  team1_name: string | null;
+  team2_name: string | null;
+  winner_name: string | null;
+}
+
+export async function getTournamentGamesForAdminAction(
+  tournamentId: string
+): Promise<{ games: GameWithTeamNames[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: games, error: gamesErr } = await supabase
+    .from("tournament_games")
+    .select("id, round, position, region, team1_id, team2_id, winner_id")
+    .eq("tournament_id", tournamentId)
+    .order("round")
+    .order("position");
+
+  if (gamesErr || !games) {
+    return { games: [], error: gamesErr?.message ?? "Failed to load games." };
+  }
+
+  const teamIds = new Set<string>();
+  for (const g of games) {
+    if (g.team1_id) teamIds.add(g.team1_id);
+    if (g.team2_id) teamIds.add(g.team2_id);
+    if (g.winner_id) teamIds.add(g.winner_id);
+  }
+  const { data: teams } = await supabase
+    .from("teams")
+    .select("id, name")
+    .in("id", [...teamIds]);
+
+  const nameById = new Map<string, string>();
+  for (const t of teams ?? []) {
+    nameById.set(t.id, t.name);
+  }
+
+  const result: GameWithTeamNames[] = games.map((g) => ({
+    ...g,
+    team1_name: g.team1_id ? nameById.get(g.team1_id) ?? null : null,
+    team2_name: g.team2_id ? nameById.get(g.team2_id) ?? null : null,
+    winner_name: g.winner_id ? nameById.get(g.winner_id) ?? null : null,
+  }));
+
+  return { games: result };
+}
+
+export async function setGameWinnerAction(
+  gameId: string,
+  winnerId: string | null
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tournament_games")
+    .update({ winner_id: winnerId })
+    .eq("id", gameId);
+
+  if (error) return { success: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  revalidatePath("/brackets");
+  return { success: true, message: "Game result updated." };
+}
+
+// ── Team edit (name, icon) ──
+
+export async function getTournamentTeamsForAdminAction(
+  tournamentId: string
+): Promise<{ teams: { id: string; name: string; seed: number; region: string; icon_url: string | null }[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: teams, error } = await supabase
+    .from("teams")
+    .select("id, name, seed, region, icon_url")
+    .eq("tournament_id", tournamentId)
+    .order("region")
+    .order("seed");
+
+  if (error) {
+    return { teams: [], error: error.message };
+  }
+  return { teams: teams ?? [] };
+}
+
+export async function updateTeamAction(
+  teamId: string,
+  updates: { name?: string; icon_url?: string | null }
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+  const update: Record<string, unknown> = {};
+  if (updates.name !== undefined) update.name = updates.name.trim();
+  if (updates.icon_url !== undefined) update.icon_url = updates.icon_url?.trim() || null;
+
+  if (Object.keys(update).length === 0) {
+    return { success: false, message: "No changes provided." };
+  }
+
+  const { error } = await supabase.from("teams").update(update).eq("id", teamId);
+
+  if (error) return { success: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  revalidatePath("/brackets");
+  return { success: true, message: "Team updated." };
+}

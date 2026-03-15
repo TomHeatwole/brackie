@@ -5,7 +5,7 @@ import { Tournament } from "@/lib/types";
 import Navbar from "../_components/navbar";
 import {
   CreateTournamentPanel,
-  TournamentManagerPanel,
+  AdminTournamentPanels,
   RawTablePanel,
 } from "./_components/admin-panels";
 
@@ -34,7 +34,7 @@ export default async function AdminPage() {
 
           <div className="flex flex-col gap-6">
             <CreateTournamentPanel />
-            <TournamentManagerPanel tournaments={(tournaments as Tournament[]) ?? []} />
+            <AdminTournamentPanels tournaments={(tournaments as Tournament[]) ?? []} />
             <RawTablePanel />
           </div>
         </div>

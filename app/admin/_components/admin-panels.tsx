@@ -10,7 +10,12 @@ import {
   seedTournamentAction,
   clearTournamentDataAction,
   rawSelectAction,
+  getTournamentGamesForAdminAction,
+  setGameWinnerAction,
+  getTournamentTeamsForAdminAction,
+  updateTeamAction,
   AdminActionResult,
+  GameWithTeamNames,
 } from "../actions";
 
 const emptyResult: AdminActionResult = { success: false, message: "" };
@@ -118,21 +123,28 @@ export function CreateTournamentPanel() {
   );
 }
 
-// ── Tournament Manager ──
+// ── Tournament Manager (no dropdown; receives tournamentId from parent) ──
 
-export function TournamentManagerPanel({ tournaments }: { tournaments: Tournament[] }) {
+export function TournamentManagerPanel({
+  tournaments,
+  tournamentId,
+  onTournamentIdChange,
+}: {
+  tournaments: Tournament[];
+  tournamentId: string;
+  onTournamentIdChange: (id: string) => void;
+}) {
   const [statusState, statusAction, statusPending] = useActionState(updateTournamentStatusAction, emptyResult);
   const [lockState, lockAction, lockPending] = useActionState(updateTournamentLockDateAction, emptyResult);
   const [seedState, seedAction, seedPending] = useActionState(seedTournamentAction, emptyResult);
   const [deleteMsg, setDeleteMsg] = useState<AdminActionResult | null>(null);
   const [clearMsg, setClearMsg] = useState<AdminActionResult | null>(null);
-  const [selectedId, setSelectedId] = useState(tournaments[0]?.id ?? "");
 
   useEffect(() => {
-    if (tournaments.length > 0 && !tournaments.find((t) => t.id === selectedId)) {
-      setSelectedId(tournaments[0].id);
+    if (tournaments.length > 0 && !tournaments.find((t) => t.id === tournamentId)) {
+      onTournamentIdChange(tournaments[0].id);
     }
-  }, [tournaments, selectedId]);
+  }, [tournaments, tournamentId, onTournamentIdChange]);
 
   if (tournaments.length === 0) {
     return (
@@ -142,13 +154,20 @@ export function TournamentManagerPanel({ tournaments }: { tournaments: Tournamen
     );
   }
 
-  const selected = tournaments.find((t) => t.id === selectedId);
+  const selected = tournaments.find((t) => t.id === tournamentId);
 
   return (
     <Card title="Manage Tournament">
       <div className="mb-4">
         <Label>Select Tournament</Label>
-        <Select value={selectedId} onChange={(e) => { setSelectedId(e.target.value); setDeleteMsg(null); setClearMsg(null); }}>
+        <Select
+          value={tournamentId}
+          onChange={(e) => {
+            onTournamentIdChange(e.target.value);
+            setDeleteMsg(null);
+            setClearMsg(null);
+          }}
+        >
           {tournaments.map((t) => (
             <option key={t.id} value={t.id}>
               {t.name} ({t.status})
@@ -163,7 +182,7 @@ export function TournamentManagerPanel({ tournaments }: { tournaments: Tournamen
       <div className="flex flex-col gap-4">
         {/* Status */}
         <form action={statusAction} className="flex items-end gap-2">
-          <input type="hidden" name="tournament_id" value={selectedId} />
+          <input type="hidden" name="tournament_id" value={tournamentId} />
           <div className="flex-1">
             <Label>Update Status</Label>
             <Select name="status" defaultValue={selected?.status}>
@@ -178,7 +197,7 @@ export function TournamentManagerPanel({ tournaments }: { tournaments: Tournamen
 
         {/* Lock date */}
         <form action={lockAction} className="flex items-end gap-2">
-          <input type="hidden" name="tournament_id" value={selectedId} />
+          <input type="hidden" name="tournament_id" value={tournamentId} />
           <div className="flex-1">
             <Label>Update Lock Date</Label>
             <Input name="lock_date" type="datetime-local" defaultValue={selected?.lock_date?.slice(0, 16) ?? ""} />
@@ -189,7 +208,7 @@ export function TournamentManagerPanel({ tournaments }: { tournaments: Tournamen
 
         {/* Seed */}
         <form action={seedAction}>
-          <input type="hidden" name="tournament_id" value={selectedId} />
+          <input type="hidden" name="tournament_id" value={tournamentId} />
           <Btn type="submit" pending={seedPending}>Seed 64 Teams + 63 Games</Btn>
         </form>
         <StatusBadge result={seedState} />
@@ -219,6 +238,271 @@ export function TournamentManagerPanel({ tournaments }: { tournaments: Tournamen
         {deleteMsg && <StatusBadge result={deleteMsg} />}
       </div>
     </Card>
+  );
+}
+
+// ── Game Results (set winner per game) ──
+
+export function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
+  const [games, setGames] = useState<GameWithTeamNames[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<AdminActionResult | null>(null);
+
+  useEffect(() => {
+    if (!tournamentId) {
+      setGames([]);
+      return;
+    }
+    setLoading(true);
+    getTournamentGamesForAdminAction(tournamentId).then((res) => {
+      setGames(res.games);
+      setLoading(false);
+    });
+  }, [tournamentId]);
+
+  async function handleSetWinner(gameId: string, winnerId: string | null) {
+    setMsg(null);
+    const result = await setGameWinnerAction(gameId, winnerId);
+    setMsg(result);
+    if (result.success) {
+      getTournamentGamesForAdminAction(tournamentId).then((res) => setGames(res.games));
+    }
+  }
+
+  if (!tournamentId) {
+    return (
+      <Card title="Game Results">
+        <p className="text-stone-500 text-sm">Select a tournament above.</p>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card title="Game Results">
+        <p className="text-stone-500 text-sm">Loading games…</p>
+      </Card>
+    );
+  }
+
+  if (games.length === 0) {
+    return (
+      <Card title="Game Results">
+        <p className="text-stone-500 text-sm">No games. Seed the tournament first.</p>
+      </Card>
+    );
+  }
+
+  const roundLabels: Record<number, string> = {
+    1: "R1",
+    2: "R2",
+    3: "Sweet 16",
+    4: "Elite 8",
+    5: "Final Four",
+    6: "Championship",
+  };
+
+  return (
+    <Card title="Game Results">
+      <p className="text-stone-500 text-xs mb-3">Set winner for each game. Overrides any scraped data.</p>
+      {msg && <StatusBadge result={msg} />}
+      <div className="overflow-x-auto max-h-[420px] overflow-y-auto space-y-2">
+        {games.map((g) => (
+          <div
+            key={g.id}
+            className="flex flex-wrap items-center gap-2 py-2 px-3 rounded border border-card-border bg-background text-sm"
+          >
+            <span className="text-stone-500 font-mono w-20 shrink-0">{roundLabels[g.round] ?? `R${g.round}`}</span>
+            <span className="text-stone-400 shrink-0">{g.team1_name ?? "TBD"}</span>
+            <span className="text-stone-600">vs</span>
+            <span className="text-stone-400 shrink-0">{g.team2_name ?? "TBD"}</span>
+            <span className="text-stone-600 text-xs shrink-0">→</span>
+            <div className="flex gap-1 flex-wrap">
+              <button
+                type="button"
+                onClick={() => handleSetWinner(g.id, g.team1_id)}
+                disabled={!g.team1_id}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                  g.winner_id === g.team1_id
+                    ? "bg-green-800 text-green-200"
+                    : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                }`}
+              >
+                {g.team1_name ?? "TBD"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetWinner(g.id, g.team2_id)}
+                disabled={!g.team2_id}
+                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                  g.winner_id === g.team2_id
+                    ? "bg-green-800 text-green-200"
+                    : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                }`}
+              >
+                {g.team2_name ?? "TBD"}
+              </button>
+              <button
+                type="button"
+                onClick={() => handleSetWinner(g.id, null)}
+                className="rounded px-2 py-0.5 text-xs font-medium bg-stone-700 text-stone-500 hover:bg-stone-600"
+              >
+                Clear
+              </button>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ── Teams (edit name & picture) ──
+
+interface TeamRow {
+  id: string;
+  name: string;
+  seed: number;
+  region: string;
+  icon_url: string | null;
+}
+
+export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
+  const [teams, setTeams] = useState<TeamRow[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editIconUrl, setEditIconUrl] = useState("");
+  const [msg, setMsg] = useState<AdminActionResult | null>(null);
+
+  useEffect(() => {
+    if (!tournamentId) {
+      setTeams([]);
+      return;
+    }
+    setLoading(true);
+    getTournamentTeamsForAdminAction(tournamentId).then((res) => {
+      setTeams(res.teams);
+      setLoading(false);
+    });
+  }, [tournamentId]);
+
+  function startEdit(t: TeamRow) {
+    setEditingId(t.id);
+    setEditName(t.name);
+    setEditIconUrl(t.icon_url ?? "");
+  }
+
+  async function saveEdit() {
+    if (!editingId) return;
+    setMsg(null);
+    const result = await updateTeamAction(editingId, {
+      name: editName.trim() || undefined,
+      icon_url: editIconUrl.trim() || null,
+    });
+    setMsg(result);
+    if (result.success) {
+      setEditingId(null);
+      getTournamentTeamsForAdminAction(tournamentId).then((res) => setTeams(res.teams));
+    }
+  }
+
+  if (!tournamentId) {
+    return (
+      <Card title="Teams (names & pictures)">
+        <p className="text-stone-500 text-sm">Select a tournament above.</p>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card title="Teams (names & pictures)">
+        <p className="text-stone-500 text-sm">Loading teams…</p>
+      </Card>
+    );
+  }
+
+  if (teams.length === 0) {
+    return (
+      <Card title="Teams (names & pictures)">
+        <p className="text-stone-500 text-sm">No teams. Seed the tournament first.</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="Teams (names & pictures)">
+      <p className="text-stone-500 text-xs mb-3">Edit team name and icon URL. Changes apply across pools and brackets.</p>
+      {msg && <StatusBadge result={msg} />}
+      <div className="overflow-x-auto max-h-[420px] overflow-y-auto space-y-2">
+        {teams.map((t) => (
+          <div
+            key={t.id}
+            className="flex flex-wrap items-center gap-2 py-2 px-3 rounded border border-card-border bg-background text-sm"
+          >
+            {editingId === t.id ? (
+              <>
+                <span className="text-stone-500 font-mono shrink-0">{t.region} #{t.seed}</span>
+                <Input
+                  className="flex-1 min-w-[120px]"
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  placeholder="Team name"
+                />
+                <Input
+                  className="flex-1 min-w-[160px]"
+                  value={editIconUrl}
+                  onChange={(e) => setEditIconUrl(e.target.value)}
+                  placeholder="Icon URL"
+                />
+                <button type="button" onClick={saveEdit} className="rounded px-2 py-1 text-xs font-medium text-white btn-primary">
+                  Save
+                </button>
+                <button type="button" onClick={() => setEditingId(null)} className="rounded px-2 py-1 text-xs bg-stone-700 text-stone-300">
+                  Cancel
+                </button>
+              </>
+            ) : (
+              <>
+                <span className="text-stone-500 font-mono shrink-0">{t.region} #{t.seed}</span>
+                <span className="text-stone-200 shrink-0">{t.name}</span>
+                {t.icon_url && (
+                  <img src={t.icon_url} alt="" className="w-6 h-6 object-contain shrink-0" />
+                )}
+                <button type="button" onClick={() => startEdit(t)} className="text-xs text-accent hover:underline shrink-0">
+                  Edit
+                </button>
+              </>
+            )}
+          </div>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
+// ── Wrapper: shared tournament selection for manager + game results + teams ──
+
+export function AdminTournamentPanels({ tournaments }: { tournaments: Tournament[] }) {
+  const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? "");
+
+  useEffect(() => {
+    if (tournaments.length > 0 && !tournaments.find((t) => t.id === tournamentId)) {
+      setTournamentId(tournaments[0].id);
+    }
+  }, [tournaments, tournamentId]);
+
+  return (
+    <>
+      <TournamentManagerPanel
+        tournaments={tournaments}
+        tournamentId={tournamentId}
+        onTournamentIdChange={setTournamentId}
+      />
+      <GameResultsPanel tournamentId={tournamentId} />
+      <TeamsPanel tournamentId={tournamentId} />
+    </>
   );
 }
 

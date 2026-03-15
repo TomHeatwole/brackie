@@ -10,7 +10,7 @@ import {
   getPoolBracketGoodyAnswers,
 } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
-import { getTeams, getGames } from "@/lib/tournament";
+import { getTeams, getGames, getTournament } from "@/lib/tournament";
 import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
@@ -105,14 +105,24 @@ export default async function PoolDetailPage({
       ? await getPoolBracketGoodyAnswers(supabase, poolBracketRow.id)
       : [];
 
-  const [teams, allGames] = await Promise.all([
+  const [tournament, teams, allGames] = await Promise.all([
+    getTournament(supabase, pool.tournament_id, testMode),
     getTeams(supabase, pool.tournament_id, testMode),
     getGames(supabase, pool.tournament_id, testMode),
   ]);
   const firstRoundGames = allGames.filter((g) => g.round === 1);
 
+  const isActive = tournament?.status === "active" || tournament?.status === "completed";
   const isMember = members.some((m) => m.user_id === user.id);
   const isCreator = pool.creator_id === user.id;
+
+  // Placeholder scores for active mode (real scoring algorithm later)
+  const membersWithScores = members.map((m, i) => ({
+    ...m,
+    points: (members.length - i) * 12 + (i % 3) * 5,
+    possiblePoints: i % 2 === 0 ? 340 + (i % 4) * 20 : 280 - (i % 3) * 15,
+  }));
+  const sortedByPoints = [...membersWithScores].sort((a, b) => b.points - a.points);
 
   return (
     <div className="min-h-screen bg-background">
@@ -153,17 +163,19 @@ export default async function PoolDetailPage({
             </div>
           </div>
 
-          <div className="card rounded-lg p-4 mb-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-sm font-medium text-stone-300 mb-1">Invite Code</h2>
-                <p className="text-muted text-xs">Share the code or link with friends to invite them</p>
+          {!isActive && (
+            <div className="card rounded-lg p-4 mb-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-sm font-medium text-stone-300 mb-1">Invite Code</h2>
+                  <p className="text-muted text-xs">Share the code or link with friends to invite them</p>
+                </div>
+                <InviteCodeDisplay code={pool.invite_code} />
               </div>
-              <InviteCodeDisplay code={pool.invite_code} />
             </div>
-          </div>
+          )}
 
-          {isMember && (
+          {!isActive && isMember && (
             <div className="card rounded-lg p-4 mb-6">
               <h2 className="text-sm font-medium text-stone-300 mb-3">
                 {currentUserPoolBracket ? "Your Submitted Bracket" : "Submit a Bracket"}
@@ -215,51 +227,101 @@ export default async function PoolDetailPage({
           )}
 
           <div className="rounded-lg overflow-hidden border border-card-border">
-            <div className="px-4 py-3 bg-card">
-              <h2 className="text-sm font-medium text-stone-300">Members</h2>
+            <div className="px-4 py-3 bg-card flex items-center justify-between">
+              <h2 className="text-sm font-medium text-stone-300">
+                {isActive ? "Scores" : "Members"}
+              </h2>
+              {isActive && (
+                <span className="text-xs text-stone-500">
+                  Points · Possible (remaining)
+                </span>
+              )}
             </div>
             <div className="divide-y divide-card-border">
-              {members.map((member) => (
-                <div
-                  key={member.id}
-                  className="px-4 py-3 flex items-center justify-between bg-background"
-                >
-                  <div className="flex items-center gap-2.5">
-                    <UserAvatar
-                      avatarUrl={member.avatar_url}
-                      firstName={member.first_name}
-                      lastName={member.last_name}
-                      size="sm"
-                    />
-                    <span className="text-stone-200 text-sm">
-                      {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
-                    </span>
-                    {member.user_id === pool.creator_id && (
-                      <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
-                        Creator
+              {isActive ? (
+                sortedByPoints.map((member, rank) => (
+                  <div
+                    key={member.id}
+                    className="px-4 py-3 flex items-center justify-between bg-background"
+                  >
+                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                      <span className="text-stone-500 font-mono text-sm w-6 shrink-0">
+                        {rank + 1}
                       </span>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    {member.bracket_submitted ? (
-                      member.bracket_id ? (
-                        <Link
-                          href={`/brackets/${member.bracket_id}${modeParam}`}
-                          className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
-                        >
-                          {member.bracket_name ?? "Bracket submitted"}
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-green-400">
-                          {member.bracket_name ?? "Bracket submitted"}
+                      <UserAvatar
+                        avatarUrl={member.avatar_url}
+                        firstName={member.first_name}
+                        lastName={member.last_name}
+                        size="sm"
+                      />
+                      <span className="text-stone-200 text-sm truncate">
+                        {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
+                      </span>
+                      {member.user_id === pool.creator_id && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground shrink-0">
+                          Creator
                         </span>
-                      )
-                    ) : (
-                      <span className="text-xs text-stone-600">No bracket</span>
-                    )}
+                      )}
+                    </div>
+                    <div className="flex items-center gap-6 shrink-0 text-right">
+                      <div>
+                        <span className="text-stone-200 font-semibold tabular-nums">
+                          {member.points}
+                        </span>
+                        <span className="text-stone-500 text-xs ml-0.5">pts</span>
+                      </div>
+                      <div>
+                        <span className="text-stone-400 text-sm tabular-nums">
+                          {member.possiblePoints}
+                        </span>
+                        <span className="text-stone-600 text-xs ml-0.5">possible</span>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))
+              ) : (
+                members.map((member) => (
+                  <div
+                    key={member.id}
+                    className="px-4 py-3 flex items-center justify-between bg-background"
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <UserAvatar
+                        avatarUrl={member.avatar_url}
+                        firstName={member.first_name}
+                        lastName={member.last_name}
+                        size="sm"
+                      />
+                      <span className="text-stone-200 text-sm">
+                        {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
+                      </span>
+                      {member.user_id === pool.creator_id && (
+                        <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
+                          Creator
+                        </span>
+                      )}
+                    </div>
+                    <div className="text-right">
+                      {member.bracket_submitted ? (
+                        member.bracket_id ? (
+                          <Link
+                            href={`/brackets/${member.bracket_id}${modeParam}`}
+                            className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
+                          >
+                            {member.bracket_name ?? "Bracket submitted"}
+                          </Link>
+                        ) : (
+                          <span className="text-xs text-green-400">
+                            {member.bracket_name ?? "Bracket submitted"}
+                          </span>
+                        )
+                      ) : (
+                        <span className="text-xs text-stone-600">No bracket</span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
         </div>
