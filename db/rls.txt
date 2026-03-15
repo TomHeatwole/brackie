@@ -1,0 +1,53 @@
+user_info
+- SELECT: true
+- INSERT: (( SELECT auth.uid() AS uid) = id)
+- UPDATE: (( SELECT auth.uid() AS uid) = id)
+- DELETE: (( SELECT auth.uid() AS uid) = id)
+
+tournaments
+- SELECT: true
+- INSERT: false
+- UPDATE: false
+- DELETE: false
+
+teams
+- SELECT: true
+- INSERT: false
+- UPDATE: false
+- DELETE: false
+
+tournament_games
+- SELECT: true
+- INSERT: false
+- UPDATE: false
+- DELETE: false
+
+brackets
+- SELECT: true
+- INSERT: (( SELECT auth.uid() AS uid) = user_id)
+- UPDATE: (( SELECT auth.uid() AS uid) = user_id)
+- DELETE: (( SELECT auth.uid() AS uid) = user_id)
+
+bracket_picks
+- SELECT: true
+- INSERT: EXISTS (SELECT 1 FROM public.brackets WHERE brackets.id = bracket_picks.bracket_id AND brackets.user_id = ( SELECT auth.uid() AS uid))
+- UPDATE: EXISTS (SELECT 1 FROM public.brackets WHERE brackets.id = bracket_picks.bracket_id AND brackets.user_id = ( SELECT auth.uid() AS uid))
+- DELETE: EXISTS (SELECT 1 FROM public.brackets WHERE brackets.id = bracket_picks.bracket_id AND brackets.user_id = ( SELECT auth.uid() AS uid))
+
+pools
+- SELECT: true
+- INSERT: (( SELECT auth.uid() AS uid) = creator_id)
+- UPDATE: (( SELECT auth.uid() AS uid) = creator_id)
+- DELETE: (( SELECT auth.uid() AS uid) = creator_id)
+
+pool_members
+- SELECT: true
+- INSERT: (( SELECT auth.uid() AS uid) = user_id)
+- UPDATE: false
+- DELETE: (( SELECT auth.uid() AS uid) = user_id)
+
+pool_brackets
+- SELECT: true
+- INSERT: (( SELECT auth.uid() AS uid) = user_id)
+- UPDATE: (( SELECT auth.uid() AS uid) = user_id)
+- DELETE: (( SELECT auth.uid() AS uid) = user_id)

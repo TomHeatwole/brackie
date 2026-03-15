@@ -1,0 +1,12 @@
+create table public.pools (
+  id uuid not null default gen_random_uuid(),
+  name character varying not null,
+  creator_id uuid not null,
+  tournament_id uuid not null,
+  invite_code character varying not null,
+  created_at timestamp with time zone not null default now(),
+  constraint pools_pkey primary key (id),
+  constraint pools_creator_id_fkey foreign key (creator_id) references auth.users (id) on update cascade on delete cascade,
+  constraint pools_tournament_id_fkey foreign key (tournament_id) references public.tournaments (id) on update cascade on delete cascade,
+  constraint pools_invite_code_unique unique (invite_code)
+) TABLESPACE pg_default;

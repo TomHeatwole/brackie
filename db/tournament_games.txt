@@ -1,0 +1,15 @@
+create table public.tournament_games (
+  id uuid not null default gen_random_uuid(),
+  tournament_id uuid not null,
+  round integer not null,
+  position integer not null,
+  region character varying null,
+  team1_id uuid null,
+  team2_id uuid null,
+  winner_id uuid null,
+  constraint tournament_games_pkey primary key (id),
+  constraint tournament_games_tournament_id_fkey foreign key (tournament_id) references public.tournaments (id) on update cascade on delete cascade,
+  constraint tournament_games_team1_id_fkey foreign key (team1_id) references public.teams (id) on update cascade on delete set null,
+  constraint tournament_games_team2_id_fkey foreign key (team2_id) references public.teams (id) on update cascade on delete set null,
+  constraint tournament_games_winner_id_fkey foreign key (winner_id) references public.teams (id) on update cascade on delete set null
+) TABLESPACE pg_default;

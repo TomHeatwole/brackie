@@ -1,0 +1,11 @@
+create table public.bracket_picks (
+  id uuid not null default gen_random_uuid(),
+  bracket_id uuid not null,
+  game_id uuid not null,
+  picked_team_id uuid not null,
+  constraint bracket_picks_pkey primary key (id),
+  constraint bracket_picks_bracket_id_fkey foreign key (bracket_id) references public.brackets (id) on update cascade on delete cascade,
+  constraint bracket_picks_game_id_fkey foreign key (game_id) references public.tournament_games (id) on update cascade on delete cascade,
+  constraint bracket_picks_picked_team_id_fkey foreign key (picked_team_id) references public.teams (id) on update cascade on delete cascade,
+  constraint bracket_picks_bracket_game_unique unique (bracket_id, game_id)
+) TABLESPACE pg_default;

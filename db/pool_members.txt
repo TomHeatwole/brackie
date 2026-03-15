@@ -1,0 +1,10 @@
+create table public.pool_members (
+  id uuid not null default gen_random_uuid(),
+  pool_id uuid not null,
+  user_id uuid not null,
+  joined_at timestamp with time zone not null default now(),
+  constraint pool_members_pkey primary key (id),
+  constraint pool_members_pool_id_fkey foreign key (pool_id) references public.pools (id) on update cascade on delete cascade,
+  constraint pool_members_user_id_fkey foreign key (user_id) references auth.users (id) on update cascade on delete cascade,
+  constraint pool_members_pool_user_unique unique (pool_id, user_id)
+) TABLESPACE pg_default;
