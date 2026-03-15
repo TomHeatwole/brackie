@@ -46,7 +46,7 @@ export default function BracketEditor({
         setTimeout(() => router.push(`/pools/${poolId}`), 1000);
       } else {
         setSaveStatus("Saved!");
-        setTimeout(() => setSaveStatus(null), 2000);
+        setTimeout(() => router.push("/brackets"), 1000);
       }
     } else {
       setSaveStatus(result.error ?? "Failed to save");

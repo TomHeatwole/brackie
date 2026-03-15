@@ -2,14 +2,23 @@
 
 import { useActionState } from "react";
 import { createPoolAction, CreatePoolFormState } from "../actions";
+import ScoringSettingsForm from "../../_components/scoring-settings-form";
+import ImageUpload from "@/app/_components/image-upload";
+import { GoodyType } from "@/lib/types";
 
 const initialState: CreatePoolFormState = {};
 
-export default function CreatePoolForm({ testMode }: { testMode: boolean }) {
+export default function CreatePoolForm({
+  testMode,
+  goodyTypes,
+}: {
+  testMode: boolean;
+  goodyTypes: GoodyType[];
+}) {
   const [state, action, isPending] = useActionState(createPoolAction, initialState);
 
   return (
-    <form action={action} noValidate className="flex flex-col gap-5 w-full max-w-sm">
+    <form action={action} noValidate className="flex flex-col gap-6 w-full max-w-sm">
       {testMode && <input type="hidden" name="mode" value="test" />}
 
       <div>
@@ -28,6 +37,18 @@ export default function CreatePoolForm({ testMode }: { testMode: boolean }) {
         {state.fieldErrors?.name && (
           <p className="mt-1.5 text-xs text-red-400">{state.fieldErrors.name}</p>
         )}
+      </div>
+
+      <ImageUpload
+        name="image_url"
+        label="Pool icon (optional)"
+        previewShape="rounded"
+        storagePath="pools"
+      />
+
+      <div className="border-t border-card-border pt-5">
+        <h2 className="text-base font-medium text-stone-200 mb-4">Scoring Settings</h2>
+        <ScoringSettingsForm goodyTypes={goodyTypes} />
       </div>
 
       {state.error && (

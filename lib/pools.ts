@@ -1,5 +1,14 @@
 import { SupabaseClient } from "@supabase/supabase-js";
-import { Pool, PoolWithDetails, PoolMemberWithInfo } from "./types";
+import {
+  Pool,
+  PoolWithDetails,
+  PoolMemberWithInfo,
+  PoolGoody,
+  RoundPoints,
+  UpsetMultipliers,
+  DEFAULT_ROUND_POINTS,
+  DEFAULT_UPSET_MULTIPLIERS,
+} from "./types";
 
 export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -105,7 +114,7 @@ export async function getPoolMembers(
 
   const { data: userInfos } = await supabase
     .from("user_info")
-    .select("id, username, first_name, last_name")
+    .select("id, username, first_name, last_name, avatar_url")
     .in("id", userIds);
 
   const { data: poolBrackets } = await supabase
@@ -123,7 +132,7 @@ export async function getPoolMembers(
         )
     : { data: [] };
 
-  const userInfoMap = new Map<string, { username?: string; first_name?: string; last_name?: string }>();
+  const userInfoMap = new Map<string, { username?: string; first_name?: string; last_name?: string; avatar_url?: string | null }>();
   for (const u of userInfos ?? []) {
     userInfoMap.set(u.id, u);
   }
@@ -144,6 +153,7 @@ export async function getPoolMembers(
       username: info?.username ?? undefined,
       first_name: info?.first_name ?? undefined,
       last_name: info?.last_name ?? undefined,
+      avatar_url: info?.avatar_url ?? null,
       bracket_submitted: poolBracketUserIds.has(m.user_id),
       bracket_name: bracketInfo?.name,
       bracket_id: bracketInfo?.id,
@@ -151,11 +161,20 @@ export async function getPoolMembers(
   });
 }
 
+export interface ScoringSettings {
+  round_points?: RoundPoints;
+  upset_points_enabled?: boolean;
+  upset_multipliers?: UpsetMultipliers;
+  goodies_enabled?: boolean;
+}
+
 export async function createPool(
   supabase: SupabaseClient,
   userId: string,
   name: string,
-  tournamentId: string
+  tournamentId: string,
+  scoring?: ScoringSettings,
+  imageUrl?: string | null
 ): Promise<Pool | null> {
   const inviteCode = generateInviteCode();
 
@@ -166,6 +185,11 @@ export async function createPool(
       creator_id: userId,
       tournament_id: tournamentId,
       invite_code: inviteCode,
+      round_points: scoring?.round_points ?? DEFAULT_ROUND_POINTS,
+      upset_points_enabled: scoring?.upset_points_enabled ?? false,
+      upset_multipliers: scoring?.upset_multipliers ?? DEFAULT_UPSET_MULTIPLIERS,
+      goodies_enabled: scoring?.goodies_enabled ?? false,
+      ...(imageUrl ? { image_url: imageUrl } : {}),
     })
     .select()
     .single();
@@ -181,6 +205,101 @@ export async function createPool(
   });
 
   return pool;
+}
+
+export async function updatePoolDetails(
+  supabase: SupabaseClient,
+  poolId: string,
+  details: { name?: string; image_url?: string | null }
+): Promise<{ success: boolean; error?: string }> {
+  const update: Record<string, unknown> = {};
+  if (details.name !== undefined) update.name = details.name;
+  if (details.image_url !== undefined) update.image_url = details.image_url;
+
+  if (Object.keys(update).length === 0) return { success: true };
+
+  const { error } = await supabase
+    .from("pools")
+    .update(update)
+    .eq("id", poolId);
+
+  if (error) {
+    console.error("Error updating pool details:", error);
+    return { success: false, error: "Failed to update pool details." };
+  }
+
+  return { success: true };
+}
+
+export async function updatePoolScoringSettings(
+  supabase: SupabaseClient,
+  poolId: string,
+  scoring: ScoringSettings
+): Promise<{ success: boolean; error?: string }> {
+  const update: Record<string, unknown> = {};
+  if (scoring.round_points !== undefined) update.round_points = scoring.round_points;
+  if (scoring.upset_points_enabled !== undefined) update.upset_points_enabled = scoring.upset_points_enabled;
+  if (scoring.upset_multipliers !== undefined) update.upset_multipliers = scoring.upset_multipliers;
+  if (scoring.goodies_enabled !== undefined) update.goodies_enabled = scoring.goodies_enabled;
+
+  const { error } = await supabase
+    .from("pools")
+    .update(update)
+    .eq("id", poolId);
+
+  if (error) {
+    console.error("Error updating pool scoring settings:", error);
+    return { success: false, error: "Failed to update scoring settings." };
+  }
+
+  return { success: true };
+}
+
+export async function getPoolGoodies(
+  supabase: SupabaseClient,
+  poolId: string
+): Promise<PoolGoody[]> {
+  const { data } = await supabase
+    .from("pool_goodies")
+    .select("*")
+    .eq("pool_id", poolId);
+
+  return data ?? [];
+}
+
+export async function setPoolGoodies(
+  supabase: SupabaseClient,
+  poolId: string,
+  goodies: { goody_type_id: string; points: number }[]
+): Promise<{ success: boolean; error?: string }> {
+  const { error: deleteError } = await supabase
+    .from("pool_goodies")
+    .delete()
+    .eq("pool_id", poolId);
+
+  if (deleteError) {
+    console.error("Error clearing pool goodies:", deleteError);
+    return { success: false, error: "Failed to update goodies." };
+  }
+
+  if (goodies.length === 0) return { success: true };
+
+  const rows = goodies.map((g) => ({
+    pool_id: poolId,
+    goody_type_id: g.goody_type_id,
+    points: g.points,
+  }));
+
+  const { error: insertError } = await supabase
+    .from("pool_goodies")
+    .insert(rows);
+
+  if (insertError) {
+    console.error("Error inserting pool goodies:", insertError);
+    return { success: false, error: "Failed to update goodies." };
+  }
+
+  return { success: true };
 }
 
 export async function joinPool(

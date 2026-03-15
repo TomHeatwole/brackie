@@ -19,6 +19,7 @@ export async function finishSigningUp(
   const firstName = (formData.get("first_name") as string | null)?.trim() ?? "";
   const lastName = (formData.get("last_name") as string | null)?.trim() ?? "";
   const username = (formData.get("username") as string | null)?.trim() ?? "";
+  const avatarUrl = (formData.get("avatar_url") as string | null)?.trim() ?? "";
 
   const fieldErrors: ProfileFormState["fieldErrors"] = {};
 
@@ -76,6 +77,7 @@ export async function finishSigningUp(
     first_name: firstName,
     last_name: lastName,
     username,
+    avatar_url: avatarUrl || null,
   });
 
   if (upsertError) {

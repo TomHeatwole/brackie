@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { finishSigningUp, ProfileFormState } from "../actions";
+import ImageUpload from "@/app/_components/image-upload";
 
 const initialState: ProfileFormState = {};
 
@@ -92,6 +93,13 @@ export default function FinishSigningUpForm() {
         hint="Letters, numbers, underscores only"
         error={state.fieldErrors?.username}
         onChange={handleUsernameChange}
+      />
+
+      <ImageUpload
+        name="avatar_url"
+        label="Profile photo (optional)"
+        previewShape="circle"
+        storagePath="avatars"
       />
 
       {state.error && (

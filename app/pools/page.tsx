@@ -4,6 +4,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getUserPools } from "@/lib/pools";
 import Navbar from "../_components/navbar";
+import PoolIcon from "../_components/pool-icon";
 import JoinPoolForm from "./_components/join-pool-form";
 
 export default async function PoolsPage({
@@ -24,7 +25,7 @@ export default async function PoolsPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Pools" modeParam={modeParam} />
+      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <div className="flex items-center justify-between mb-8">
@@ -53,16 +54,17 @@ export default async function PoolsPage({
                   href={`/pools/${pool.id}${modeParam}`}
                   className="card rounded-lg p-4"
                 >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <h3 className="text-stone-100 font-medium">{pool.name}</h3>
-                      <p className="text-muted text-xs mt-1">
+                  <div className="flex items-center gap-3">
+                    <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="md" />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center justify-between">
+                        <h3 className="text-stone-100 font-medium truncate">{pool.name}</h3>
+                        <span className="text-xs font-mono text-muted-foreground tracking-wider shrink-0 ml-2">{pool.invite_code}</span>
+                      </div>
+                      <p className="text-muted text-xs mt-0.5">
                         {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
                         {pool.creator_username && <> &middot; Created by {pool.creator_username}</>}
                       </p>
-                    </div>
-                    <div className="text-right">
-                      <span className="text-xs font-mono text-muted-foreground tracking-wider">{pool.invite_code}</span>
                     </div>
                   </div>
                 </Link>

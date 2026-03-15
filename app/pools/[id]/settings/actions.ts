@@ -1,9 +1,12 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { createPool, setPoolGoodies, ScoringSettings } from "@/lib/pools";
-import { getActiveTournament } from "@/lib/tournament";
+import {
+  updatePoolScoringSettings,
+  updatePoolDetails,
+  setPoolGoodies,
+  ScoringSettings,
+} from "@/lib/pools";
 import {
   RoundPoints,
   UpsetMultipliers,
@@ -11,8 +14,9 @@ import {
   DEFAULT_UPSET_MULTIPLIERS,
 } from "@/lib/types";
 
-export interface CreatePoolFormState {
+export interface UpdatePoolSettingsState {
   error?: string;
+  success?: boolean;
   fieldErrors?: {
     name?: string;
   };
@@ -49,20 +53,13 @@ function parseGoodies(formData: FormData): { goody_type_id: string; points: numb
   });
 }
 
-export async function createPoolAction(
-  _prevState: CreatePoolFormState,
+export async function updatePoolSettingsAction(
+  _prevState: UpdatePoolSettingsState,
   formData: FormData
-): Promise<CreatePoolFormState> {
-  const name = (formData.get("name") as string | null)?.trim() ?? "";
-  const imageUrl = (formData.get("image_url") as string | null)?.trim() ?? "";
-  const mode = formData.get("mode") as string | null;
-  const testMode = mode === "test";
-
-  if (!name) {
-    return { fieldErrors: { name: "Pool name is required." } };
-  }
-  if (name.length > 50) {
-    return { fieldErrors: { name: "Pool name must be 50 characters or fewer." } };
+): Promise<UpdatePoolSettingsState> {
+  const poolId = formData.get("pool_id") as string | null;
+  if (!poolId) {
+    return { error: "Missing pool ID." };
   }
 
   const supabase = await createClient();
@@ -71,9 +68,32 @@ export async function createPoolAction(
     return { error: "You must be logged in." };
   }
 
-  const tournament = await getActiveTournament(supabase, testMode);
-  if (!tournament) {
-    return { error: "No active tournament found." };
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("creator_id")
+    .eq("id", poolId)
+    .single();
+
+  if (!pool || pool.creator_id !== user.id) {
+    return { error: "You do not have permission to edit this pool." };
+  }
+
+  const name = (formData.get("name") as string | null)?.trim() ?? "";
+  const imageUrl = (formData.get("image_url") as string | null)?.trim() ?? "";
+
+  if (!name) {
+    return { fieldErrors: { name: "Pool name is required." } };
+  }
+  if (name.length > 50) {
+    return { fieldErrors: { name: "Pool name must be 50 characters or fewer." } };
+  }
+
+  const detailsResult = await updatePoolDetails(supabase, poolId, {
+    name,
+    image_url: imageUrl || null,
+  });
+  if (!detailsResult.success) {
+    return { error: detailsResult.error ?? "Failed to update pool details." };
   }
 
   const scoring: ScoringSettings = {
@@ -83,18 +103,20 @@ export async function createPoolAction(
     goodies_enabled: formData.get("goodies_enabled") === "true",
   };
 
-  const pool = await createPool(supabase, user.id, name, tournament.id, scoring, imageUrl || null);
-  if (!pool) {
-    return { error: "Failed to create pool. Please try again." };
+  const result = await updatePoolScoringSettings(supabase, poolId, scoring);
+  if (!result.success) {
+    return { error: result.error ?? "Failed to update settings." };
   }
 
   if (scoring.goodies_enabled) {
     const goodies = parseGoodies(formData);
-    if (goodies.length > 0) {
-      await setPoolGoodies(supabase, pool.id, goodies);
+    const goodyResult = await setPoolGoodies(supabase, poolId, goodies);
+    if (!goodyResult.success) {
+      return { error: goodyResult.error ?? "Failed to update goodies." };
     }
+  } else {
+    await setPoolGoodies(supabase, poolId, []);
   }
 
-  const params = testMode ? "?mode=test" : "";
-  redirect(`/pools/${pool.id}${params}`);
+  return { success: true };
 }

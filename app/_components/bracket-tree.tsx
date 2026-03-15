@@ -216,7 +216,7 @@ export default function BracketTree({
             <button
               onClick={() => onSave(picks)}
               disabled={saving}
-              className="btn-primary"
+              className="rounded-lg py-2 px-5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
             >
               {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
             </button>
@@ -290,7 +290,7 @@ export default function BracketTree({
               <button
                 onClick={() => onSave(picks)}
                 disabled={saving}
-                className="btn-primary"
+                className="rounded-lg py-2 px-5 text-sm font-medium text-white bg-blue-600 hover:bg-blue-500 transition-all cursor-pointer disabled:opacity-60"
               >
                 {saving ? "Saving…" : saveLabel ?? "Save Bracket"}
               </button>

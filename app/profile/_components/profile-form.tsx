@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { updateProfile, ProfileFormState } from "../actions";
+import ImageUpload from "@/app/_components/image-upload";
 
 const initialState: ProfileFormState = {};
 
@@ -55,6 +56,7 @@ interface ProfileFormProps {
     firstName: string | null;
     lastName: string | null;
     username: string | null;
+    avatarUrl: string | null;
   };
 }
 
@@ -115,6 +117,14 @@ export default function ProfileForm({ email, initialValues }: ProfileFormProps) 
         value={username}
         onChange={setUsername}
         error={state.fieldErrors?.username}
+      />
+
+      <ImageUpload
+        name="avatar_url"
+        label="Profile photo"
+        initialValue={initialValues.avatarUrl}
+        previewShape="circle"
+        storagePath="avatars"
       />
 
       {state.error && (

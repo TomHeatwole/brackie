@@ -24,7 +24,7 @@ export default async function AdminPage() {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} />
+      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} />
       <main className="pt-16 pb-12 flex justify-center">
         <div className="w-full max-w-3xl px-4">
           <div className="flex items-center justify-between mb-6">

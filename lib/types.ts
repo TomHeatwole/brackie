@@ -43,13 +43,55 @@ export interface BracketPick {
   picked_team_id: string;
 }
 
+export type RoundPoints = Record<string, number>;
+export type UpsetMultipliers = Record<string, number>;
+
+export const DEFAULT_ROUND_POINTS: RoundPoints = {
+  "1": 10,
+  "2": 20,
+  "3": 30,
+  "4": 50,
+  "5": 80,
+  "6": 130,
+};
+
+export const DEFAULT_UPSET_MULTIPLIERS: UpsetMultipliers = {
+  "1": 1,
+  "2": 3,
+  "3": 5,
+  "4": 10,
+  "5": 15,
+  "6": 20,
+};
+
 export interface Pool {
   id: string;
   name: string;
   creator_id: string;
   tournament_id: string;
   invite_code: string;
+  round_points: RoundPoints;
+  upset_points_enabled: boolean;
+  upset_multipliers: UpsetMultipliers;
+  goodies_enabled: boolean;
+  image_url: string | null;
   created_at: string;
+}
+
+export interface GoodyType {
+  id: string;
+  key: string;
+  name: string;
+  description: string | null;
+  default_points: number;
+  created_at: string;
+}
+
+export interface PoolGoody {
+  id: string;
+  pool_id: string;
+  goody_type_id: string;
+  points: number;
 }
 
 export interface PoolMember {
@@ -75,6 +117,7 @@ export interface PoolMemberWithInfo extends PoolMember {
   username?: string;
   first_name?: string;
   last_name?: string;
+  avatar_url?: string | null;
   bracket_submitted?: boolean;
   bracket_name?: string;
   bracket_id?: string;
@@ -83,6 +126,8 @@ export interface PoolMemberWithInfo extends PoolMember {
 export interface BracketWithPicks extends Bracket {
   picks: BracketPick[];
   pick_count: number;
+  champion_name?: string;
+  champion_seed?: number;
 }
 
 export const REGIONS = ["East", "West", "South", "Midwest"] as const;

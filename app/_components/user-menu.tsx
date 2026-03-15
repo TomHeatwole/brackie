@@ -4,13 +4,15 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import UserAvatar from "./user-avatar";
 
 interface UserMenuProps {
   userEmail: string;
   username?: string | null;
+  avatarUrl?: string | null;
 }
 
-export default function UserMenu({ userEmail, username }: UserMenuProps) {
+export default function UserMenu({ userEmail, username, avatarUrl }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
@@ -32,7 +34,6 @@ export default function UserMenu({ userEmail, username }: UserMenuProps) {
   }
 
   const displayName = username ? `@${username}` : userEmail;
-  const avatarInitial = (username ?? userEmail)[0].toUpperCase();
 
   return (
     <div ref={ref} className="relative">
@@ -40,9 +41,7 @@ export default function UserMenu({ userEmail, username }: UserMenuProps) {
         onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-2 rounded-full pl-1 pr-3 py-1 transition-all hover:bg-white/5 border border-transparent hover:border-card-border"
       >
-        <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-accent">
-          {avatarInitial}
-        </div>
+        <UserAvatar avatarUrl={avatarUrl} username={username} email={userEmail} size="sm" />
         <span className="text-stone-300 text-xs max-w-[140px] truncate hidden sm:block">
           {displayName}
         </span>

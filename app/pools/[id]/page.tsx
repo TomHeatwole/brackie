@@ -5,6 +5,8 @@ import { getUserInfo } from "@/utils/user-info";
 import { getPool, getPoolMembers } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
 import Navbar from "../../_components/navbar";
+import PoolIcon from "../../_components/pool-icon";
+import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
 
@@ -46,10 +48,11 @@ export default async function PoolDetailPage({
     .maybeSingle();
 
   const isMember = members.some((m) => m.user_id === user.id);
+  const isCreator = pool.creator_id === user.id;
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Pools" modeParam={modeParam} />
+      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <Link
@@ -60,13 +63,28 @@ export default async function PoolDetailPage({
           </Link>
 
           <div className="mt-4 mb-8">
-            <h1 className="text-2xl font-semibold text-stone-100">{pool.name}</h1>
-            <div className="flex items-center gap-4 mt-2">
-              <span className="text-muted text-sm">
-                {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
-              </span>
-              {pool.creator_username && (
-                <span className="text-muted text-sm">Created by {pool.creator_username}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="lg" />
+                <div>
+                  <h1 className="text-2xl font-semibold text-stone-100">{pool.name}</h1>
+                  <div className="flex items-center gap-4 mt-1">
+                    <span className="text-muted text-sm">
+                      {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
+                    </span>
+                    {pool.creator_username && (
+                      <span className="text-muted text-sm">Created by {pool.creator_username}</span>
+                    )}
+                  </div>
+                </div>
+              </div>
+              {isCreator && (
+                <Link
+                  href={`/pools/${poolId}/settings${modeParam}`}
+                  className="btn-outline shrink-0"
+                >
+                  Settings
+                </Link>
               )}
             </div>
           </div>
@@ -134,12 +152,17 @@ export default async function PoolDetailPage({
                   key={member.id}
                   className="px-4 py-3 flex items-center justify-between bg-background"
                 >
-                  <div>
+                  <div className="flex items-center gap-2.5">
+                    <UserAvatar
+                      avatarUrl={member.avatar_url}
+                      username={member.username}
+                      size="sm"
+                    />
                     <span className="text-stone-200 text-sm">
                       {member.username ?? member.first_name ?? "Anonymous"}
                     </span>
                     {member.user_id === pool.creator_id && (
-                      <span className="ml-2 text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
+                      <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
                         Creator
                       </span>
                     )}

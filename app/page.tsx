@@ -6,6 +6,7 @@ import { getUserBrackets } from "@/lib/brackets";
 import { getUserPools } from "@/lib/pools";
 import { TOTAL_GAMES } from "@/lib/types";
 import Navbar from "./_components/navbar";
+import PoolIcon from "./_components/pool-icon";
 
 export default async function Home({
   searchParams,
@@ -32,7 +33,7 @@ export default async function Home({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Dashboard" modeParam={modeParam} />
+      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={modeParam} />
       <main className="pt-16 min-h-screen flex justify-center">
         <div className="w-full max-w-5xl flex flex-col md:flex-row">
           {/* Your Brackets */}
@@ -126,13 +127,18 @@ export default async function Home({
                     href={`/pools/${pool.id}${modeParam}`}
                     className="card rounded-lg p-3"
                   >
-                    <div className="flex items-center justify-between">
-                      <span className="text-stone-100 text-sm font-medium">{pool.name}</span>
-                      <span className="text-xs font-mono text-muted tracking-wider">{pool.invite_code}</span>
+                    <div className="flex items-center gap-3">
+                      <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="md" />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between">
+                          <span className="text-stone-100 text-sm font-medium truncate">{pool.name}</span>
+                          <span className="text-xs font-mono text-muted tracking-wider shrink-0 ml-2">{pool.invite_code}</span>
+                        </div>
+                        <p className="text-muted text-xs mt-0.5">
+                          {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
+                        </p>
+                      </div>
                     </div>
-                    <p className="text-muted text-xs mt-1">
-                      {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
-                    </p>
                   </Link>
                 ))}
                 {pools.length > 5 && (

@@ -7,6 +7,7 @@ import { getTeams, getGames, isTournamentLocked, getTournament } from "@/lib/tou
 import { getPool } from "@/lib/pools";
 import Navbar from "../../_components/navbar";
 import BracketEditor from "./_components/bracket-editor";
+import BracketCountdown from "./_components/bracket-countdown";
 
 export default async function BracketDetailPage({
   params,
@@ -34,6 +35,41 @@ export default async function BracketDetailPage({
   const tournament = await getTournament(supabase, bracket.tournament_id, testMode);
   const locked = tournament ? isTournamentLocked(tournament) : false;
 
+  // Non-owner viewing before games start: show countdown instead of bracket
+  if (!isOwner && !locked) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
+        <main className="pt-16 min-h-screen">
+          <div className="px-4 mb-4">
+            <Link
+              href={`/brackets${modeParam}`}
+              className="text-muted text-sm hover:text-stone-300 transition-colors"
+            >
+              &larr; Back to Brackets
+            </Link>
+          </div>
+          <div className="px-2">
+            {tournament?.lock_date ? (
+              <BracketCountdown
+                bracketName={bracket.name}
+                lockDate={tournament.lock_date}
+              />
+            ) : (
+              <div className="flex min-h-[60vh] flex-col items-center justify-center">
+                <p className="text-muted-foreground text-center">
+                  This bracket will be revealed when the tournament begins.
+                  <br />
+                  <span className="text-sm">Lock date not yet set.</span>
+                </p>
+              </div>
+            )}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   const teams = await getTeams(supabase, bracket.tournament_id, testMode);
   const games = await getGames(supabase, bracket.tournament_id, testMode);
 
@@ -46,7 +82,7 @@ export default async function BracketDetailPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} username={userInfo?.username} activeTab="Brackets" modeParam={modeParam} />
+      <Navbar userEmail={user.email} username={userInfo?.username} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
       <main className="pt-16 min-h-screen">
         <div className="px-4 mb-4">
           <Link

@@ -27,12 +27,53 @@ export async function getUserBrackets(
     picksByBracket.set(pick.bracket_id, existing);
   }
 
+  const tournamentIds = [...new Set(brackets.map((b: Bracket) => b.tournament_id))];
+  const { data: champGames } = await supabase
+    .from("tournament_games")
+    .select("id, tournament_id")
+    .in("tournament_id", tournamentIds)
+    .eq("round", 6);
+
+  const champGameByTournament = new Map<string, string>();
+  for (const g of champGames ?? []) {
+    champGameByTournament.set(g.tournament_id, g.id);
+  }
+
+  const champTeamIds = new Set<string>();
+  for (const b of brackets) {
+    const bracketPicks = picksByBracket.get(b.id) ?? [];
+    const champGameId = champGameByTournament.get(b.tournament_id);
+    if (champGameId) {
+      const champPick = bracketPicks.find((p) => p.game_id === champGameId);
+      if (champPick) champTeamIds.add(champPick.picked_team_id);
+    }
+  }
+
+  const teamMap = new Map<string, { name: string; seed: number }>();
+  if (champTeamIds.size > 0) {
+    const { data: teams } = await supabase
+      .from("teams")
+      .select("id, name, seed")
+      .in("id", [...champTeamIds]);
+    for (const t of teams ?? []) {
+      teamMap.set(t.id, { name: t.name, seed: t.seed });
+    }
+  }
+
   return brackets.map((b: Bracket) => {
     const bracketPicks = picksByBracket.get(b.id) ?? [];
+    const champGameId = champGameByTournament.get(b.tournament_id);
+    const champPick = champGameId
+      ? bracketPicks.find((p) => p.game_id === champGameId)
+      : undefined;
+    const champTeam = champPick ? teamMap.get(champPick.picked_team_id) : undefined;
+
     return {
       ...b,
       picks: bracketPicks,
       pick_count: bracketPicks.length,
+      champion_name: champTeam?.name,
+      champion_seed: champTeam?.seed,
     };
   });
 }
