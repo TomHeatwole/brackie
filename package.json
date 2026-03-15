@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "save-auth": "tsx scripts/save-auth.ts",
-    "screenshot": "tsx scripts/screenshot.ts"
+    "screenshot": "tsx scripts/screenshot.ts",
+    "parse-espn": "tsx scripts/parse-espn-scrape.ts"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",

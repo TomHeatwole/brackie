@@ -15,7 +15,17 @@ function isPublicPath(pathname: string) {
   );
 }
 
-/** Paths that skip auth entirely (static/public); no config matcher so Next can compile. */
+/**
+ * Don't run the proxy (auth) for static assets at all — so scrapers/crawlers
+ * loading og:image etc. never hit auth and get 200.
+ */
+export const config = {
+  matcher: [
+    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|manifest\\.webmanifest|2026-teams\\.json|sitemap\\.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|webmanifest)$).*)",
+  ],
+};
+
+/** Paths that skip auth entirely (static/public). */
 function isStaticOrPublicPath(pathname: string) {
   if (isPublicPath(pathname)) return true;
   if (pathname.startsWith("/_next/static") || pathname.startsWith("/_next/image")) return true;

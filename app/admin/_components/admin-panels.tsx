@@ -369,13 +369,14 @@ interface TeamRow {
   icon_url: string | null;
 }
 
+type LocalEdits = Record<string, { name?: string; icon_url?: string }>;
+
 export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadConfigPending, setLoadConfigPending] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editName, setEditName] = useState("");
-  const [editIconUrl, setEditIconUrl] = useState("");
+  const [localEdits, setLocalEdits] = useState<LocalEdits>({});
+  const [savingId, setSavingId] = useState<string | null>(null);
   const [msg, setMsg] = useState<AdminActionResult | null>(null);
 
   useEffect(() => {
@@ -390,22 +391,31 @@ export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
     });
   }, [tournamentId]);
 
-  function startEdit(t: TeamRow) {
-    setEditingId(t.id);
-    setEditName(t.name);
-    setEditIconUrl(t.icon_url ?? "");
-  }
-
-  async function saveEdit() {
-    if (!editingId) return;
+  async function saveRow(t: TeamRow) {
+    const name = (localEdits[t.id]?.name ?? t.name).trim();
+    const icon_url = (localEdits[t.id]?.icon_url ?? t.icon_url ?? "").trim() || null;
+    if (name === t.name && icon_url === (t.icon_url ?? null)) {
+      setLocalEdits((prev) => {
+        const next = { ...prev };
+        delete next[t.id];
+        return next;
+      });
+      return;
+    }
     setMsg(null);
-    const result = await updateTeamAction(editingId, {
-      name: editName.trim() || undefined,
-      icon_url: editIconUrl.trim() || null,
+    setSavingId(t.id);
+    const result = await updateTeamAction(t.id, {
+      name: name || undefined,
+      icon_url,
     });
     setMsg(result);
+    setSavingId(null);
     if (result.success) {
-      setEditingId(null);
+      setLocalEdits((prev) => {
+        const next = { ...prev };
+        delete next[t.id];
+        return next;
+      });
       getTournamentTeamsForAdminAction(tournamentId).then((res) => setTeams(res.teams));
     }
   }
@@ -455,7 +465,7 @@ export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
 
   return (
     <Card title="Teams (names & pictures)">
-      <p className="text-stone-500 text-xs mb-3">Edit team name and icon URL. Changes apply across pools and brackets.</p>
+      <p className="text-stone-500 text-xs mb-3">Type in the name or icon URL; changes save when you tab or click away. Applies across pools and brackets.</p>
       <div className="flex items-center gap-2 mb-3">
         <Btn type="button" onClick={load2026Teams} pending={loadConfigPending} disabled={loadConfigPending}>
           Load 2026 teams
@@ -469,40 +479,33 @@ export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
             key={t.id}
             className="flex flex-wrap items-center gap-2 py-2 px-3 rounded border border-card-border bg-background text-sm"
           >
-            {editingId === t.id ? (
-              <>
-                <span className="text-stone-500 font-mono shrink-0">{t.region} #{t.seed}</span>
-                <Input
-                  className="flex-1 min-w-[120px]"
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  placeholder="Team name"
-                />
-                <Input
-                  className="flex-1 min-w-[160px]"
-                  value={editIconUrl}
-                  onChange={(e) => setEditIconUrl(e.target.value)}
-                  placeholder="Icon URL"
-                />
-                <button type="button" onClick={saveEdit} className="rounded px-2 py-1 text-xs font-medium text-white btn-primary">
-                  Save
-                </button>
-                <button type="button" onClick={() => setEditingId(null)} className="rounded px-2 py-1 text-xs bg-stone-700 text-stone-300">
-                  Cancel
-                </button>
-              </>
+            <span className="text-stone-500 font-mono shrink-0 w-20">{t.region} #{t.seed}</span>
+            <Input
+              className="flex-1 min-w-[120px]"
+              value={localEdits[t.id]?.name ?? t.name}
+              onChange={(e) =>
+                setLocalEdits((prev) => ({ ...prev, [t.id]: { ...prev[t.id], name: e.target.value } }))
+              }
+              onBlur={() => saveRow(t)}
+              placeholder="Team name"
+              disabled={savingId === t.id}
+            />
+            <Input
+              className="flex-1 min-w-[140px] max-w-[200px]"
+              value={localEdits[t.id]?.icon_url ?? t.icon_url ?? ""}
+              onChange={(e) =>
+                setLocalEdits((prev) => ({ ...prev, [t.id]: { ...prev[t.id], icon_url: e.target.value } }))
+              }
+              onBlur={() => saveRow(t)}
+              placeholder="Icon URL"
+              disabled={savingId === t.id}
+            />
+            {t.icon_url ? (
+              <img src={t.icon_url} alt="" className="w-6 h-6 object-contain shrink-0" />
             ) : (
-              <>
-                <span className="text-stone-500 font-mono shrink-0">{t.region} #{t.seed}</span>
-                <span className="text-stone-200 shrink-0">{t.name}</span>
-                {t.icon_url && (
-                  <img src={t.icon_url} alt="" className="w-6 h-6 object-contain shrink-0" />
-                )}
-                <button type="button" onClick={() => startEdit(t)} className="text-xs text-accent hover:underline shrink-0">
-                  Edit
-                </button>
-              </>
+              <span className="w-6 h-6 shrink-0 text-stone-600 text-xs">—</span>
             )}
+            {savingId === t.id && <span className="text-stone-500 text-xs">Saving…</span>}
           </div>
         ))}
       </div>

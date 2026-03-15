@@ -1,0 +1,322 @@
+[
+  {
+    "region": "East",
+    "seed": 1,
+    "name": "Duke"
+  },
+  {
+    "region": "East",
+    "seed": 16,
+    "name": "Siena"
+  },
+  {
+    "region": "East",
+    "seed": 8,
+    "name": "Ohio State"
+  },
+  {
+    "region": "East",
+    "seed": 9,
+    "name": "TCU"
+  },
+  {
+    "region": "East",
+    "seed": 5,
+    "name": "St John's"
+  },
+  {
+    "region": "East",
+    "seed": 12,
+    "name": "Northern Iowa"
+  },
+  {
+    "region": "East",
+    "seed": 4,
+    "name": "Kansas"
+  },
+  {
+    "region": "East",
+    "seed": 13,
+    "name": "CA Baptist"
+  },
+  {
+    "region": "East",
+    "seed": 6,
+    "name": "Louisville"
+  },
+  {
+    "region": "East",
+    "seed": 11,
+    "name": "South Florida"
+  },
+  {
+    "region": "East",
+    "seed": 3,
+    "name": "Michigan St"
+  },
+  {
+    "region": "East",
+    "seed": 14,
+    "name": "N Dakota St"
+  },
+  {
+    "region": "East",
+    "seed": 7,
+    "name": "UCLA"
+  },
+  {
+    "region": "East",
+    "seed": 10,
+    "name": "UCF"
+  },
+  {
+    "region": "East",
+    "seed": 2,
+    "name": "UConn"
+  },
+  {
+    "region": "East",
+    "seed": 15,
+    "name": "Furman"
+  },
+  {
+    "region": "West",
+    "seed": 1,
+    "name": "Arizona"
+  },
+  {
+    "region": "West",
+    "seed": 16,
+    "name": "Long Island"
+  },
+  {
+    "region": "West",
+    "seed": 8,
+    "name": "Villanova"
+  },
+  {
+    "region": "West",
+    "seed": 9,
+    "name": "Utah State"
+  },
+  {
+    "region": "West",
+    "seed": 5,
+    "name": "Wisconsin"
+  },
+  {
+    "region": "West",
+    "seed": 12,
+    "name": "High Point"
+  },
+  {
+    "region": "West",
+    "seed": 4,
+    "name": "Arkansas"
+  },
+  {
+    "region": "West",
+    "seed": 13,
+    "name": "Hawai'i"
+  },
+  {
+    "region": "West",
+    "seed": 6,
+    "name": "BYU"
+  },
+  {
+    "region": "West",
+    "seed": 11,
+    "name": "TBD"
+  },
+  {
+    "region": "West",
+    "seed": 3,
+    "name": "Gonzaga"
+  },
+  {
+    "region": "West",
+    "seed": 14,
+    "name": "Kennesaw St"
+  },
+  {
+    "region": "West",
+    "seed": 7,
+    "name": "Miami"
+  },
+  {
+    "region": "West",
+    "seed": 10,
+    "name": "Missouri"
+  },
+  {
+    "region": "West",
+    "seed": 2,
+    "name": "Purdue"
+  },
+  {
+    "region": "West",
+    "seed": 15,
+    "name": "Queens"
+  },
+  {
+    "region": "South",
+    "seed": 1,
+    "name": "Florida"
+  },
+  {
+    "region": "South",
+    "seed": 16,
+    "name": "TBD"
+  },
+  {
+    "region": "South",
+    "seed": 8,
+    "name": "Clemson"
+  },
+  {
+    "region": "South",
+    "seed": 9,
+    "name": "Iowa"
+  },
+  {
+    "region": "South",
+    "seed": 5,
+    "name": "Vanderbilt"
+  },
+  {
+    "region": "South",
+    "seed": 12,
+    "name": "McNeese"
+  },
+  {
+    "region": "South",
+    "seed": 4,
+    "name": "Nebraska"
+  },
+  {
+    "region": "South",
+    "seed": 13,
+    "name": "Troy"
+  },
+  {
+    "region": "South",
+    "seed": 6,
+    "name": "North Carolina"
+  },
+  {
+    "region": "South",
+    "seed": 11,
+    "name": "VCU"
+  },
+  {
+    "region": "South",
+    "seed": 3,
+    "name": "Illinois"
+  },
+  {
+    "region": "South",
+    "seed": 14,
+    "name": "Penn"
+  },
+  {
+    "region": "South",
+    "seed": 7,
+    "name": "Saint Mary's"
+  },
+  {
+    "region": "South",
+    "seed": 10,
+    "name": "Texas A&M"
+  },
+  {
+    "region": "South",
+    "seed": 2,
+    "name": "Houston"
+  },
+  {
+    "region": "South",
+    "seed": 15,
+    "name": "Idaho"
+  },
+  {
+    "region": "Midwest",
+    "seed": 1,
+    "name": "Michigan"
+  },
+  {
+    "region": "Midwest",
+    "seed": 8,
+    "name": "Georgia"
+  },
+  {
+    "region": "Midwest",
+    "seed": 9,
+    "name": "Saint Louis"
+  },
+  {
+    "region": "Midwest",
+    "seed": 5,
+    "name": "Texas Tech"
+  },
+  {
+    "region": "Midwest",
+    "seed": 12,
+    "name": "Akron"
+  },
+  {
+    "region": "Midwest",
+    "seed": 4,
+    "name": "Alabama"
+  },
+  {
+    "region": "Midwest",
+    "seed": 13,
+    "name": "Hofstra"
+  },
+  {
+    "region": "Midwest",
+    "seed": 6,
+    "name": "Tennessee"
+  },
+  {
+    "region": "Midwest",
+    "seed": 3,
+    "name": "Virginia"
+  },
+  {
+    "region": "Midwest",
+    "seed": 14,
+    "name": "Wright St"
+  },
+  {
+    "region": "Midwest",
+    "seed": 7,
+    "name": "Kentucky"
+  },
+  {
+    "region": "Midwest",
+    "seed": 10,
+    "name": "Santa Clara"
+  },
+  {
+    "region": "Midwest",
+    "seed": 2,
+    "name": "Iowa State"
+  },
+  {
+    "region": "Midwest",
+    "seed": 15,
+    "name": "Tennessee St"
+  },
+  {
+    "region": "Midwest",
+    "seed": 11,
+    "name": "Texas"
+  },
+  {
+    "region": "Midwest",
+    "seed": 11,
+    "name": "NC State"
+  }
+]
