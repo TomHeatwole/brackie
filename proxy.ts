@@ -15,14 +15,8 @@ function isPublicPath(pathname: string) {
   );
 }
 
-/**
- * Don't run the proxy (auth) for static assets at all — so scrapers/crawlers
- * loading og:image etc. never hit auth and get 200.
- */
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon\\.ico|robots\\.txt|manifest\\.webmanifest|2026-teams\\.json|sitemap\\.xml|.*\\.(?:ico|png|jpg|jpeg|gif|webp|svg|webmanifest)$).*)",
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
 
 /** Paths that skip auth entirely (static/public). */

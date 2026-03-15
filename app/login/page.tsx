@@ -24,6 +24,10 @@ export default function LoginPage() {
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     callbackUrl.searchParams.set("next", next);
 
+    // Persist next in a cookie so we still have it when Supabase redirects to
+    // /login?code=... (or /auth/callback without next) after the user clicks the email link.
+    document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`;
+
     setLoading(true);
     const { error: authError } = await supabase.auth.signInWithOtp({
       email,
