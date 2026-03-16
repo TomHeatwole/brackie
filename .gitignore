@@ -29,6 +29,6 @@ pnpm-debug.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# Playwright
-auth/
+# Playwright (root-level auth state only; do not ignore app/auth/)
+/auth/
 screenshots/
