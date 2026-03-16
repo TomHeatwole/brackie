@@ -7,6 +7,8 @@ import {
   PoolBracketGoodyAnswer,
   RoundPoints,
   UpsetMultipliers,
+  GoodyScoringMode,
+  GoodyScoringConfig,
   DEFAULT_ROUND_POINTS,
   DEFAULT_UPSET_MULTIPLIERS,
 } from "./types";
@@ -276,10 +278,18 @@ export async function getPoolGoodies(
   return data ?? [];
 }
 
+export interface SetPoolGoodyInput {
+  goody_type_id: string;
+  points: number;
+  stroke_rule_enabled: boolean;
+  scoring_mode?: GoodyScoringMode;
+  scoring_config?: GoodyScoringConfig | null;
+}
+
 export async function setPoolGoodies(
   supabase: SupabaseClient,
   poolId: string,
-  goodies: { goody_type_id: string; points: number; stroke_rule_enabled: boolean }[]
+  goodies: SetPoolGoodyInput[]
 ): Promise<{ success: boolean; error?: string }> {
   const { error: deleteError } = await supabase
     .from("pool_goodies")
@@ -298,6 +308,8 @@ export async function setPoolGoodies(
     goody_type_id: g.goody_type_id,
     points: g.points,
     stroke_rule_enabled: g.stroke_rule_enabled ?? false,
+    scoring_mode: g.scoring_mode ?? "fixed",
+    scoring_config: g.scoring_config ?? null,
   }));
 
   const { error: insertError } = await supabase
@@ -312,7 +324,7 @@ export async function setPoolGoodies(
   return { success: true };
 }
 
-/** Pool goody with joined goody type (for knowing input_type). */
+/** Pool goodie with joined goodie type (for knowing input_type). */
 export interface PoolGoodyWithType extends PoolGoody {
   goody_types: GoodyTypeRow | null;
 }
@@ -495,8 +507,8 @@ export async function setPoolBracketGoodyAnswers(
     .eq("pool_bracket_id", poolBracketId);
 
   if (deleteError) {
-    console.error("Error clearing goody answers:", deleteError);
-    return { success: false, error: "Failed to save goody answers." };
+    console.error("Error clearing goodie answers:", deleteError);
+    return { success: false, error: "Failed to save goodie answers." };
   }
 
   if (answers.length === 0) return { success: true };
@@ -512,8 +524,8 @@ export async function setPoolBracketGoodyAnswers(
     .insert(rows);
 
   if (insertError) {
-    console.error("Error inserting goody answers:", insertError);
-    return { success: false, error: "Failed to save goody answers." };
+    console.error("Error inserting goodie answers:", insertError);
+    return { success: false, error: "Failed to save goodie answers." };
   }
 
   return { success: true };

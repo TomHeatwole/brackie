@@ -1,4 +1,4 @@
--- Ensure goody_types table exists and is seeded with the 10 goody types.
+-- Ensure goody_types table exists and is seeded with the 10 goodie types.
 -- Safe to run multiple times (CREATE IF NOT EXISTS, INSERT ON CONFLICT DO UPDATE).
 
 -- Create table if it was never created by an earlier migration or schema apply
@@ -20,7 +20,7 @@ alter table public.goody_types
   add column if not exists input_type character varying not null default 'bracket_derived',
   add column if not exists config jsonb null;
 
--- Seed the 10 goody types (idempotent)
+-- Seed the 10 goodie types (idempotent)
 insert into public.goody_types (key, name, description, default_points, input_type, config)
 values
   ('lowest_seed_first_round', 'Lowest seed to win first round', 'Lowest seed correctly picked to win in the first round.', 10, 'bracket_derived', null),

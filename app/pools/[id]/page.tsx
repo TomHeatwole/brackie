@@ -10,7 +10,7 @@ import {
   getPoolBracketGoodyAnswers,
 } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
-import { getTeams, getGames, getTournament } from "@/lib/tournament";
+import { getTournament } from "@/lib/tournament";
 import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
@@ -99,21 +99,20 @@ export default async function PoolDetailPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const poolGoodiesWithTypes = await getPoolGoodiesWithTypes(supabase, poolId);
+  const [poolGoodiesWithTypes, tournament] = await Promise.all([
+    getPoolGoodiesWithTypes(supabase, poolId),
+    getTournament(supabase, pool.tournament_id, testMode),
+  ]);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
   );
+
   const goodyAnswers =
-    poolBracketRow?.id != null
+    poolBracketRow && userInputGoodies.length > 0
       ? await getPoolBracketGoodyAnswers(supabase, poolBracketRow.id)
       : [];
-
-  const [tournament, teams, allGames] = await Promise.all([
-    getTournament(supabase, pool.tournament_id, testMode),
-    getTeams(supabase, pool.tournament_id, testMode),
-    getGames(supabase, pool.tournament_id, testMode),
-  ]);
-  const firstRoundGames = allGames.filter((g) => g.round === 1);
+  const goodyPicksComplete =
+    userInputGoodies.length > 0 && goodyAnswers.length >= userInputGoodies.length;
 
   const isActive = tournament?.status === "active" || tournament?.status === "completed";
   const isMember = members.some((m) => m.user_id === user.id);
@@ -207,10 +206,7 @@ export default async function PoolDetailPage({
                     poolId={poolId}
                     brackets={userBrackets}
                     currentBracketId={poolBracketRow?.bracket_id}
-                    userInputGoodies={userInputGoodies}
-                    existingGoodyAnswers={goodyAnswers}
-                    teams={teams}
-                    firstRoundGames={firstRoundGames}
+                    modeParam={modeParam}
                   />
                   <Link
                     href={`/brackets/create${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
@@ -234,13 +230,41 @@ export default async function PoolDetailPage({
                         poolId={poolId}
                         brackets={userBrackets}
                         currentBracketId={poolBracketRow?.bracket_id}
-                        userInputGoodies={userInputGoodies}
-                        existingGoodyAnswers={goodyAnswers}
-                        teams={teams}
-                        firstRoundGames={firstRoundGames}
+                        modeParam={modeParam}
                       />
                     </div>
                   )}
+                </>
+              )}
+            </div>
+          )}
+
+          {!isActive && isMember && currentUserPoolBracket && userInputGoodies.length > 0 && (
+            <div className="card p-4 mb-6">
+              <h2 className="text-sm font-medium text-stone-300 mb-1">Goodie Picks</h2>
+              {goodyPicksComplete ? (
+                <>
+                  <p className="text-muted text-xs mb-4">
+                    Your bonus picks are set. You can update them anytime before the tournament.
+                  </p>
+                  <Link
+                    href={`/pools/${poolId}/goody-picks${modeParam}`}
+                    className="btn-outline w-full text-center block py-3 text-base font-medium"
+                  >
+                    Edit Goodie Picks
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <p className="text-muted text-xs mb-4">
+                    You haven&apos;t made your Goodie Picks yet. Add bonus picks to compete for extra points in this pool.
+                  </p>
+                  <Link
+                    href={`/pools/${poolId}/goody-picks${modeParam}`}
+                    className="btn-primary w-full text-center block py-3 text-base font-medium"
+                  >
+                    Make Goodie Picks
+                  </Link>
                 </>
               )}
             </div>

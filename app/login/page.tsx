@@ -29,6 +29,15 @@ export default function LoginPage() {
       setLinkExpired(true);
       window.history.replaceState(null, "", window.location.pathname + window.location.search);
     }
+    // Show message when /auth/confirm redirected here (missing or invalid token)
+    const params = new URLSearchParams(window.location.search);
+    const confirmError = params.get("error");
+    if (confirmError === "missing_token" || confirmError === "invalid_or_expired") {
+      setLinkExpired(true);
+      params.delete("error");
+      const newSearch = params.toString();
+      window.history.replaceState(null, "", window.location.pathname + (newSearch ? `?${newSearch}` : ""));
+    }
   }, []);
 
   async function handleSubmit(e: React.FormEvent) {

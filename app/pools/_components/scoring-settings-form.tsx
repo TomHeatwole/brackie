@@ -7,6 +7,7 @@ import {
   UpsetMultipliers,
   GoodyType,
   PoolGoody,
+  GoodyScoringMode,
   DEFAULT_ROUND_POINTS,
   DEFAULT_UPSET_MULTIPLIERS,
 } from "@/lib/types";
@@ -44,6 +45,18 @@ export default function ScoringSettingsForm({
   );
   const goodyStrokeRuleMap = new Map(
     (initialPoolGoodies ?? []).map((pg) => [pg.goody_type_id, pg.stroke_rule_enabled])
+  );
+  const goodyScoringModeMap = new Map<string, GoodyScoringMode>(
+    (initialPoolGoodies ?? []).map((pg) => [
+      pg.goody_type_id,
+      (pg.scoring_mode ?? "fixed") as GoodyScoringMode,
+    ])
+  );
+  const goodyConferenceMultiplierMap = new Map(
+    (initialPoolGoodies ?? []).map((pg) => [
+      pg.goody_type_id,
+      pg.scoring_config?.conference_multiplier ?? 5,
+    ])
   );
 
   const [selectedGoodies, setSelectedGoodies] = useState<Set<string>>(enabledGoodyIds);
@@ -155,7 +168,7 @@ export default function ScoringSettingsForm({
           </label>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Bonus scoring categories. Turn on and pick which to use; set points and optional stroke rule per goody.
+          Bonus scoring categories. Turn on and pick which to use; set points and optional stroke rule per goodie.
         </p>
         {goodiesEnabled && (
           <div className="flex flex-col gap-2">
@@ -204,7 +217,7 @@ export default function ScoringSettingsForm({
                       )}
                       {isSelected && (
                         <div
-                          className="mt-4 pt-4 border-t border-card-border flex flex-wrap items-center gap-x-8 gap-y-3 rounded-lg bg-background/60 px-3 py-2 -mx-3 -mb-2"
+                          className="mt-4 pt-4 border-t border-card-border flex flex-wrap items-start gap-x-8 gap-y-4 rounded-lg bg-background/60 px-3 py-2 -mx-3 -mb-2"
                           onClick={(e) => e.stopPropagation()}
                         >
                           <div className="flex items-center gap-3 min-w-0">
@@ -220,23 +233,105 @@ export default function ScoringSettingsForm({
                               <div className="relative w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
                             </label>
                           </div>
-                          <div className="flex items-center gap-3 min-w-0">
-                            <label
-                              htmlFor={`goody_points_${goody.id}`}
-                              className="text-xs text-muted-foreground shrink-0"
-                            >
-                              Points
-                            </label>
-                            <input
-                              id={`goody_points_${goody.id}`}
-                              name={`goody_points_${goody.id}`}
-                              type="number"
-                              min={0}
-                              step={1}
-                              defaultValue={goodyPointsMap.get(goody.id) ?? goody.default_points}
-                              className="input-field w-20 py-2 text-center shrink-0"
-                            />
-                          </div>
+
+                          {goody.key === "first_conference_out" && (
+                            <div className="flex flex-wrap items-center gap-4 w-full">
+                              <span className="text-xs text-muted-foreground shrink-0">Scoring</span>
+                              <div className="flex flex-wrap items-center gap-4">
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`goody_scoring_mode_${goody.id}`}
+                                    value="fixed"
+                                    defaultChecked={goodyScoringModeMap.get(goody.id) === "fixed"}
+                                    className="rounded-full border-card-border text-accent focus:ring-accent"
+                                  />
+                                  <span className="text-xs text-stone-300">Fixed points</span>
+                                </label>
+                                <label className="flex items-center gap-2 cursor-pointer">
+                                  <input
+                                    type="radio"
+                                    name={`goody_scoring_mode_${goody.id}`}
+                                    value="conference_multiplier"
+                                    defaultChecked={goodyScoringModeMap.get(goody.id) === "conference_multiplier"}
+                                    className="rounded-full border-card-border text-accent focus:ring-accent"
+                                  />
+                                  <span className="text-xs text-stone-300">Conference size ×</span>
+                                </label>
+                                {goodyScoringModeMap.get(goody.id) === "conference_multiplier" ? (
+                                  <input
+                                    type="number"
+                                    name={`goody_conference_multiplier_${goody.id}`}
+                                    min={1}
+                                    step={1}
+                                    defaultValue={goodyConferenceMultiplierMap.get(goody.id) ?? 5}
+                                    className="input-field w-16 py-1.5 text-center text-sm"
+                                    key="mult"
+                                  />
+                                ) : (
+                                  <input
+                                    type="hidden"
+                                    name={`goody_conference_multiplier_${goody.id}`}
+                                    value={goodyConferenceMultiplierMap.get(goody.id) ?? 5}
+                                  />
+                                )}
+                              </div>
+                            </div>
+                          )}
+
+                          {goody.key === "dark_horse_champion" && (
+                            <div className="flex flex-wrap items-center gap-4">
+                              <span className="text-xs text-muted-foreground shrink-0">Scoring</span>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`goody_scoring_mode_${goody.id}`}
+                                  value="fixed"
+                                  defaultChecked={goodyScoringModeMap.get(goody.id) === "fixed"}
+                                  className="rounded-full border-card-border text-accent focus:ring-accent"
+                                />
+                                <span className="text-xs text-stone-300">Fixed points</span>
+                              </label>
+                              <label className="flex items-center gap-2 cursor-pointer">
+                                <input
+                                  type="radio"
+                                  name={`goody_scoring_mode_${goody.id}`}
+                                  value="bracket_upset_points"
+                                  defaultChecked={goodyScoringModeMap.get(goody.id) === "bracket_upset_points"}
+                                  className="rounded-full border-card-border text-accent focus:ring-accent"
+                                />
+                                <span className="text-xs text-stone-300">Bracket + upset points</span>
+                              </label>
+                            </div>
+                          )}
+
+                          {(goody.key !== "first_conference_out" || goodyScoringModeMap.get(goody.id) === "fixed") &&
+                           (goody.key !== "dark_horse_champion" || goodyScoringModeMap.get(goody.id) === "fixed") && (
+                            <div className="flex items-center gap-3 min-w-0">
+                              <label
+                                htmlFor={`goody_points_${goody.id}`}
+                                className="text-xs text-muted-foreground shrink-0"
+                              >
+                                Points
+                              </label>
+                              <input
+                                id={`goody_points_${goody.id}`}
+                                name={`goody_points_${goody.id}`}
+                                type="number"
+                                min={0}
+                                step={1}
+                                defaultValue={goodyPointsMap.get(goody.id) ?? goody.default_points}
+                                className="input-field w-20 py-2 text-center shrink-0"
+                              />
+                            </div>
+                          )}
+
+                          {(goody.key === "first_conference_out" && goodyScoringModeMap.get(goody.id) === "conference_multiplier") && (
+                            <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
+                          )}
+                          {(goody.key === "dark_horse_champion" && goodyScoringModeMap.get(goody.id) === "bracket_upset_points") && (
+                            <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
+                          )}
                         </div>
                       )}
                     </div>

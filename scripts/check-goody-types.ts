@@ -1,5 +1,5 @@
 /**
- * Verify goody_types data in the database.
+ * Verify goodie types data in the database (goody_types table).
  * Run: pnpm tsx scripts/check-goody-types.ts
  * Uses .env.local for NEXT_PUBLIC_SB_URL and NEXT_PUBLIC_SB_PUBLIC_KEY.
  */
@@ -37,7 +37,7 @@ if (!url || !key) {
 const supabase = createClient(url, key);
 
 async function main() {
-  console.log("Querying goody_types...\n");
+  console.log("Querying goody_types table...\n");
 
   const { data, error } = await supabase
     .from("goody_types")
@@ -57,11 +57,11 @@ async function main() {
     process.exit(1);
   }
 
-  console.log(`Found ${data.length} goody type(s):\n`);
+  console.log(`Found ${data.length} goodie type(s):\n`);
   data.forEach((row: { key: string; name: string; input_type: string }) => {
     console.log(`  - ${row.key}: ${row.name} (${row.input_type})`);
   });
-  console.log("\nGoody data exists in the DB. If the app still shows 'no goodies', check RLS for goody_types.");
+  console.log("\nGoodie data exists in the DB. If the app still shows 'no goodies', check RLS for goody_types.");
 }
 
 main();

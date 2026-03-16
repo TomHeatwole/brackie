@@ -110,15 +110,27 @@ export interface GoodyType {
   created_at: string;
 }
 
+/** Scoring mode for pool goodies. Only some goody types support non-fixed modes. */
+export type GoodyScoringMode = "fixed" | "conference_multiplier" | "bracket_upset_points";
+
+/** When scoring_mode is conference_multiplier, points = (teams in conference) * conference_multiplier. */
+export interface GoodyScoringConfig {
+  conference_multiplier?: number;
+}
+
 export interface PoolGoody {
   id: string;
   pool_id: string;
   goody_type_id: string;
   points: number;
   stroke_rule_enabled: boolean;
+  /** Default 'fixed'. Use 'conference_multiplier' for First Conference Out; 'bracket_upset_points' for Dark Horse Champion. */
+  scoring_mode?: GoodyScoringMode;
+  /** When scoring_mode is 'conference_multiplier', set conference_multiplier. */
+  scoring_config?: GoodyScoringConfig | null;
 }
 
-/** User-input goody answer per (pool_bracket, goody_type). value shape varies by goody key. */
+/** User-input goodie answer per (pool_bracket, goodie_type). value shape varies by goodie key. */
 export interface PoolBracketGoodyAnswer {
   id: string;
   pool_bracket_id: string;
@@ -126,7 +138,7 @@ export interface PoolBracketGoodyAnswer {
   value: Record<string, unknown>;
 }
 
-/** Elite conferences for "First conference out" goody. */
+/** Elite conferences for "First conference out" goodie. */
 export const ELITE_CONFERENCES = [
   "ACC",
   "Big Ten",

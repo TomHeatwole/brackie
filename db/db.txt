@@ -173,6 +173,8 @@ create table public.pool_goodies (
   goody_type_id uuid not null,
   points integer not null default 5,
   stroke_rule_enabled boolean not null default false,
+  scoring_mode character varying not null default 'fixed',
+  scoring_config jsonb null,
   constraint pool_goodies_pkey primary key (id),
   constraint pool_goodies_pool_id_fkey foreign key (pool_id) references public.pools (id) on update cascade on delete cascade,
   constraint pool_goodies_goody_type_id_fkey foreign key (goody_type_id) references public.goody_types (id) on update cascade on delete cascade,

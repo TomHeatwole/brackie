@@ -193,4 +193,6 @@ alter table public.goody_types
   add column if not exists config jsonb null;
 
 alter table public.pool_goodies
-  add column if not exists stroke_rule_enabled boolean not null default false;
+  add column if not exists stroke_rule_enabled boolean not null default false,
+  add column if not exists scoring_mode character varying not null default 'fixed',
+  add column if not exists scoring_config jsonb null;

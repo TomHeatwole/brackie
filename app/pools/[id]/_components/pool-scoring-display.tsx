@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { type PoolWithDetails } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
 
@@ -28,6 +31,7 @@ export default function PoolScoringDisplay({
   pool,
   poolGoodiesWithTypes,
 }: PoolScoringDisplayProps) {
+  const [expanded, setExpanded] = useState(true);
   const hasGoodies = pool.goodies_enabled && poolGoodiesWithTypes.length > 0;
 
   return (
@@ -42,21 +46,37 @@ export default function PoolScoringDisplay({
         <div className="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-accent/60 to-accent/20" aria-hidden />
       )}
       <div className="relative px-5 py-5">
-        <div className="flex items-center gap-3 mb-5">
-          {hasGoodies && (
-            <span
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/25 text-accent shadow-inner"
-              aria-hidden
-            >
-              ★
-            </span>
-          )}
-          <h2 className="text-lg font-semibold tracking-tight text-stone-100">
-            Scoring
-          </h2>
-        </div>
+        <button
+          type="button"
+          onClick={() => setExpanded((e) => !e)}
+          className="flex w-full items-center justify-between gap-3 rounded-lg text-left mb-0 -mx-1 px-1 py-0.5 hover:bg-white/5 transition-colors"
+          aria-expanded={expanded}
+        >
+          <div className="flex items-center gap-3">
+            {hasGoodies && (
+              <span
+                className="flex h-8 w-8 items-center justify-center rounded-lg bg-accent/25 text-accent shadow-inner"
+                aria-hidden
+              >
+                ★
+              </span>
+            )}
+            <h2 className="text-lg font-semibold tracking-tight text-stone-100">
+              Scoring
+            </h2>
+          </div>
+          <span
+            className={`shrink-0 text-stone-400 transition-transform duration-200 ${expanded ? "rotate-180" : ""}`}
+            aria-hidden
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </span>
+        </button>
 
-        <div className="space-y-6">
+        {expanded && (
+        <div className="space-y-6 mt-5">
           {/* Round points — grid of round chips */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
@@ -131,7 +151,7 @@ export default function PoolScoringDisplay({
                     className="flex items-center justify-between gap-3 rounded-lg bg-background/60 px-3 py-2.5 ring-1 ring-stone-800/50"
                   >
                     <span className="text-sm text-stone-200">
-                      {pg.goody_types?.name ?? "Goody"}
+                      {pg.goody_types?.name ?? "Goodie"}
                       {pg.stroke_rule_enabled && (
                         <span className="ml-1.5 text-xs text-muted-foreground">
                           (stroke rule)
@@ -147,6 +167,7 @@ export default function PoolScoringDisplay({
             </div>
           )}
         </div>
+        )}
       </div>
     </div>
   );
