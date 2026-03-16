@@ -13,8 +13,6 @@ const REGIONS = ["East", "West", "South", "Midwest"] as const;
 const REGIONS_TC = ["East", "South", "West", "Midwest"] as const;
 // Standard bracket order: 1v16, 8v9, 5v12, 4v13, 6v11, 3v14, 7v10, 2v15
 const SEED_ORDER = [1, 16, 8, 9, 5, 12, 4, 13, 6, 11, 3, 14, 7, 10, 2, 15];
-// Tournament Challenge page sometimes shows 3-seed matchup before 4-seed (positions 6 and 7 swapped)
-const SEED_ORDER_TC = [1, 16, 8, 9, 5, 12, 3, 14, 4, 13, 6, 11, 7, 10, 2, 15];
 const LOGO_BASE = "https://a.espncdn.com/i/teamlogos/ncaa/500";
 
 // First Four play-in slots: these get "Play In" and no logo; the scrape has 60 teams for the other 60 slots
@@ -92,7 +90,8 @@ function main() {
     }
   }
 
-  const seedOrder = usedTcPairing ? SEED_ORDER_TC : SEED_ORDER;
+  // Use standard seed order for both: TC page lists teams in same order (4 before 3, etc.)
+  const seedOrder = SEED_ORDER;
 
   type Entry = { region: string; seed: number; name: string; icon_url: string | null };
   const entries: Entry[] = [];
