@@ -2,6 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
+import { getUserInfo } from "@/utils/user-info";
+import { removePoolMember } from "@/lib/pools";
 import { REGIONS, SEED_MATCHUPS, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
 
 const DEFAULT_TEAM_NAMES: Record<Region, string[]> = {
@@ -475,4 +477,116 @@ export async function bulkUpdateTeamsFromConfigAction(
   revalidatePath("/pools");
   revalidatePath("/brackets");
   return { success: true, message: `Updated ${updated} teams from config.` };
+}
+
+// ── Pools (admin: list pools + remove players) ──
+
+export interface PoolMemberForAdmin {
+  user_id: string;
+  first_name: string | null;
+  last_name: string | null;
+  username: string | null;
+  joined_at: string;
+}
+
+export interface PoolWithMembersForAdmin {
+  id: string;
+  name: string;
+  invite_code: string;
+  creator_id: string;
+  member_count: number;
+  members: PoolMemberForAdmin[];
+}
+
+export async function getPoolsWithMembersForAdminAction(
+  tournamentId: string
+): Promise<{ pools: PoolWithMembersForAdmin[]; error?: string }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { pools: [], error: "Not authenticated." };
+
+  const userInfo = await getUserInfo(supabase, user.id);
+  if (!userInfo?.is_site_admin) return { pools: [], error: "Not an admin." };
+
+  const { data: pools, error: poolsErr } = await supabase
+    .from("pools")
+    .select("id, name, invite_code, creator_id")
+    .eq("tournament_id", tournamentId)
+    .order("created_at", { ascending: false });
+
+  if (poolsErr || !pools?.length) {
+    return { pools: [], error: poolsErr?.message };
+  }
+
+  const poolIds = pools.map((p) => p.id);
+  const { data: members } = await supabase
+    .from("pool_members")
+    .select("pool_id, user_id, joined_at")
+    .in("pool_id", poolIds)
+    .order("joined_at");
+
+  const userIds = [...new Set((members ?? []).map((m) => m.user_id))];
+  const { data: userInfos } = await supabase
+    .from("user_info")
+    .select("id, first_name, last_name, username")
+    .in("id", userIds);
+
+  const userMap = new Map<string, { first_name: string | null; last_name: string | null; username: string | null }>();
+  for (const u of userInfos ?? []) {
+    userMap.set(u.id, {
+      first_name: u.first_name ?? null,
+      last_name: u.last_name ?? null,
+      username: u.username ?? null,
+    });
+  }
+
+  const membersByPool = new Map<string, typeof members>();
+  for (const m of members ?? []) {
+    const list = membersByPool.get(m.pool_id) ?? [];
+    list.push(m);
+    membersByPool.set(m.pool_id, list);
+  }
+
+  const result: PoolWithMembersForAdmin[] = pools.map((p) => {
+    const poolMembers = membersByPool.get(p.id) ?? [];
+    return {
+      id: p.id,
+      name: p.name,
+      invite_code: p.invite_code,
+      creator_id: p.creator_id,
+      member_count: poolMembers.length,
+      members: poolMembers.map((m) => {
+        const info = userMap.get(m.user_id);
+        return {
+          user_id: m.user_id,
+          first_name: info?.first_name ?? null,
+          last_name: info?.last_name ?? null,
+          username: info?.username ?? null,
+          joined_at: m.joined_at,
+        };
+      }),
+    };
+  });
+
+  return { pools: result };
+}
+
+export async function adminRemovePoolMemberAction(
+  poolId: string,
+  memberUserId: string
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, message: "Not authenticated." };
+
+  const userInfo = await getUserInfo(supabase, user.id);
+  if (!userInfo?.is_site_admin) return { success: false, message: "Not an admin." };
+
+  const result = await removePoolMember(supabase, poolId, memberUserId);
+  if (!result.success) return { success: false, message: result.error ?? "Failed to remove member." };
+
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  revalidatePath(`/pools/${poolId}`);
+  return { success: true, message: "Player removed from pool." };
 }

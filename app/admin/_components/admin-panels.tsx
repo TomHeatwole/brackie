@@ -15,9 +15,12 @@ import {
   getTournamentTeamsForAdminAction,
   updateTeamAction,
   bulkUpdateTeamsFromConfigAction,
+  getPoolsWithMembersForAdminAction,
+  adminRemovePoolMemberAction,
   AdminActionResult,
   GameWithTeamNames,
   TeamConfigEntry,
+  PoolWithMembersForAdmin,
 } from "../actions";
 
 const emptyResult: AdminActionResult = { success: false, message: "" };
@@ -523,6 +526,112 @@ export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
   );
 }
 
+// ── Pools (admin: list pools + remove players) ──
+
+function memberDisplayName(m: PoolWithMembersForAdmin["members"][number]): string {
+  const parts = [m.first_name, m.last_name].filter(Boolean);
+  if (parts.length) return parts.join(" ");
+  if (m.username) return m.username;
+  return m.user_id.slice(0, 8) + "…";
+}
+
+export function PoolsPanel({ tournamentId }: { tournamentId: string }) {
+  const [pools, setPools] = useState<PoolWithMembersForAdmin[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<AdminActionResult | null>(null);
+  const [removing, setRemoving] = useState<string | null>(null);
+
+  function refreshPools() {
+    if (!tournamentId) return;
+    setLoading(true);
+    getPoolsWithMembersForAdminAction(tournamentId).then((res) => {
+      setPools(res.pools ?? []);
+      setLoading(false);
+    });
+  }
+
+  useEffect(() => {
+    if (!tournamentId) {
+      setPools([]);
+      setLoading(false);
+      return;
+    }
+    refreshPools();
+  }, [tournamentId]);
+
+  async function handleRemove(poolId: string, memberUserId: string) {
+    setMsg(null);
+    setRemoving(`${poolId}:${memberUserId}`);
+    const result = await adminRemovePoolMemberAction(poolId, memberUserId);
+    setMsg(result);
+    setRemoving(null);
+    if (result.success) refreshPools();
+  }
+
+  if (!tournamentId) {
+    return (
+      <Card title="Pools (remove players)">
+        <p className="text-stone-500 text-sm">Select a tournament above.</p>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card title="Pools (remove players)">
+        <p className="text-stone-500 text-sm">Loading pools…</p>
+      </Card>
+    );
+  }
+
+  return (
+    <Card title="Pools (remove players)">
+      <p className="text-stone-500 text-xs mb-3">Remove a player from a pool. This also removes their bracket from the pool.</p>
+      {msg && <StatusBadge result={msg} />}
+      {pools.length === 0 ? (
+        <p className="text-stone-500 text-sm">No pools for this tournament.</p>
+      ) : (
+        <div className="space-y-4 max-h-[420px] overflow-y-auto">
+          {pools.map((pool) => (
+            <div
+              key={pool.id}
+              className="rounded border border-card-border bg-background p-3 text-sm"
+            >
+              <div className="font-medium text-stone-200 mb-1">
+                {pool.name}
+                <span className="text-stone-500 font-mono text-xs ml-2">({pool.invite_code})</span>
+              </div>
+              <div className="text-stone-500 text-xs mb-2">
+                {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
+              </div>
+              <ul className="space-y-1.5">
+                {pool.members.map((m) => (
+                  <li
+                    key={m.user_id}
+                    className="flex items-center justify-between gap-2 py-1 px-2 rounded bg-stone-900/50"
+                  >
+                    <span className="text-stone-300 truncate">
+                      {memberDisplayName(m)}
+                    </span>
+                    <Btn
+                      variant="danger"
+                      onClick={() => handleRemove(pool.id, m.user_id)}
+                      disabled={removing !== null}
+                      pending={removing === `${pool.id}:${m.user_id}`}
+                    >
+                      Remove
+                    </Btn>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  );
+}
+
 // ── Wrapper: shared tournament selection for manager + game results + teams ──
 
 export function AdminTournamentPanels({ tournaments }: { tournaments: Tournament[] }) {
@@ -543,6 +652,7 @@ export function AdminTournamentPanels({ tournaments }: { tournaments: Tournament
       />
       <GameResultsPanel tournamentId={tournamentId} />
       <TeamsPanel tournamentId={tournamentId} />
+      <PoolsPanel tournamentId={tournamentId} />
     </>
   );
 }

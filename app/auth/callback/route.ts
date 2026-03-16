@@ -60,24 +60,28 @@ export async function GET(request: Request) {
     );
     await supabase.auth.exchangeCodeForSession(code);
 
-    // If we still don't have a redirect path (e.g. magic link opened in another context),
-    // look up the path we stored by email when they requested the link.
-    if (!nextRaw || !nextRaw.startsWith("/")) {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (user?.email) {
-        const { data: row } = await supabase
+    // Prefer stored redirect from DB (source of truth from when they requested the link).
+    // Use service role to bypass RLS. Ensures invite/pool link persists even when cookie is "/" or missing.
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user?.email) {
+      const emailLower = user.email.toLowerCase();
+      try {
+        const { createServerAdminClient } = await import("@/utils/supabase/server-admin");
+        const admin = createServerAdminClient();
+        const { data: row } = await admin
           .from("pending_login_redirect")
           .select("next_path")
-          .eq("email", user.email.toLowerCase())
+          .eq("email", emailLower)
           .gt("expires_at", new Date().toISOString())
-          .single();
+          .maybeSingle();
         if (row?.next_path && row.next_path.startsWith("/")) {
-          nextRaw = row.next_path;
-          await supabase.from("pending_login_redirect").delete().eq("email", user.email.toLowerCase());
-          res.headers.set("Location", `${origin}${nextRaw}`);
+          await admin.from("pending_login_redirect").delete().eq("email", emailLower);
+          res.headers.set("Location", `${origin}${row.next_path}`);
         }
+      } catch {
+        // No service role key or admin client failed; keep redirect from cookie/url/default.
       }
     }
   }
