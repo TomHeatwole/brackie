@@ -2,13 +2,16 @@
 
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { useStartNavigation } from "@/app/_components/navigation-progress";
 
 export default function LogoutButton() {
   const router = useRouter();
+  const startNavigation = useStartNavigation();
   const supabase = createClient();
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    startNavigation();
     router.push("/login");
   }
 

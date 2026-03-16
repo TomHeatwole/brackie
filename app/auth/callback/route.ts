@@ -24,7 +24,9 @@ export async function GET(request: Request) {
   const next = nextRaw.startsWith("/") ? nextRaw : "/";
 
   const redirectUrl = `${origin}${next}`;
-  const res = NextResponse.redirect(redirectUrl);
+  // Explicit 302 so the browser reliably follows the redirect after setting cookies
+  // (some browsers can hang or not follow when status is omitted or 307/308)
+  const res = NextResponse.redirect(redirectUrl, { status: 302 });
 
   if (code) {
     const cookieHeader = request.headers.get("cookie") ?? "";

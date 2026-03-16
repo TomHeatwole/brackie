@@ -5,6 +5,7 @@ import { Team, TournamentGame, BracketStructure } from "@/lib/types";
 import BracketTree from "@/app/_components/bracket-tree";
 import { saveBracketPicksAction, saveAndSubmitToPoolAction } from "@/app/brackets/create/actions";
 import { useRouter } from "next/navigation";
+import { useStartNavigation } from "@/app/_components/navigation-progress";
 
 interface Props {
   bracketId: string;
@@ -32,26 +33,39 @@ export default function BracketEditor({
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const router = useRouter();
+  const startNavigation = useStartNavigation();
 
   async function handleSave(picks: Record<string, string>) {
     setSaving(true);
     setSaveStatus(null);
 
-    const result = poolId
-      ? await saveAndSubmitToPoolAction(bracketId, poolId, picks)
-      : await saveBracketPicksAction(bracketId, picks);
+    try {
+      const result = poolId
+        ? await saveAndSubmitToPoolAction(bracketId, poolId, picks)
+        : await saveBracketPicksAction(bracketId, picks);
 
-    setSaving(false);
-    if (result.success) {
-      if (poolId) {
-        setSaveStatus("Submitted!");
-        setTimeout(() => router.push(`/pools/${poolId}`), 1000);
+      if (result.success) {
+        if (poolId) {
+          setSaveStatus("Submitted!");
+          setTimeout(() => {
+            startNavigation();
+            router.push(`/pools/${poolId}`);
+          }, 1000);
+        } else {
+          setSaveStatus("Saved!");
+          setTimeout(() => {
+            startNavigation();
+            router.push("/brackets");
+          }, 1000);
+        }
+        // Keep "Saving…" until redirect; don't setSaving(false)
       } else {
-        setSaveStatus("Saved!");
-        setTimeout(() => router.push("/brackets"), 1000);
+        setSaving(false);
+        setSaveStatus(result.error ?? "Failed to save");
       }
-    } else {
-      setSaveStatus(result.error ?? "Failed to save");
+    } catch {
+      setSaving(false);
+      setSaveStatus("Failed to save");
     }
   }
 

@@ -1,8 +1,19 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/app/_components/navbar";
+
+function getLinkExpiredFromHash(): boolean {
+  if (typeof window === "undefined") return false;
+  const hash = window.location.hash.slice(1);
+  if (!hash) return false;
+  const params = new URLSearchParams(hash);
+  return (
+    params.get("error_code") === "otp_expired" ||
+    params.get("error") === "access_denied"
+  );
+}
 
 export default function LoginPage() {
   const supabase = createClient();
@@ -10,6 +21,14 @@ export default function LoginPage() {
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [linkExpired, setLinkExpired] = useState(false);
+
+  useEffect(() => {
+    if (getLinkExpiredFromHash()) {
+      setLinkExpired(true);
+      window.history.replaceState(null, "", window.location.pathname + window.location.search);
+    }
+  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +80,12 @@ export default function LoginPage() {
             <h2 className="mb-5 text-sm font-medium text-muted-foreground uppercase tracking-widest">
               Sign In or Create Account
             </h2>
+
+            {linkExpired && (
+              <div className="mb-4 rounded-lg px-4 py-3 text-sm bg-amber-500/10 border border-amber-500/25 text-amber-200">
+                That login link was already used or has expired. Request a new one below.
+              </div>
+            )}
 
             {submitted ? (
               <div className="flex flex-col gap-3">

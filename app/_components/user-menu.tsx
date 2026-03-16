@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
+import { useStartNavigation } from "@/app/_components/navigation-progress";
 import { formatUserDisplayName } from "@/utils/display-name";
 import UserAvatar from "./user-avatar";
 
@@ -18,6 +19,7 @@ export default function UserMenu({ userEmail, firstName, lastName, avatarUrl }: 
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   const router = useRouter();
+  const startNavigation = useStartNavigation();
   const supabase = createClient();
 
   useEffect(() => {
@@ -32,6 +34,7 @@ export default function UserMenu({ userEmail, firstName, lastName, avatarUrl }: 
 
   async function handleLogout() {
     await supabase.auth.signOut();
+    startNavigation();
     router.push("/login");
   }
 
