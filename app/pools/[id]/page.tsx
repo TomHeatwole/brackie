@@ -18,6 +18,7 @@ import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
 import PoolScoringDisplay from "./_components/pool-scoring-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
+import RemoveMemberButton from "./_components/remove-member-button";
 
 const OG_TITLE = "Join my pool on brackie!";
 const SHARE_DESCRIPTION = "Join my pool on brackie!";
@@ -279,6 +280,13 @@ export default async function PoolDetailPage({
                         </span>
                         <span className="text-stone-600 text-xs ml-0.5">possible</span>
                       </div>
+                      {isCreator && member.user_id !== pool.creator_id && (
+                        <RemoveMemberButton
+                          poolId={poolId}
+                          memberUserId={member.user_id}
+                          memberDisplayName={formatUserDisplayName(member.first_name, member.last_name) || "this member"}
+                        />
+                      )}
                     </div>
                   </div>
                 ))
@@ -304,7 +312,7 @@ export default async function PoolDetailPage({
                         </span>
                       )}
                     </div>
-                    <div className="text-right">
+                    <div className="flex items-center gap-3 text-right">
                       {member.bracket_submitted ? (
                         member.bracket_id ? (
                           <Link
@@ -320,6 +328,13 @@ export default async function PoolDetailPage({
                         )
                       ) : (
                         <span className="text-xs text-stone-600">No bracket</span>
+                      )}
+                      {isCreator && member.user_id !== pool.creator_id && (
+                        <RemoveMemberButton
+                          poolId={poolId}
+                          memberUserId={member.user_id}
+                          memberDisplayName={formatUserDisplayName(member.first_name, member.last_name) || "this member"}
+                        />
                       )}
                     </div>
                   </div>

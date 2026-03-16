@@ -2,18 +2,8 @@
 -- Owners can always see their own picks. Others can only see picks after lock_date.
 -- Admins can always see everything.
 
--- Drop any existing SELECT policies on bracket_picks (names vary by setup)
-DO $$
-DECLARE
-  pol record;
-BEGIN
-  FOR pol IN
-    SELECT policyname FROM pg_policies
-    WHERE schemaname = 'public' AND tablename = 'bracket_picks' AND cmd = 'SELECT'
-  LOOP
-    EXECUTE format('DROP POLICY IF EXISTS %I ON public.bracket_picks', pol.policyname);
-  END LOOP;
-END $$;
+-- Drop existing SELECT policy (by known name); pg_policies uses "policyname" not "polname"
+DROP POLICY IF EXISTS "bracket_picks_select" ON public.bracket_picks;
 
 -- Create restricted SELECT policy for bracket_picks
 CREATE POLICY "bracket_picks_select" ON public.bracket_picks

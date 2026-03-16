@@ -48,13 +48,13 @@ pool_members
 - SELECT: true
 - INSERT: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 - UPDATE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
-- DELETE: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- DELETE: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true) OR EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_members.pool_id AND pools.creator_id = ( SELECT auth.uid()))
 
 pool_brackets
 - SELECT: true
 - INSERT: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 - UPDATE: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
-- DELETE: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- DELETE: (( SELECT auth.uid() AS uid) = user_id) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true) OR EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_brackets.pool_id AND pools.creator_id = ( SELECT auth.uid()))
 
 goody_types
 - SELECT: true
@@ -78,4 +78,4 @@ pending_login_redirect
 - SELECT: (auth.jwt()->>'email') = email
 - INSERT: true
 - UPDATE: false
-- DELETE: (auth.jwt()->>'email')  
+- DELETE: (auth.jwt()->>'email') = email  

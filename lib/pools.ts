@@ -383,6 +383,37 @@ export async function joinPool(
   return { success: true, poolId: pool.id };
 }
 
+/** Remove a member from a pool. Caller must be the pool creator or site admin (enforced by RLS). Also removes their bracket from the pool. */
+export async function removePoolMember(
+  supabase: SupabaseClient,
+  poolId: string,
+  memberUserId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error: bracketError } = await supabase
+    .from("pool_brackets")
+    .delete()
+    .eq("pool_id", poolId)
+    .eq("user_id", memberUserId);
+
+  if (bracketError) {
+    console.error("Error removing member bracket from pool:", bracketError);
+    return { success: false, error: "Failed to remove member from pool." };
+  }
+
+  const { error: memberError } = await supabase
+    .from("pool_members")
+    .delete()
+    .eq("pool_id", poolId)
+    .eq("user_id", memberUserId);
+
+  if (memberError) {
+    console.error("Error removing pool member:", memberError);
+    return { success: false, error: "Failed to remove member from pool." };
+  }
+
+  return { success: true };
+}
+
 export async function submitBracketToPool(
   supabase: SupabaseClient,
   poolId: string,

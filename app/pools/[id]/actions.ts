@@ -6,6 +6,7 @@ import {
   submitBracketToPool,
   getPoolGoodiesWithTypes,
   setPoolBracketGoodyAnswers,
+  removePoolMember,
 } from "@/lib/pools";
 
 export interface SubmitBracketFormState {
@@ -69,6 +70,44 @@ export async function submitBracketToPoolAction(
     if (!answerResult.success) {
       return { error: answerResult.error ?? "Failed to save goody answers." };
     }
+  }
+
+  revalidatePath(`/pools/${poolId}`);
+  return { success: true };
+}
+
+export interface RemovePoolMemberState {
+  error?: string;
+  success?: boolean;
+}
+
+export async function removePoolMemberAction(
+  poolId: string,
+  memberUserId: string
+): Promise<RemovePoolMemberState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("creator_id")
+    .eq("id", poolId)
+    .single();
+
+  if (!pool || pool.creator_id !== user.id) {
+    return { error: "Only the pool creator can remove members." };
+  }
+
+  if (memberUserId === user.id) {
+    return { error: "You cannot remove yourself. Leave the pool instead." };
+  }
+
+  const result = await removePoolMember(supabase, poolId, memberUserId);
+  if (!result.success) {
+    return { error: result.error ?? "Failed to remove member." };
   }
 
   revalidatePath(`/pools/${poolId}`);

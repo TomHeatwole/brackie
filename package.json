@@ -8,6 +8,7 @@
     "start": "next start",
     "lint": "eslint",
     "save-auth": "tsx scripts/save-auth.ts",
+    "check-goodies": "tsx scripts/check-goody-types.ts",
     "screenshot": "tsx scripts/screenshot.ts",
     "parse-espn": "tsx scripts/parse-espn-scrape.ts"
   },
