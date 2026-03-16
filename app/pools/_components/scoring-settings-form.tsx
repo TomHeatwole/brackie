@@ -37,6 +37,12 @@ export default function ScoringSettingsForm({
   const rp = initialRoundPoints ?? DEFAULT_ROUND_POINTS;
   const um = initialUpsetMultipliers ?? DEFAULT_UPSET_MULTIPLIERS;
 
+  const champBase = rp["6"] ?? DEFAULT_ROUND_POINTS["6"];
+  const champUpsetMult = um["6"] ?? DEFAULT_UPSET_MULTIPLIERS["6"];
+  const regularChampScoreFormula = upsetEnabled
+    ? `${champBase} + (${champUpsetMult} × upset)`
+    : String(champBase);
+
   const enabledGoodyIds = new Set(
     (initialPoolGoodies ?? []).map((pg) => pg.goody_type_id)
   );
@@ -314,14 +320,14 @@ export default function ScoringSettingsForm({
                                   onChange={() => setGoodyScoringMode(goody.id, "bracket_upset_points")}
                                   className="rounded-full border-card-border text-accent focus:ring-accent"
                                 />
-                                <span className="text-xs text-stone-300">Bracket + upset points</span>
+                                <span className="text-xs text-stone-300">
+                                  Regular championship score ({regularChampScoreFormula})
+                                </span>
                               </label>
                             </div>
                           )}
 
-                          {((goody.key !== "first_conference_out" && goody.key !== "dark_horse_champion") ||
-                            scoringModeByGoodyId.get(goody.id) === "fixed" ||
-                            scoringModeByGoodyId.get(goody.id) === undefined) && (
+                          {(goody.key !== "first_conference_out" || (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "fixed") && (
                             <div className="flex items-center gap-3 min-w-0">
                               <label
                                 htmlFor={`goody_points_${goody.id}`}
@@ -331,20 +337,22 @@ export default function ScoringSettingsForm({
                               </label>
                               <input
                                 id={`goody_points_${goody.id}`}
-                                name={`goody_points_${goody.id}`}
+                                name={(goody.key === "dark_horse_champion" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points") ? undefined : `goody_points_${goody.id}`}
                                 type="number"
                                 min={0}
                                 step={1}
                                 defaultValue={goodyPointsMap.get(goody.id) ?? goody.default_points}
-                                className="input-field w-20 py-2 text-center shrink-0"
+                                className="input-field w-20 py-2 text-center shrink-0 disabled:opacity-60 disabled:cursor-not-allowed"
+                                disabled={goody.key === "dark_horse_champion" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points"}
                               />
                             </div>
                           )}
 
-                          {goody.key === "first_conference_out" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "conference_multiplier" && (
+                          {goody.key === "dark_horse_champion" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points" && (
                             <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
                           )}
-                          {goody.key === "dark_horse_champion" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points" && (
+
+                          {goody.key === "first_conference_out" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "conference_multiplier" && (
                             <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
                           )}
                         </div>

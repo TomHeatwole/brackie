@@ -149,12 +149,17 @@ export default function PoolScoringDisplay({
                   const mode = pg.scoring_mode ?? "fixed";
                   const isConferenceMultiplier = mode === "conference_multiplier";
                   const isBracketUpset = mode === "bracket_upset_points";
+                  const champBase = pool.round_points?.["6"] ?? 130;
+                  const champUpsetMult = pool.upset_multipliers?.["6"] ?? 20;
+                  const regularChampFormula = pool.upset_points_enabled
+                    ? `${champBase} + (${champUpsetMult} × upset)`
+                    : String(champBase);
                   const pointsLabel =
                     isConferenceMultiplier && pg.scoring_config?.conference_multiplier != null
                       ? `Conference size × ${pg.scoring_config.conference_multiplier} pts`
                       : isBracketUpset
-                        ? "Bracket + upset points"
-                        : `+${pg.points} pts`;
+                        ? regularChampFormula
+                        : `${pg.points} pts`;
                   return (
                     <li
                       key={pg.id}
