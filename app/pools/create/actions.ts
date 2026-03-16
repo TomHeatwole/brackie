@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
-import { createPool, setPoolGoodies, ScoringSettings } from "@/lib/pools";
+import { createPool, setPoolGoodies, ScoringSettings, SetPoolGoodyInput } from "@/lib/pools";
 import { getActiveTournament } from "@/lib/tournament";
 import {
   RoundPoints,
@@ -40,20 +40,25 @@ function parseUpsetMultipliers(formData: FormData): UpsetMultipliers {
   return multipliers;
 }
 
-function parseGoodies(formData: FormData): {
-  goody_type_id: string;
-  points: number;
-  stroke_rule_enabled: boolean;
-}[] {
+function parseGoodies(formData: FormData): SetPoolGoodyInput[] {
   const ids = formData.getAll("goody_ids") as string[];
   return ids.map((id) => {
     const raw = formData.get(`goody_points_${id}`);
     const pts = raw ? Number(raw) : 5;
     const strokeRule = formData.get(`goody_stroke_rule_${id}`) === "true";
+    const scoringMode = (formData.get(`goody_scoring_mode_${id}`) as string) || "fixed";
+    const multRaw = formData.get(`goody_conference_multiplier_${id}`);
+    const conferenceMultiplier = multRaw != null ? Number(multRaw) : undefined;
+    const scoringConfig =
+      scoringMode === "conference_multiplier" && conferenceMultiplier != null && !isNaN(conferenceMultiplier) && conferenceMultiplier >= 1
+        ? { conference_multiplier: conferenceMultiplier }
+        : null;
     return {
       goody_type_id: id,
       points: isNaN(pts) || pts < 0 ? 5 : pts,
       stroke_rule_enabled: strokeRule,
+      scoring_mode: scoringMode as "fixed" | "conference_multiplier" | "bracket_upset_points",
+      scoring_config: scoringConfig,
     };
   });
 }

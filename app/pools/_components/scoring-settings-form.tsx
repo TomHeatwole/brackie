@@ -60,6 +60,17 @@ export default function ScoringSettingsForm({
   );
 
   const [selectedGoodies, setSelectedGoodies] = useState<Set<string>>(enabledGoodyIds);
+  const [scoringModeByGoodyId, setScoringModeByGoodyId] = useState<Map<string, GoodyScoringMode>>(() =>
+    new Map((initialPoolGoodies ?? []).map((pg) => [pg.goody_type_id, (pg.scoring_mode ?? "fixed") as GoodyScoringMode]))
+  );
+
+  function setGoodyScoringMode(goodyId: string, mode: GoodyScoringMode) {
+    setScoringModeByGoodyId((prev) => {
+      const next = new Map(prev);
+      next.set(goodyId, mode);
+      return next;
+    });
+  }
 
   function toggleGoody(id: string) {
     setSelectedGoodies((prev) => {
@@ -243,7 +254,8 @@ export default function ScoringSettingsForm({
                                     type="radio"
                                     name={`goody_scoring_mode_${goody.id}`}
                                     value="fixed"
-                                    defaultChecked={goodyScoringModeMap.get(goody.id) === "fixed"}
+                                    checked={(scoringModeByGoodyId.get(goody.id) ?? "fixed") === "fixed"}
+                                    onChange={() => setGoodyScoringMode(goody.id, "fixed")}
                                     className="rounded-full border-card-border text-accent focus:ring-accent"
                                   />
                                   <span className="text-xs text-stone-300">Fixed points</span>
@@ -253,12 +265,13 @@ export default function ScoringSettingsForm({
                                     type="radio"
                                     name={`goody_scoring_mode_${goody.id}`}
                                     value="conference_multiplier"
-                                    defaultChecked={goodyScoringModeMap.get(goody.id) === "conference_multiplier"}
+                                    checked={(scoringModeByGoodyId.get(goody.id) ?? "fixed") === "conference_multiplier"}
+                                    onChange={() => setGoodyScoringMode(goody.id, "conference_multiplier")}
                                     className="rounded-full border-card-border text-accent focus:ring-accent"
                                   />
                                   <span className="text-xs text-stone-300">Conference size ×</span>
                                 </label>
-                                {goodyScoringModeMap.get(goody.id) === "conference_multiplier" ? (
+                                {(scoringModeByGoodyId.get(goody.id) ?? "fixed") === "conference_multiplier" ? (
                                   <input
                                     type="number"
                                     name={`goody_conference_multiplier_${goody.id}`}
@@ -266,7 +279,6 @@ export default function ScoringSettingsForm({
                                     step={1}
                                     defaultValue={goodyConferenceMultiplierMap.get(goody.id) ?? 5}
                                     className="input-field w-16 py-1.5 text-center text-sm"
-                                    key="mult"
                                   />
                                 ) : (
                                   <input
@@ -287,7 +299,8 @@ export default function ScoringSettingsForm({
                                   type="radio"
                                   name={`goody_scoring_mode_${goody.id}`}
                                   value="fixed"
-                                  defaultChecked={goodyScoringModeMap.get(goody.id) === "fixed"}
+                                  checked={(scoringModeByGoodyId.get(goody.id) ?? "fixed") === "fixed"}
+                                  onChange={() => setGoodyScoringMode(goody.id, "fixed")}
                                   className="rounded-full border-card-border text-accent focus:ring-accent"
                                 />
                                 <span className="text-xs text-stone-300">Fixed points</span>
@@ -297,7 +310,8 @@ export default function ScoringSettingsForm({
                                   type="radio"
                                   name={`goody_scoring_mode_${goody.id}`}
                                   value="bracket_upset_points"
-                                  defaultChecked={goodyScoringModeMap.get(goody.id) === "bracket_upset_points"}
+                                  checked={(scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points"}
+                                  onChange={() => setGoodyScoringMode(goody.id, "bracket_upset_points")}
                                   className="rounded-full border-card-border text-accent focus:ring-accent"
                                 />
                                 <span className="text-xs text-stone-300">Bracket + upset points</span>
@@ -305,8 +319,9 @@ export default function ScoringSettingsForm({
                             </div>
                           )}
 
-                          {(goody.key !== "first_conference_out" || goodyScoringModeMap.get(goody.id) === "fixed") &&
-                           (goody.key !== "dark_horse_champion" || goodyScoringModeMap.get(goody.id) === "fixed") && (
+                          {((goody.key !== "first_conference_out" && goody.key !== "dark_horse_champion") ||
+                            scoringModeByGoodyId.get(goody.id) === "fixed" ||
+                            scoringModeByGoodyId.get(goody.id) === undefined) && (
                             <div className="flex items-center gap-3 min-w-0">
                               <label
                                 htmlFor={`goody_points_${goody.id}`}
@@ -326,10 +341,10 @@ export default function ScoringSettingsForm({
                             </div>
                           )}
 
-                          {(goody.key === "first_conference_out" && goodyScoringModeMap.get(goody.id) === "conference_multiplier") && (
+                          {goody.key === "first_conference_out" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "conference_multiplier" && (
                             <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
                           )}
-                          {(goody.key === "dark_horse_champion" && goodyScoringModeMap.get(goody.id) === "bracket_upset_points") && (
+                          {goody.key === "dark_horse_champion" && (scoringModeByGoodyId.get(goody.id) ?? "fixed") === "bracket_upset_points" && (
                             <input type="hidden" name={`goody_points_${goody.id}`} value="0" />
                           )}
                         </div>

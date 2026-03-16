@@ -145,24 +145,35 @@ export default function PoolScoringDisplay({
                 Goodies
               </p>
               <ul className="space-y-2">
-                {poolGoodiesWithTypes.map((pg) => (
-                  <li
-                    key={pg.id}
-                    className="flex items-center justify-between gap-3 rounded-lg bg-background/60 px-3 py-2.5 ring-1 ring-stone-800/50"
-                  >
-                    <span className="text-sm text-stone-200">
-                      {pg.goody_types?.name ?? "Goodie"}
-                      {pg.stroke_rule_enabled && (
-                        <span className="ml-1.5 text-xs text-muted-foreground">
-                          (stroke rule)
-                        </span>
-                      )}
-                    </span>
-                    <span className="shrink-0 rounded-md bg-accent/25 px-2.5 py-1 text-sm font-bold tabular-nums text-accent ring-1 ring-accent/20">
-                      +{pg.points} pts
-                    </span>
-                  </li>
-                ))}
+                {poolGoodiesWithTypes.map((pg) => {
+                  const mode = pg.scoring_mode ?? "fixed";
+                  const isConferenceMultiplier = mode === "conference_multiplier";
+                  const isBracketUpset = mode === "bracket_upset_points";
+                  const pointsLabel =
+                    isConferenceMultiplier && pg.scoring_config?.conference_multiplier != null
+                      ? `Conference size × ${pg.scoring_config.conference_multiplier} pts`
+                      : isBracketUpset
+                        ? "Bracket + upset points"
+                        : `+${pg.points} pts`;
+                  return (
+                    <li
+                      key={pg.id}
+                      className="flex items-center justify-between gap-3 rounded-lg bg-background/60 px-3 py-2.5 ring-1 ring-stone-800/50"
+                    >
+                      <span className="text-sm text-stone-200">
+                        {pg.goody_types?.name ?? "Goodie"}
+                        {pg.stroke_rule_enabled && (
+                          <span className="ml-1.5 text-xs text-muted-foreground">
+                            (stroke rule)
+                          </span>
+                        )}
+                      </span>
+                      <span className="shrink-0 rounded-md bg-accent/25 px-2.5 py-1 text-sm font-bold tabular-nums text-accent ring-1 ring-accent/20">
+                        {pointsLabel}
+                      </span>
+                    </li>
+                  );
+                })}
               </ul>
             </div>
           )}
