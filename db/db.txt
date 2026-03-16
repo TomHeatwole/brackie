@@ -132,15 +132,17 @@ create table public.pool_brackets (
 ) TABLESPACE pg_default;
 
 -- =============================================================================
--- bracket_picks (references brackets, tournament_games, teams)
+-- bracket_picks (references brackets, tournaments, tournament_games, teams)
 -- =============================================================================
 create table public.bracket_picks (
   id uuid not null default gen_random_uuid(),
   bracket_id uuid not null,
+  tournament_id uuid not null,
   game_id uuid not null,
   picked_team_id uuid not null,
   constraint bracket_picks_pkey primary key (id),
   constraint bracket_picks_bracket_id_fkey foreign key (bracket_id) references public.brackets (id) on update cascade on delete cascade,
+  constraint bracket_picks_tournament_id_fkey foreign key (tournament_id) references public.tournaments (id) on update cascade on delete cascade,
   constraint bracket_picks_game_id_fkey foreign key (game_id) references public.tournament_games (id) on update cascade on delete cascade,
   constraint bracket_picks_picked_team_id_fkey foreign key (picked_team_id) references public.teams (id) on update cascade on delete cascade,
   constraint bracket_picks_bracket_game_unique unique (bracket_id, game_id)
@@ -189,4 +191,14 @@ create table public.pool_bracket_goody_answers (
   constraint pool_bracket_goody_answers_pool_bracket_id_fkey foreign key (pool_bracket_id) references public.pool_brackets (id) on update cascade on delete cascade,
   constraint pool_bracket_goody_answers_goody_type_id_fkey foreign key (goody_type_id) references public.goody_types (id) on update cascade on delete cascade,
   constraint pool_bracket_goody_answers_pool_bracket_goody_unique unique (pool_bracket_id, goody_type_id)
+) TABLESPACE pg_default;
+
+-- =============================================================================
+-- pending_login_redirect (no deps; used to persist "next" by email across magic-link open)
+-- =============================================================================
+create table public.pending_login_redirect (
+  email text not null,
+  next_path text not null,
+  expires_at timestamp with time zone not null,
+  constraint pending_login_redirect_pkey primary key (email)
 ) TABLESPACE pg_default;

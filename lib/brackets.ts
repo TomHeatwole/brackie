@@ -145,6 +145,7 @@ export async function createBracket(
 export async function saveBracketPicks(
   supabase: SupabaseClient,
   bracketId: string,
+  tournamentId: string,
   picks: { game_id: string; picked_team_id: string }[]
 ): Promise<boolean> {
   await supabase.from("bracket_picks").delete().eq("bracket_id", bracketId);
@@ -153,6 +154,7 @@ export async function saveBracketPicks(
 
   const rows = picks.map((p) => ({
     bracket_id: bracketId,
+    tournament_id: tournamentId,
     game_id: p.game_id,
     picked_team_id: p.picked_team_id,
   }));

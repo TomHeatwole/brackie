@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { createClient } from "@/utils/supabase/client";
 import Navbar from "@/app/_components/navbar";
+import { savePendingRedirect } from "./actions";
 
 function getLinkExpiredFromHash(): boolean {
   if (typeof window === "undefined") return false;
@@ -43,9 +44,10 @@ export default function LoginPage() {
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     callbackUrl.searchParams.set("next", next);
 
-    // Persist next in a cookie so we still have it when Supabase redirects to
-    // /login?code=... (or /auth/callback without next) after the user clicks the email link.
+    // Persist next so we can redirect there after the magic link is used, even when
+    // the link is opened in a different browser/context (e.g. in-app email viewer).
     document.cookie = `auth_next=${encodeURIComponent(next)}; path=/; max-age=600; SameSite=Lax`;
+    await savePendingRedirect(email.trim(), next);
 
     setLoading(true);
     const { error: authError } = await supabase.auth.signInWithOtp({

@@ -20,12 +20,10 @@ export async function GET(request: Request) {
   const code = searchParams.get("code");
   const nextFromUrl = searchParams.get("next");
   const nextFromCookie = request.headers.get("cookie")?.match(new RegExp(`${AUTH_NEXT_COOKIE}=([^;]+)`))?.[1];
-  const nextRaw = nextFromUrl ?? (nextFromCookie ? decodeURIComponent(nextFromCookie) : null) ?? "/";
-  const next = nextRaw.startsWith("/") ? nextRaw : "/";
+  let nextRaw = nextFromUrl ?? (nextFromCookie ? decodeURIComponent(nextFromCookie) : null) ?? null;
 
-  const redirectUrl = `${origin}${next}`;
+  const redirectUrl = `${origin}${nextRaw && nextRaw.startsWith("/") ? nextRaw : "/"}`;
   // Explicit 302 so the browser reliably follows the redirect after setting cookies
-  // (some browsers can hang or not follow when status is omitted or 307/308)
   const res = NextResponse.redirect(redirectUrl, { status: 302 });
 
   if (code) {
@@ -61,6 +59,27 @@ export async function GET(request: Request) {
       }
     );
     await supabase.auth.exchangeCodeForSession(code);
+
+    // If we still don't have a redirect path (e.g. magic link opened in another context),
+    // look up the path we stored by email when they requested the link.
+    if (!nextRaw || !nextRaw.startsWith("/")) {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user?.email) {
+        const { data: row } = await supabase
+          .from("pending_login_redirect")
+          .select("next_path")
+          .eq("email", user.email.toLowerCase())
+          .gt("expires_at", new Date().toISOString())
+          .single();
+        if (row?.next_path && row.next_path.startsWith("/")) {
+          nextRaw = row.next_path;
+          await supabase.from("pending_login_redirect").delete().eq("email", user.email.toLowerCase());
+          res.headers.set("Location", `${origin}${nextRaw}`);
+        }
+      }
+    }
   }
 
   res.cookies.set(AUTH_NEXT_COOKIE, "", { path: "/", maxAge: 0 });

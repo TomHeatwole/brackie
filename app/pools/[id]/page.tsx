@@ -16,6 +16,7 @@ import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
 import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
+import PoolScoringDisplay from "./_components/pool-scoring-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
 
 const OG_TITLE = "Join my pool on brackie!";
@@ -162,6 +163,8 @@ export default async function PoolDetailPage({
               )}
             </div>
           </div>
+
+          <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
 
           {!isActive && (
             <div className="card rounded-lg p-4 mb-6">

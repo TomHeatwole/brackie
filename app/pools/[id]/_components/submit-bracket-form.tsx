@@ -7,6 +7,7 @@ import {
   Team,
   TournamentGame,
   ELITE_CONFERENCES,
+  TOTAL_GAMES,
 } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
 import type { PoolBracketGoodyAnswer } from "@/lib/types";
@@ -61,10 +62,20 @@ export default function SubmitBracketForm({
 }: Props) {
   const [state, action, isPending] = useActionState(submitBracketToPoolAction, initialState);
 
+  const completedBrackets = brackets.filter((b) => b.pick_count === TOTAL_GAMES);
+
   if (brackets.length === 0) {
     return (
       <p className="text-muted text-sm">
         You don&apos;t have any brackets yet. Create one first!
+      </p>
+    );
+  }
+
+  if (completedBrackets.length === 0) {
+    return (
+      <p className="text-muted text-sm">
+        You don&apos;t have any completed brackets. Fill out all 63 picks in a bracket first, then come back to submit it.
       </p>
     );
   }
@@ -77,13 +88,17 @@ export default function SubmitBracketForm({
       <div className="flex gap-2 items-start">
         <select
           name="bracket_id"
-          defaultValue={currentBracketId ?? ""}
+          defaultValue={
+            currentBracketId && completedBrackets.some((b) => b.id === currentBracketId)
+              ? currentBracketId
+              : ""
+          }
           className="input-field flex-1 cursor-pointer"
         >
           <option value="" disabled>Select a bracket…</option>
-          {brackets.map((b) => (
+          {completedBrackets.map((b) => (
             <option key={b.id} value={b.id}>
-              {b.name} ({b.pick_count}/63 picks)
+              {b.name}
             </option>
           ))}
         </select>

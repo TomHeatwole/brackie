@@ -73,3 +73,9 @@ pool_bracket_goody_answers
 - INSERT: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
 - UPDATE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
 - DELETE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+
+pending_login_redirect
+- SELECT: (auth.jwt()->>'email') = email
+- INSERT: true
+- UPDATE: false
+- DELETE: (auth.jwt()->>'email')  

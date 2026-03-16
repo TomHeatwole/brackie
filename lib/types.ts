@@ -57,6 +57,7 @@ export interface Bracket {
 export interface BracketPick {
   id: string;
   bracket_id: string;
+  tournament_id: string;
   game_id: string;
   picked_team_id: string;
 }

@@ -79,7 +79,7 @@ export async function saveBracketPicksAction(
     picked_team_id: teamId,
   }));
 
-  const success = await saveBracketPicks(supabase, bracketId, pickRows);
+  const success = await saveBracketPicks(supabase, bracketId, bracket.tournament_id, pickRows);
   if (!success) {
     return { success: false, error: "Failed to save picks." };
   }
@@ -113,7 +113,7 @@ export async function saveAndSubmitToPoolAction(
     picked_team_id: teamId,
   }));
 
-  const saveOk = await saveBracketPicks(supabase, bracketId, pickRows);
+  const saveOk = await saveBracketPicks(supabase, bracketId, bracket.tournament_id, pickRows);
   if (!saveOk) {
     return { success: false, error: "Failed to save picks." };
   }

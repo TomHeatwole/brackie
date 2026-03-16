@@ -7,6 +7,7 @@ import { getUserPools } from "@/lib/pools";
 import { TOTAL_GAMES } from "@/lib/types";
 import Navbar from "./_components/navbar";
 import PoolIcon from "./_components/pool-icon";
+import TeamIcon from "./_components/team-icon";
 
 export default async function Home({
   searchParams,
@@ -68,8 +69,23 @@ export default async function Home({
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-stone-100 text-sm font-medium">{bracket.name}</span>
-                        <span className="text-xs text-muted">{bracket.pick_count}/{TOTAL_GAMES}</span>
                       </div>
+                      {bracket.champion_name ? (
+                        <div className="flex items-center gap-2 mb-2">
+                          <TeamIcon
+                            team={{
+                              name: bracket.champion_name,
+                              icon_url: bracket.champion_icon_url ?? null,
+                            }}
+                            size="xs"
+                          />
+                          <span className="text-sm font-medium text-accent">
+                            ({bracket.champion_seed}) {bracket.champion_name}
+                          </span>
+                        </div>
+                      ) : (
+                        <p className="text-xs text-muted italic mb-2">No champion picked yet</p>
+                      )}
                       <div className="h-1.5 rounded-full overflow-hidden bg-stone-800/60">
                         <div
                           className="h-full rounded-full transition-all"
