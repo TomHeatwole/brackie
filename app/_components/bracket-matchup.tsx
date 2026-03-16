@@ -31,16 +31,16 @@ function TeamSlot({
   if (!team) {
     return (
       <div
-        className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] ${roundedClass} ${borderClass}`}
+        className={`flex items-center gap-1 px-2 py-1 text-[12px] ${roundedClass} ${borderClass}`}
         style={{
           backgroundColor: "var(--card)",
           border: "1px solid var(--card-border)",
-          width: "173px",
-          height: "30px",
+          width: "150px",
+          height: "28px",
         }}
       >
-        <span className="w-6 shrink-0" aria-hidden />
-        <span className="text-stone-700 text-[12px] w-5 text-right">--</span>
+        <span className="w-4 shrink-0" aria-hidden />
+        <span className="text-stone-700 text-[11px] w-5 text-right">--</span>
         <span className="text-stone-700 truncate italic">TBD</span>
       </div>
     );
@@ -51,14 +51,14 @@ function TeamSlot({
   return (
     <div
       onClick={canClick ? onClick : undefined}
-      className={`flex items-center gap-1.5 px-2.5 py-1.5 text-[13px] ${roundedClass} ${borderClass} transition-all ${
+      className={`flex items-center gap-1 px-2 py-1 text-[12px] ${roundedClass} ${borderClass} transition-all ${
         canClick ? "cursor-pointer" : ""
       }`}
       style={{
         backgroundColor: isPicked ? "var(--accent)" : "var(--card)",
         border: `1px solid ${isPicked ? "var(--accent)" : "var(--card-border)"}`,
-        width: "173px",
-        height: "30px",
+        width: "150px",
+        height: "28px",
         color: isPicked ? "#fff" : "var(--foreground)",
         boxShadow: isPicked ? "0 0 8px rgba(194, 85, 10, 0.25)" : "none",
       }}
@@ -77,7 +77,7 @@ function TeamSlot({
     >
       <TeamIcon team={team} size="xs" className="shrink-0" />
       <span
-        className="text-[12px] w-5 text-right font-semibold tabular-nums"
+        className="text-[11px] w-4 text-right font-semibold tabular-nums"
         style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}
       >
         {team.seed}

@@ -80,3 +80,11 @@ If you are an AI agent working on this codebase:
 1. After making UI changes, run `pnpm screenshot --path <route>` to capture the result.
 2. Read the PNG file from `screenshots/` to visually verify the change looks correct.
 3. If the screenshot script reports "Session expired", ask the user to run `pnpm save-auth`.
+
+### Goodies UI (create pool / pool settings)
+
+To capture the Goodies section with the list visible, enable the Goodies toggle via the label (the checkbox is sr-only and is overlayed by the switch):
+
+```bash
+pnpm screenshot --path /pools/create --name goodies-create --fullpage true --actions '[{"type": "click", "selector": "label:has(input[name=goodies_enabled])"}, {"type": "wait", "timeout": 400}]'
+```

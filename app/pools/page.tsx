@@ -27,7 +27,7 @@ export default async function PoolsPage({
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
-      <main className="pt-20 min-h-screen flex justify-center">
+      <main className="pt-20 pb-20 md:pb-8 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-semibold text-stone-100">Your Pools</h1>
@@ -36,7 +36,7 @@ export default async function PoolsPage({
             </Link>
           </div>
 
-          <div className="card mb-8 rounded-lg p-4">
+          <div className="card mb-8 p-4">
             <h2 className="text-sm font-medium text-stone-300 mb-3">Join a Pool</h2>
             <JoinPoolForm testMode={testMode} />
           </div>
@@ -53,7 +53,7 @@ export default async function PoolsPage({
                 <Link
                   key={pool.id}
                   href={`/pools/${pool.id}${modeParam}`}
-                  className="card rounded-lg p-4"
+                  className="card p-4"
                 >
                   <div className="flex items-center gap-3">
                     <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="md" />

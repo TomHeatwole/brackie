@@ -156,11 +156,12 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
   }
 
   const tabs: TabType[] = [...regionsInOrder, "Final Four"];
+  const tabLabels: Record<string, string> = { "Final Four": "Final 4" };
 
   return (
     <div className="flex flex-col gap-3">
       {/* Region tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1">
+      <div className="grid grid-cols-5 gap-1">
         {tabs.map((tab) => (
           <button
             key={tab}
@@ -168,13 +169,13 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
               setActiveTab(tab);
               setActiveRound(tab === "Final Four" ? 5 : 1);
             }}
-            className={`shrink-0 px-3.5 py-2 rounded-full text-sm font-medium transition-all ${
+            className={`px-1 py-2 rounded-lg text-[13px] font-medium transition-all text-center ${
               activeTab === tab
-                ? "bg-accent text-white"
-                : "text-muted-foreground hover:text-foreground bg-card border border-card-border"
+                ? "bg-accent text-white shadow-md shadow-accent/20"
+                : "text-muted-foreground bg-card border border-card-border"
             }`}
           >
-            {tab}
+            {tabLabels[tab] ?? tab}
           </button>
         ))}
       </div>

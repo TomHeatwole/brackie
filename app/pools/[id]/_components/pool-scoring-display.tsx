@@ -1,7 +1,23 @@
-import { ROUND_NAMES, type PoolWithDetails } from "@/lib/types";
+import { type PoolWithDetails } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
 
 const ROUND_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
+const ROUND_LABELS: Record<string, string> = {
+  "1": "R64",
+  "2": "R32",
+  "3": "S16",
+  "4": "E8",
+  "5": "F4",
+  "6": "Champ",
+};
+const ROUND_LABELS_FULL: Record<string, string> = {
+  "1": "Round of 64",
+  "2": "Round of 32",
+  "3": "Sweet 16",
+  "4": "Elite 8",
+  "5": "Final Four",
+  "6": "Championship",
+};
 
 interface PoolScoringDisplayProps {
   pool: PoolWithDetails;
@@ -46,18 +62,16 @@ export default function PoolScoringDisplay({
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
               Points per correct pick
             </p>
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+            <div className="grid grid-cols-3 gap-2">
               {ROUND_KEYS.map((key) => {
                 const pts = pool.round_points?.[key] ?? 0;
-                const label = ROUND_NAMES[Number(key)];
                 return (
                   <div
                     key={key}
-                    className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-3 py-2.5 shadow-sm"
+                    className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-2.5 py-2 shadow-sm"
                   >
-                    <span className="text-xs text-stone-400 truncate pr-2">
-                      {label}
-                    </span>
+                    <span className="text-[11px] text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
+                    <span className="text-xs text-stone-400 hidden sm:inline">{ROUND_LABELS_FULL[key]}</span>
                     <span className="shrink-0 flex items-baseline gap-0.5">
                       <span className="text-sm font-bold tabular-nums text-stone-200">
                         {pts}
@@ -78,18 +92,16 @@ export default function PoolScoringDisplay({
               Upset bonus
             </p>
             {pool.upset_points_enabled ? (
-              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3">
+              <div className="grid grid-cols-3 gap-2">
                 {ROUND_KEYS.map((key) => {
                   const mult = pool.upset_multipliers?.[key] ?? 1;
-                  const label = ROUND_NAMES[Number(key)];
                   return (
                     <div
                       key={key}
-                      className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-3 py-2.5 shadow-sm"
+                      className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-2.5 py-2 shadow-sm"
                     >
-                      <span className="text-xs text-stone-400 truncate pr-2">
-                        {label}
-                      </span>
+                      <span className="text-[11px] text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
+                      <span className="text-xs text-stone-400 hidden sm:inline">{ROUND_LABELS_FULL[key]}</span>
                       <span className="shrink-0 flex items-baseline gap-0.5">
                         <span className="text-sm font-bold tabular-nums text-stone-200">
                           ×{mult}

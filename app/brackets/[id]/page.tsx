@@ -86,7 +86,7 @@ export default async function BracketDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
-      <main className="pt-16 min-h-screen">
+      <main className="pt-16 pb-20 md:pb-8 min-h-screen">
         <div className="px-4 mb-4">
           <Link
             href={`/brackets${modeParam}`}

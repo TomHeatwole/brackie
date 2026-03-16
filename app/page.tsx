@@ -35,10 +35,10 @@ export default async function Home({
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={modeParam} />
-      <main className="pt-16 min-h-screen flex justify-center">
+      <main className="pt-16 pb-20 md:pb-8 min-h-screen flex justify-center">
         <div className="w-full max-w-5xl flex flex-col md:flex-row">
           {/* Your Brackets */}
-          <section className="flex-1 border-b md:border-b-0 md:border-r border-card-border px-4 md:px-8 py-8 md:py-10">
+          <section className="flex-1 border-b md:border-b-0 md:border-r border-card-border px-4 md:px-8 py-6 md:py-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Brackets</h2>
               <Link href={`/brackets/create${modeParam}`} className="btn-outline">
@@ -65,7 +65,7 @@ export default async function Home({
                     <Link
                       key={bracket.id}
                       href={`/brackets/${bracket.id}${modeParam}`}
-                      className="card rounded-lg p-3"
+                      className="card p-3"
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-stone-100 text-sm font-medium">{bracket.name}</span>
@@ -111,7 +111,7 @@ export default async function Home({
           </section>
 
           {/* Your Pools */}
-          <section className="flex-1 px-4 md:px-8 py-8 md:py-10">
+          <section className="flex-1 px-4 md:px-8 py-6 md:py-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Pools</h2>
               <div className="flex gap-2">
@@ -141,7 +141,7 @@ export default async function Home({
                   <Link
                     key={pool.id}
                     href={`/pools/${pool.id}${modeParam}`}
-                    className="card rounded-lg p-3"
+                    className="card p-3"
                   >
                     <div className="flex items-center gap-3">
                       <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="md" />

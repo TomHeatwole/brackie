@@ -54,6 +54,9 @@ export default async function PoolDetailPage({
 
   const { id: poolId } = await params;
 
+  const pool = await getPool(supabase, poolId);
+  if (!pool) notFound();
+
   if (!user) {
     return (
       <div className="min-h-screen bg-background flex flex-col items-center justify-center px-4">
@@ -64,7 +67,7 @@ export default async function PoolDetailPage({
           Sign in to join this pool and make your bracket.
         </p>
         <Link
-          href={`/login?next=${encodeURIComponent(`/pools/${poolId}`)}`}
+          href={`/login?next=${encodeURIComponent(`/pools/join/${pool.invite_code}`)}`}
           className="btn-primary px-6 py-3 text-base font-medium"
         >
           Sign in to join
@@ -78,8 +81,6 @@ export default async function PoolDetailPage({
   const modeParam = testMode ? "?mode=test" : "";
 
   const userInfo = await getUserInfo(supabase, user.id);
-  const pool = await getPool(supabase, poolId);
-  if (!pool) notFound();
 
   const members = await getPoolMembers(supabase, poolId);
   const allUserBrackets = await getUserBrackets(supabase, user.id);
@@ -129,7 +130,7 @@ export default async function PoolDetailPage({
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
-      <main className="pt-20 min-h-screen flex justify-center">
+      <main className="pt-20 pb-20 md:pb-8 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <Link
             href={`/pools${modeParam}`}
@@ -139,40 +140,55 @@ export default async function PoolDetailPage({
           </Link>
 
           <div className="mt-4 mb-8">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="lg" />
-                <div>
-                  <h1 className="text-2xl font-semibold text-stone-100">{pool.name}</h1>
-                  <div className="flex items-center gap-4 mt-1">
-                    <span className="text-muted text-sm">
-                      {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
-                    </span>
-                    {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name) && (
-                      <span className="text-muted text-sm">Created by {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name)}</span>
-                    )}
-                  </div>
+            <div className="flex items-start gap-3">
+              <PoolIcon imageUrl={pool.image_url} poolName={pool.name} size="lg" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <h1 className="text-xl sm:text-2xl font-semibold text-stone-100 truncate">{pool.name}</h1>
+                  {isCreator && (
+                    <Link
+                      href={`/pools/${poolId}/settings${modeParam}`}
+                      className="btn-outline shrink-0"
+                    >
+                      Settings
+                    </Link>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 mt-1 text-muted text-sm">
+                  <span>
+                    {pool.member_count} member{pool.member_count !== 1 ? "s" : ""}
+                  </span>
+                  {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name) && (
+                    <span className="hidden sm:inline">Created by {formatUserDisplayName(pool.creator_first_name, pool.creator_last_name)}</span>
+                  )}
                 </div>
               </div>
-              {isCreator && (
-                <Link
-                  href={`/pools/${poolId}/settings${modeParam}`}
-                  className="btn-outline shrink-0"
-                >
-                  Settings
-                </Link>
-              )}
             </div>
           </div>
 
           <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
 
+          {!isMember && (
+            <div className="card p-4 mb-6">
+              <h2 className="text-sm font-medium text-stone-300 mb-1">Join this pool</h2>
+              <p className="text-muted text-xs mb-4">
+                You need to join the pool before you can create or submit a bracket.
+              </p>
+              <Link
+                href={`/pools/join/${pool.invite_code}`}
+                className="btn-primary w-full text-center block py-3 text-base font-medium"
+              >
+                Join pool
+              </Link>
+            </div>
+          )}
+
           {!isActive && (
-            <div className="card rounded-lg p-4 mb-6">
-              <div className="flex items-center justify-between">
+            <div className="card p-4 mb-6">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                 <div>
-                  <h2 className="text-sm font-medium text-stone-300 mb-1">Invite Code</h2>
-                  <p className="text-muted text-xs">Share the code or link with friends to invite them</p>
+                  <h2 className="text-sm font-medium text-stone-300 mb-0.5">Invite Code</h2>
+                  <p className="text-muted text-xs">Share the code or link with friends</p>
                 </div>
                 <InviteCodeDisplay code={pool.invite_code} />
               </div>
@@ -180,7 +196,7 @@ export default async function PoolDetailPage({
           )}
 
           {!isActive && isMember && (
-            <div className="card rounded-lg p-4 mb-6">
+            <div className="card p-4 mb-6">
               <h2 className="text-sm font-medium text-stone-300 mb-3">
                 {currentUserPoolBracket ? "Your Submitted Bracket" : "Submit a Bracket"}
               </h2>

@@ -108,103 +108,110 @@ export default function SubmitBracketForm({
       </div>
 
       {hasUserInputGoodies && (
-        <div className="rounded-lg border border-card-border bg-card p-3 space-y-3">
-          <h3 className="text-sm font-medium text-stone-300">Goody picks</h3>
-          {userInputGoodies.map((pg) => {
-            const key = pg.goody_types?.key ?? "";
-            const name = pg.goody_types?.name ?? "Goody";
-            if (key === "first_conference_out") {
-              const options =
-                (pg.goody_types?.config?.conference_options as string[] | undefined) ??
-                [...ELITE_CONFERENCES];
-              return (
-                <div key={pg.id}>
-                  <label
-                    htmlFor={`goody_${pg.goody_type_id}`}
-                    className="block text-xs text-muted-foreground mb-1"
-                  >
-                    {name}
-                  </label>
-                  <select
-                    id={`goody_${pg.goody_type_id}`}
-                    name={`goody_${pg.goody_type_id}`}
-                    className="input-field w-full"
-                    defaultValue={getExistingValue(
-                      pg.goody_type_id,
-                      existingGoodyAnswers,
-                      "conference_key"
-                    )}
-                  >
-                    <option value="">Select conference…</option>
-                    {options.map((conf) => (
-                      <option key={conf} value={conf}>
-                        {conf}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            }
-            if (key === "nit_champion" || key === "dark_horse_champion") {
-              return (
-                <div key={pg.id}>
-                  <label
-                    htmlFor={`goody_${pg.goody_type_id}`}
-                    className="block text-xs text-muted-foreground mb-1"
-                  >
-                    {name}
-                  </label>
-                  <select
-                    id={`goody_${pg.goody_type_id}`}
-                    name={`goody_${pg.goody_type_id}`}
-                    className="input-field w-full"
-                    defaultValue={getExistingValue(
-                      pg.goody_type_id,
-                      existingGoodyAnswers,
-                      "team_id"
-                    )}
-                  >
-                    <option value="">Select team…</option>
-                    {teams.map((t) => (
-                      <option key={t.id} value={t.id}>
-                        {t.seed} {t.name} ({t.region})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            }
-            if (key === "biggest_first_round_blowout") {
-              return (
-                <div key={pg.id}>
-                  <label
-                    htmlFor={`goody_${pg.goody_type_id}`}
-                    className="block text-xs text-muted-foreground mb-1"
-                  >
-                    {name}
-                  </label>
-                  <select
-                    id={`goody_${pg.goody_type_id}`}
-                    name={`goody_${pg.goody_type_id}`}
-                    className="input-field w-full"
-                    defaultValue={getExistingValue(
-                      pg.goody_type_id,
-                      existingGoodyAnswers,
-                      "game_id"
-                    )}
-                  >
-                    <option value="">Select game…</option>
-                    {firstRoundGames.map((g) => (
-                      <option key={g.id} value={g.id}>
-                        {gameLabel(g, teams)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              );
-            }
-            return null;
-          })}
+        <div className="rounded-xl border border-card-border bg-card overflow-hidden">
+          <div className="px-4 py-3 border-b border-card-border bg-background/50">
+            <h3 className="text-sm font-medium text-stone-200">Goody picks</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Optional bonus picks for this pool. Submit with your bracket.
+            </p>
+          </div>
+          <div className="p-4 space-y-4">
+            {userInputGoodies.map((pg) => {
+              const key = pg.goody_types?.key ?? "";
+              const name = pg.goody_types?.name ?? "Goody";
+              if (key === "first_conference_out") {
+                const options =
+                  (pg.goody_types?.config?.conference_options as string[] | undefined) ??
+                  [...ELITE_CONFERENCES];
+                return (
+                  <div key={pg.id} className="space-y-1.5">
+                    <label
+                      htmlFor={`goody_${pg.goody_type_id}`}
+                      className="block text-sm font-medium text-stone-300"
+                    >
+                      {name}
+                    </label>
+                    <select
+                      id={`goody_${pg.goody_type_id}`}
+                      name={`goody_${pg.goody_type_id}`}
+                      className="input-field w-full"
+                      defaultValue={getExistingValue(
+                        pg.goody_type_id,
+                        existingGoodyAnswers,
+                        "conference_key"
+                      )}
+                    >
+                      <option value="">Select conference…</option>
+                      {options.map((conf) => (
+                        <option key={conf} value={conf}>
+                          {conf}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+              if (key === "nit_champion" || key === "dark_horse_champion") {
+                return (
+                  <div key={pg.id} className="space-y-1.5">
+                    <label
+                      htmlFor={`goody_${pg.goody_type_id}`}
+                      className="block text-sm font-medium text-stone-300"
+                    >
+                      {name}
+                    </label>
+                    <select
+                      id={`goody_${pg.goody_type_id}`}
+                      name={`goody_${pg.goody_type_id}`}
+                      className="input-field w-full"
+                      defaultValue={getExistingValue(
+                        pg.goody_type_id,
+                        existingGoodyAnswers,
+                        "team_id"
+                      )}
+                    >
+                      <option value="">Select team…</option>
+                      {teams.map((t) => (
+                        <option key={t.id} value={t.id}>
+                          {t.seed} {t.name} ({t.region})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+              if (key === "biggest_first_round_blowout") {
+                return (
+                  <div key={pg.id} className="space-y-1.5">
+                    <label
+                      htmlFor={`goody_${pg.goody_type_id}`}
+                      className="block text-sm font-medium text-stone-300"
+                    >
+                      {name}
+                    </label>
+                    <select
+                      id={`goody_${pg.goody_type_id}`}
+                      name={`goody_${pg.goody_type_id}`}
+                      className="input-field w-full"
+                      defaultValue={getExistingValue(
+                        pg.goody_type_id,
+                        existingGoodyAnswers,
+                        "game_id"
+                      )}
+                    >
+                      <option value="">Select game…</option>
+                      {firstRoundGames.map((g) => (
+                        <option key={g.id} value={g.id}>
+                          {gameLabel(g, teams)}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                );
+              }
+              return null;
+            })}
+          </div>
         </div>
       )}
 

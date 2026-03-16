@@ -5,11 +5,13 @@
   --foreground: #e7e5e4;
   --accent: #c2550a;
   --accent-hover: #9a4408;
-  --card: #171412;
-  --card-border: #2e2a26;
-  --card-border-hover: #44403c;
+  --card: #1a1614;
+  --card-border: #302924;
+  --card-border-hover: #4a443e;
   --muted: #78716c;
   --muted-foreground: #a8a29e;
+  --danger: #ef4444;
+  --success: #4ade80;
 }
 
 @theme inline {
@@ -22,6 +24,8 @@
   --color-card-border-hover: var(--card-border-hover);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
@@ -30,6 +34,12 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, -apple-system, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background-color: rgba(194, 85, 10, 0.3);
+  color: white;
 }
 
 @layer utilities {
@@ -38,6 +48,10 @@ body {
     background-color: var(--accent);
     &:hover:not(:disabled) {
       background-color: var(--accent-hover);
+      box-shadow: 0 0 16px rgba(194, 85, 10, 0.15);
+    }
+    &:active:not(:disabled) {
+      transform: scale(0.98);
     }
   }
 
@@ -49,24 +63,39 @@ body {
       border-color: var(--accent);
       color: var(--foreground);
     }
+    &:active {
+      transform: scale(0.97);
+    }
   }
 
   .input-field {
-    @apply w-full rounded-lg px-3 py-2 text-sm outline-none transition-colors;
+    @apply w-full rounded-lg px-3 py-2.5 text-sm outline-none transition-colors;
     background-color: var(--card);
     border: 1px solid var(--card-border);
     color: var(--foreground);
+    &::placeholder {
+      color: var(--muted);
+    }
     &:focus {
       border-color: var(--accent);
+      box-shadow: 0 0 0 2px rgba(194, 85, 10, 0.1);
     }
   }
 
   .card {
-    @apply rounded-lg transition-colors;
+    @apply rounded-xl transition-all;
     background-color: var(--card);
     border: 1px solid var(--card-border);
     &:hover {
       border-color: var(--card-border-hover);
+    }
+  }
+
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+    &::-webkit-scrollbar {
+      display: none;
     }
   }
 }

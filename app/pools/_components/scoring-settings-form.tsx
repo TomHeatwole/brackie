@@ -138,7 +138,7 @@ export default function ScoringSettingsForm({
 
       {/* Goodies */}
       <fieldset>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-2">
           <legend className="text-sm font-medium text-stone-300">
             Goodies
           </legend>
@@ -154,20 +154,23 @@ export default function ScoringSettingsForm({
             <div className="w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
           </label>
         </div>
+        <p className="text-xs text-muted-foreground mb-3">
+          Bonus scoring categories. Turn on and pick which to use; set points and optional stroke rule per goody.
+        </p>
         {goodiesEnabled && (
           <div className="flex flex-col gap-2">
             {goodyTypes.length === 0 && (
-              <p className="text-xs text-muted">No goodies available yet.</p>
+              <p className="text-xs text-muted py-2">No goodies available yet.</p>
             )}
             {goodyTypes.map((goody) => {
               const isSelected = selectedGoodies.has(goody.id);
               return (
                 <div
                   key={goody.id}
-                  className={`flex items-center gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                  className={`rounded-xl border transition-all cursor-pointer ${
                     isSelected
                       ? "border-accent bg-card"
-                      : "border-card-border bg-background hover:border-card-border-hover"
+                      : "border-card-border bg-background/50 hover:border-card-border-hover hover:bg-background/80"
                   }`}
                   onClick={() => toggleGoody(goody.id)}
                 >
@@ -179,44 +182,65 @@ export default function ScoringSettingsForm({
                     onChange={() => toggleGoody(goody.id)}
                     className="sr-only"
                   />
-                  <div className="flex-1 min-w-0">
-                    <span className="text-sm text-stone-200">{goody.name}</span>
-                    {goody.description && (
-                      <p className="text-xs text-muted mt-0.5">{goody.description}</p>
-                    )}
-                  </div>
-                  {isSelected && (
-                    <div
-                      className="flex items-center gap-3 shrink-0 flex-wrap"
-                      onClick={(e) => e.stopPropagation()}
+                  <div className="p-4 flex items-start gap-3">
+                    <span
+                      className={`shrink-0 mt-0.5 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors ${
+                        isSelected
+                          ? "border-accent bg-accent"
+                          : "border-stone-500 bg-transparent"
+                      }`}
+                      aria-hidden
                     >
-                      <label className="inline-flex items-center gap-1.5 cursor-pointer">
-                        <input
-                          type="checkbox"
-                          name={`goody_stroke_rule_${goody.id}`}
-                          value="true"
-                          defaultChecked={goodyStrokeRuleMap.get(goody.id) ?? false}
-                          className="rounded border-card-border"
-                        />
-                        <span className="text-xs text-muted-foreground">Stroke rule</span>
-                      </label>
-                      <label
-                        htmlFor={`goody_points_${goody.id}`}
-                        className="text-xs text-muted-foreground"
-                      >
-                        Pts
-                      </label>
-                      <input
-                        id={`goody_points_${goody.id}`}
-                        name={`goody_points_${goody.id}`}
-                        type="number"
-                        min={0}
-                        step={1}
-                        defaultValue={goodyPointsMap.get(goody.id) ?? goody.default_points}
-                        className="input-field w-16 text-center"
-                      />
+                      {isSelected && (
+                        <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2.5}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      )}
+                    </span>
+                    <div className="flex-1 min-w-0">
+                      <span className="text-sm font-medium text-stone-200 block">{goody.name}</span>
+                      {goody.description && (
+                        <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{goody.description}</p>
+                      )}
+                      {isSelected && (
+                        <div
+                          className="mt-4 pt-4 border-t border-card-border flex flex-wrap items-center gap-x-8 gap-y-3 rounded-lg bg-background/60 px-3 py-2 -mx-3 -mb-2"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-xs text-muted-foreground shrink-0">Stroke rule</span>
+                            <label className="relative inline-flex shrink-0 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                name={`goody_stroke_rule_${goody.id}`}
+                                value="true"
+                                defaultChecked={goodyStrokeRuleMap.get(goody.id) ?? false}
+                                className="sr-only peer"
+                              />
+                              <div className="relative w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+                            </label>
+                          </div>
+                          <div className="flex items-center gap-3 min-w-0">
+                            <label
+                              htmlFor={`goody_points_${goody.id}`}
+                              className="text-xs text-muted-foreground shrink-0"
+                            >
+                              Points
+                            </label>
+                            <input
+                              id={`goody_points_${goody.id}`}
+                              name={`goody_points_${goody.id}`}
+                              type="number"
+                              min={0}
+                              step={1}
+                              defaultValue={goodyPointsMap.get(goody.id) ?? goody.default_points}
+                              className="input-field w-20 py-2 text-center shrink-0"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
-                  )}
+                  </div>
                 </div>
               );
             })}

@@ -25,7 +25,7 @@ export default async function BracketsPage({
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
-      <main className="pt-20 min-h-screen flex justify-center">
+      <main className="pt-20 pb-20 md:pb-8 min-h-screen flex justify-center">
         <div className="w-full max-w-2xl px-4">
           <div className="flex items-center justify-between mb-8">
             <h1 className="text-2xl font-semibold text-stone-100">Your Brackets</h1>

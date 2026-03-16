@@ -69,7 +69,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
 
-      <div className="flex min-h-screen items-center justify-center pt-12 px-4">
+      <div className="flex min-h-screen items-center justify-center pt-12 pb-16 px-4 md:pb-0">
         <div className="w-full max-w-sm">
           <div className="mb-8 text-center">
             <span className="text-4xl font-bold select-none text-accent">[ ]</span>
