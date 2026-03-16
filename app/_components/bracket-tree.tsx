@@ -7,12 +7,29 @@ import BracketRegion from "./bracket-region";
 import BracketFinalFour from "./bracket-final-four";
 import BracketMobile from "./bracket-mobile";
 
+const DRAFT_STORAGE_KEY_PREFIX = "brackie:draft:";
+
+function getDraftKey(bracketId: string): string {
+  return `${DRAFT_STORAGE_KEY_PREFIX}${bracketId}`;
+}
+
+export function clearBracketDraft(bracketId: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    window.localStorage.removeItem(getDraftKey(bracketId));
+  } catch {
+    // ignore
+  }
+}
+
 interface Props {
   teams: Team[];
   games: TournamentGame[];
   /** When provided, overrides default East/West/South/Midwest layout and Final Four matchups */
   bracketStructure?: BracketStructure | null;
   initialPicks?: Record<string, string>;
+  /** When set, draft picks are persisted to localStorage so they survive navigation */
+  bracketId?: string;
   readOnly?: boolean;
   onSave?: (picks: Record<string, string>) => void;
   saving?: boolean;
@@ -81,21 +98,54 @@ function findNextGame(
   return null;
 }
 
+function loadDraftPicks(bracketId: string, games: TournamentGame[], fallback: Record<string, string>): Record<string, string> {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.localStorage.getItem(getDraftKey(bracketId));
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== "object") return fallback;
+    const gameIds = new Set(games.map((g) => g.id));
+    const out: Record<string, string> = {};
+    for (const [gameId, teamId] of Object.entries(parsed)) {
+      if (typeof gameId === "string" && typeof teamId === "string" && gameIds.has(gameId)) {
+        out[gameId] = teamId;
+      }
+    }
+    return Object.keys(out).length > 0 ? out : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export default function BracketTree({
   teams,
   games,
   bracketStructure: bracketStructureProp,
   initialPicks = {},
+  bracketId,
   readOnly = false,
   onSave,
   saving = false,
   saveLabel,
 }: Props) {
   const isMobile = useIsMobile();
-  const [picks, setPicks] = useState<Record<string, string>>(initialPicks);
+  const [picks, setPicks] = useState<Record<string, string>>(() =>
+    bracketId && !readOnly ? loadDraftPicks(bracketId, games, initialPicks) : initialPicks
+  );
   const gameMap = buildGameMap(games);
   const structure = bracketStructureProp ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
+
+  // Persist draft to localStorage when editing and bracketId is set
+  useEffect(() => {
+    if (!bracketId || readOnly || typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(getDraftKey(bracketId), JSON.stringify(picks));
+    } catch {
+      // ignore
+    }
+  }, [bracketId, readOnly, picks]);
 
   const handlePick = useCallback(
     (gameId: string, teamId: string) => {

@@ -44,6 +44,9 @@ function getExistingValue(
   if (key === "game_id" && "game_id" in a.value) {
     return String(a.value.game_id);
   }
+  if (key === "nit_matchup" && "nit_matchup" in a.value) {
+    return String(a.value.nit_matchup);
+  }
   return "";
 }
 
@@ -110,7 +113,38 @@ export default function GoodyPicksForm({
                 </div>
               );
             }
-            if (key === "nit_champion" || key === "dark_horse_champion") {
+            if (key === "nit_champion") {
+              const nitOptions =
+                (pg.goody_types?.config?.nit_options as string[] | undefined) ?? [];
+              return (
+                <div key={pg.id} className="space-y-2">
+                  <label
+                    htmlFor={`goody_${pg.goody_type_id}`}
+                    className="block text-sm font-medium text-stone-300"
+                  >
+                    {name}
+                  </label>
+                  <select
+                    id={`goody_${pg.goody_type_id}`}
+                    name={`goody_${pg.goody_type_id}`}
+                    className="input-field w-full"
+                    defaultValue={getExistingValue(
+                      pg.goody_type_id,
+                      existingGoodyAnswers,
+                      "nit_matchup"
+                    )}
+                  >
+                    <option value="">Select team…</option>
+                    {nitOptions.map((opt) => (
+                      <option key={opt} value={opt}>
+                        {opt}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              );
+            }
+            if (key === "dark_horse_champion") {
               return (
                 <div key={pg.id} className="space-y-2">
                   <label

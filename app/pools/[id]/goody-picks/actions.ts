@@ -18,7 +18,9 @@ function parseGoodyAnswers(
     const key = pg.goody_types?.key ?? "";
     if (key === "first_conference_out") {
       answers.push({ goody_type_id: pg.goody_type_id, value: { conference_key: raw } });
-    } else if (key === "nit_champion" || key === "dark_horse_champion") {
+    } else if (key === "nit_champion") {
+      answers.push({ goody_type_id: pg.goody_type_id, value: { nit_matchup: raw } });
+    } else if (key === "dark_horse_champion") {
       answers.push({ goody_type_id: pg.goody_type_id, value: { team_id: raw } });
     } else if (key === "biggest_first_round_blowout") {
       answers.push({ goody_type_id: pg.goody_type_id, value: { game_id: raw } });

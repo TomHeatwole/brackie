@@ -11,13 +11,14 @@ const REDIRECT_TTL_MINUTES = 10;
  */
 export async function savePendingRedirect(email: string, nextPath: string) {
   const normalizedEmail = email.trim().toLowerCase();
-  if (!normalizedEmail || !nextPath.startsWith("/")) return;
+  const path = nextPath.trim();
+  if (!normalizedEmail || !path.startsWith("/")) return;
 
   const supabase = await createClient();
   const expiresAt = new Date(Date.now() + REDIRECT_TTL_MINUTES * 60 * 1000).toISOString();
 
   await supabase.from("pending_login_redirect").upsert(
-    { email: normalizedEmail, next_path: nextPath, expires_at: expiresAt },
+    { email: normalizedEmail, next_path: path, expires_at: expiresAt },
     { onConflict: "email" }
   );
 }

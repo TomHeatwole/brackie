@@ -1,0 +1,37 @@
+-- NIT champion goody: dropdown options = NIT team names (2026), parsed from first-round matchups.
+update public.goody_types
+set config = '{"nit_options": [
+  "Auburn",
+  "Bradley",
+  "Cal",
+  "Colorado State",
+  "Davidson",
+  "Dayton",
+  "George Mason",
+  "George Washington",
+  "Illinois State",
+  "Kent State",
+  "Liberty",
+  "Murray State",
+  "Navy",
+  "Nevada",
+  "New Mexico",
+  "Oklahoma State",
+  "SFA",
+  "Saint Joseph''s",
+  "Sam Houston",
+  "Seattle U",
+  "South Alabama",
+  "St. Thomas (MN)",
+  "Tulsa",
+  "UC Irvine",
+  "UIC",
+  "UNCW",
+  "UNLV",
+  "Utah Valley",
+  "Wake Forest",
+  "Wichita State",
+  "Wyoming",
+  "Yale"
+]}'::jsonb
+where key = 'nit_champion';

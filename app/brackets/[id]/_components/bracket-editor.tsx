@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Team, TournamentGame, BracketStructure } from "@/lib/types";
-import BracketTree from "@/app/_components/bracket-tree";
+import BracketTree, { clearBracketDraft } from "@/app/_components/bracket-tree";
 import { saveBracketPicksAction, saveAndSubmitToPoolAction } from "@/app/brackets/create/actions";
 import { useRouter } from "next/navigation";
 import { useStartNavigation } from "@/app/_components/navigation-progress";
@@ -45,6 +45,7 @@ export default function BracketEditor({
         : await saveBracketPicksAction(bracketId, picks);
 
       if (result.success) {
+        clearBracketDraft(bracketId);
         if (poolId) {
           setSaveStatus("Submitted!");
           setTimeout(() => {
@@ -98,6 +99,7 @@ export default function BracketEditor({
         games={games}
         bracketStructure={bracketStructure}
         initialPicks={initialPicks}
+        bracketId={bracketId}
         readOnly={locked}
         onSave={locked ? undefined : handleSave}
         saving={saving}

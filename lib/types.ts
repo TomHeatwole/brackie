@@ -141,14 +141,10 @@ export interface PoolBracketGoodyAnswer {
 /** Elite conferences for "First conference out" goodie. */
 export const ELITE_CONFERENCES = [
   "ACC",
-  "Big Ten",
-  "Big 12",
   "SEC",
+  "Big Ten",
+  "Big Twelve",
   "Big East",
-  "Pac-12",
-  "American",
-  "Mountain West",
-  "WCC",
 ] as const;
 export type EliteConferenceKey = (typeof ELITE_CONFERENCES)[number];
 

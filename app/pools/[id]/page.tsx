@@ -208,6 +208,14 @@ export default async function PoolDetailPage({
                     currentBracketId={poolBracketRow?.bracket_id}
                     modeParam={modeParam}
                   />
+                  {poolBracketRow?.bracket_id && (
+                    <Link
+                      href={`/brackets/${poolBracketRow.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
+                      className="mt-3 btn-outline w-full text-center block py-3 text-base font-medium"
+                    >
+                      Edit picks
+                    </Link>
+                  )}
                   <Link
                     href={`/brackets/create${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
                     className="mt-3 inline-block text-sm text-accent hover:underline"

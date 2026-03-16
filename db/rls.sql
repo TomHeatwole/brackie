@@ -321,12 +321,13 @@ create policy "pool_bracket_goody_answers_delete" on public.pool_bracket_goody_a
 
 -- -----------------------------------------------------------------------------
 -- pending_login_redirect (select/delete by email in JWT; insert anyone; no update)
+-- Case-insensitive email match so JWT email (original case) matches stored lowercase.
 -- -----------------------------------------------------------------------------
 alter table public.pending_login_redirect enable row level security;
 
 drop policy if exists "pending_login_redirect_select" on public.pending_login_redirect;
 create policy "pending_login_redirect_select" on public.pending_login_redirect for select using (
-  (auth.jwt()->>'email') = email
+  lower(auth.jwt()->>'email') = lower(email)
 );
 
 drop policy if exists "pending_login_redirect_insert" on public.pending_login_redirect;
@@ -334,5 +335,5 @@ create policy "pending_login_redirect_insert" on public.pending_login_redirect f
 
 drop policy if exists "pending_login_redirect_delete" on public.pending_login_redirect;
 create policy "pending_login_redirect_delete" on public.pending_login_redirect for delete using (
-  (auth.jwt()->>'email') = email
+  lower(auth.jwt()->>'email') = lower(email)
 );
