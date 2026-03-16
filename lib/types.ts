@@ -20,7 +20,7 @@ export interface Tournament {
 export interface BracketStructure {
   /** [topLeft, topRight, bottomLeft, bottomRight] for display order and tabs */
   regionsInOrder: [string, string, string, string];
-  /** FF game 0: [regionA, regionB], FF game 1: [regionC, regionD]. Default: [[topLeft, topRight], [bottomLeft, bottomRight]]. */
+  /** FF game 0: [regionA, regionB], FF game 1: [regionC, regionD]. Default: [[topLeft, bottomLeft], [topRight, bottomRight]]. */
   finalFourMatchups: [string, string][];
 }
 
@@ -221,8 +221,8 @@ export const SEED_MATCHUPS: [number, number][] = [
 ];
 
 export const FINAL_FOUR_MATCHUPS: [Region, Region][] = [
-  ["East", "West"],
-  ["South", "Midwest"],
+  ["East", "South"],
+  ["West", "Midwest"],
 ];
 
 /** Build bracket structure from tournament. Uses defaults (East, West, South, Midwest) when fields missing. */
@@ -234,8 +234,8 @@ export function getBracketStructure(tournament: Tournament | null): BracketStruc
   return {
     regionsInOrder: [topLeft, topRight, bottomLeft, bottomRight],
     finalFourMatchups: [
-      [topLeft, topRight],
-      [bottomLeft, bottomRight],
+      [topLeft, bottomLeft],
+      [topRight, bottomRight],
     ],
   };
 }
