@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/auth",
   "/finish-signing-up",
   "/robots.txt",
+  "/pools/join", // so crawlers get join page HTML (and its OG title) instead of redirect to login
 ];
 
 function isPublicPath(pathname: string) {

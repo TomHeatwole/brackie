@@ -4,22 +4,22 @@ import type { Metadata } from "next";
 import { createClient } from "@/utils/supabase/server";
 import { joinPool } from "@/lib/pools";
 
-const SHARE_TITLE = "Join my pool on brackie";
-const SHARE_DESCRIPTION = "Join my pool on brackie";
+const OG_TITLE = "Join my pool on brackie!";
+const SHARE_DESCRIPTION = "Join my pool on brackie!";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
     title: "brackie",
     description: SHARE_DESCRIPTION,
     openGraph: {
-      title: SHARE_TITLE,
+      title: OG_TITLE,
       description: SHARE_DESCRIPTION,
       images: [{ url: "https://brackie.games/share_logo.png", width: 512, height: 512, alt: "Brackie!" }],
       type: "website",
     },
     twitter: {
       card: "summary_large_image",
-      title: SHARE_TITLE,
+      title: OG_TITLE,
       description: SHARE_DESCRIPTION,
       images: ["https://brackie.games/share_logo.png"],
     },
