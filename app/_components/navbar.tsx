@@ -40,6 +40,26 @@ const NAV_TABS = [
       </svg>
     ),
   },
+  {
+    label: "Rules",
+    href: "/rules",
+    icon: (
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
+        <path d="M5 4h14a1 1 0 0 1 1 1v14l-4-3-4 3-4-3-4 3V5a1 1 0 0 1 1-1z" />
+        <path d="M9 9h6" />
+        <path d="M9 13h3" />
+      </svg>
+    ),
+  },
 ];
 
 interface NavbarProps {

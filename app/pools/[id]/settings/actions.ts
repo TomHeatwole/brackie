@@ -127,7 +127,7 @@ export async function updatePoolSettingsAction(
     const goodies = parseGoodies(formData);
     const goodyResult = await setPoolGoodies(supabase, poolId, goodies);
     if (!goodyResult.success) {
-      return { error: goodyResult.error ?? "Failed to update goodies." };
+      return { error: goodyResult.error ?? "Failed to update Goodies." };
     }
   } else {
     await setPoolGoodies(supabase, poolId, []);

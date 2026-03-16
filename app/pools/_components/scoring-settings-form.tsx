@@ -126,20 +126,41 @@ export default function ScoringSettingsForm({
           <legend className="text-sm font-medium text-stone-300">
             Upset multipliers
           </legend>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              name="upset_points_enabled"
-              value="true"
-              checked={upsetEnabled}
-              onChange={(e) => setUpsetEnabled(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
-          </label>
+          <div className="flex items-center gap-2">
+            <div className="relative group">
+              <button
+                type="button"
+                className="text-[11px] text-accent hover:underline"
+              >
+                How Upset points work
+              </button>
+              <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
+                Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
+                <a
+                  href="/rules"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block text-[11px] text-accent hover:underline"
+                >
+                  See full Upset example
+                </a>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="upset_points_enabled"
+                value="true"
+                checked={upsetEnabled}
+                onChange={(e) => setUpsetEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+            </label>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          When enabled, set the multiplier per round for correctly picking an upset (lower seed beating higher seed).
+          When enabled, set the multiplier per round for correctly picking an upset (lower seed beating higher seed). Upset points use the Upset multiplier and seed differential; see the Rules page for a full example.
         </p>
         {upsetEnabled && (
           <div className="grid grid-cols-2 gap-3">
@@ -172,25 +193,46 @@ export default function ScoringSettingsForm({
           <legend className="text-sm font-medium text-stone-300">
             Goodies
           </legend>
-          <label className="relative inline-flex items-center cursor-pointer">
-            <input
-              type="checkbox"
-              name="goodies_enabled"
-              value="true"
-              checked={goodiesEnabled}
-              onChange={(e) => setGoodiesEnabled(e.target.checked)}
-              className="sr-only peer"
-            />
-            <div className="w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
-          </label>
+          <div className="flex items-center gap-2">
+            <div className="relative group">
+              <button
+                type="button"
+                className="text-[11px] text-accent hover:underline"
+              >
+                How Goodies work
+              </button>
+              <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
+                Goodies are optional bonus categories that award extra points on top of normal bracket scoring.
+                <a
+                  href="/rules#goodies"
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-1 inline-block text-[11px] text-accent hover:underline"
+                >
+                  See all Goodies
+                </a>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                name="goodies_enabled"
+                value="true"
+                checked={goodiesEnabled}
+                onChange={(e) => setGoodiesEnabled(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 rounded-full bg-card-border peer-checked:bg-accent transition-colors after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-stone-300 after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-full" />
+            </label>
+          </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Bonus scoring categories. Turn on and pick which to use; set points and optional stroke rule per goodie.
+          Bonus scoring categories. Turn on and pick which to use; set points and optional Stroke rule per Goody. The Rules page explains how each Goody works.
         </p>
         {goodiesEnabled && (
           <div className="flex flex-col gap-2">
             {goodyTypes.length === 0 && (
-              <p className="text-xs text-muted py-2">No goodies available yet.</p>
+              <p className="text-xs text-muted py-2">No Goodies available yet.</p>
             )}
             {goodyTypes.map((goody) => {
               const isSelected = selectedGoodies.has(goody.id);

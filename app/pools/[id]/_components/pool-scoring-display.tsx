@@ -108,9 +108,30 @@ export default function PoolScoringDisplay({
 
           {/* Upset bonus — same grid as points per round */}
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
-              Upset bonus
-            </p>
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
+                Upset bonus
+              </p>
+              <div className="relative group">
+                <button
+                  type="button"
+                  className="text-[11px] text-accent hover:underline"
+                >
+                  How Upset points work
+                </button>
+                <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
+                  Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
+                  <a
+                    href="/rules"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-1 inline-block text-[11px] text-accent hover:underline"
+                  >
+                    See full Upset example
+                  </a>
+                </div>
+              </div>
+            </div>
             {pool.upset_points_enabled ? (
               <div className="grid grid-cols-3 gap-2">
                 {ROUND_KEYS.map((key) => {
@@ -141,9 +162,30 @@ export default function PoolScoringDisplay({
           {/* Goodies — standout block when present */}
           {hasGoodies && (
             <div className="rounded-xl border border-accent/30 bg-accent/10 px-4 py-3.5 shadow-inner">
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-accent mb-3">
-                Goodies
-              </p>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
+                  Goodies
+                </p>
+                <div className="relative group">
+                  <button
+                    type="button"
+                    className="text-[11px] text-accent/90 hover:underline"
+                  >
+                    How Goodies work
+                  </button>
+                  <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-accent/40 bg-stone-950/95 px-3 py-2 text-[11px] text-stone-100 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
+                    Goodies are optional bonus categories that can award extra points on top of your normal bracket score.
+                    <a
+                      href="/rules#goodies"
+                      target="_blank"
+                      rel="noreferrer"
+                      className="mt-1 inline-block text-[11px] text-accent hover:underline"
+                    >
+                      See all Goodies
+                    </a>
+                  </div>
+                </div>
+              </div>
               <ul className="space-y-2">
                 {poolGoodiesWithTypes.map((pg) => {
                   const mode = pg.scoring_mode ?? "fixed";
