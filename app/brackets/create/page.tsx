@@ -7,15 +7,20 @@ import CreateBracketForm from "./_components/create-bracket-form";
 
 function buildQuerySuffix(params: Record<string, string | string[] | undefined>): string {
   const mode = params.mode;
-  const tournament = params.tournament_ID;
+  const tournamentUpper = params.tournament_ID;
+  const tournamentLower = params.tournament_id;
+  const tournament =
+    (Array.isArray(tournamentUpper) ? tournamentUpper[0] : tournamentUpper) ??
+    (Array.isArray(tournamentLower) ? tournamentLower[0] : tournamentLower) ??
+    "";
   const parts: string[] = [];
 
   if (mode === "test") {
     parts.push("mode=test");
   }
 
-  if (typeof tournament === "string" && tournament) {
-    parts.push(`tournament_ID=${encodeURIComponent(tournament)}`);
+  if (tournament) {
+    parts.push(`tournament_id=${encodeURIComponent(tournament)}`);
   }
 
   return parts.length > 0 ? `?${parts.join("&")}` : "";
@@ -35,8 +40,10 @@ export default async function CreateBracketPage({
   const querySuffix = buildQuerySuffix(params);
   const testMode = params?.mode === "test";
   const poolId = typeof params?.pool === "string" ? params.pool : undefined;
-  const tournamentIdOverride =
-    typeof params?.tournament_ID === "string" ? params.tournament_ID : undefined;
+  const tournamentIdOverrideParam =
+    (Array.isArray(params?.tournament_ID) ? params.tournament_ID[0] : params?.tournament_ID) ??
+    (Array.isArray(params?.tournament_id) ? params.tournament_id[0] : params?.tournament_id) ??
+    undefined;
 
   return (
     <div className="min-h-screen bg-background">
@@ -53,7 +60,7 @@ export default async function CreateBracketPage({
           <CreateBracketForm
             testMode={testMode}
             poolId={poolId}
-            tournamentIdOverride={tournamentIdOverride}
+            tournamentIdOverride={tournamentIdOverrideParam}
           />
         </div>
       </main>

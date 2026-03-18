@@ -71,7 +71,10 @@ export async function createPoolAction(
   const imageUrl = (formData.get("image_url") as string | null)?.trim() ?? "";
   const mode = formData.get("mode") as string | null;
   const testMode = mode === "test";
-  const overrideTournamentId = (formData.get("tournament_ID") as string | null) ?? null;
+  const overrideTournamentId =
+    (formData.get("tournament_id") as string | null) ??
+    (formData.get("tournament_ID") as string | null) ??
+    null;
 
   if (!name) {
     return { fieldErrors: { name: "Pool name is required." } };

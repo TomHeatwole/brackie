@@ -23,7 +23,10 @@ export async function createBracketAction(
   const mode = formData.get("mode") as string | null;
   const testMode = mode === "test";
   const poolId = formData.get("pool_id") as string | null;
-   const overrideTournamentId = (formData.get("tournament_ID") as string | null) ?? null;
+  const overrideTournamentId =
+    (formData.get("tournament_id") as string | null) ??
+    (formData.get("tournament_ID") as string | null) ??
+    null;
 
   if (!name) {
     return { fieldErrors: { name: "Bracket name is required." } };
@@ -61,7 +64,7 @@ export async function createBracketAction(
 export async function saveBracketPicksAction(
   bracketId: string,
   picks: Record<string, string>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; hasSelectableGoodies?: boolean }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {

@@ -11,6 +11,7 @@ const initialState: CreatePoolFormState = {};
 export default function CreatePoolForm({
   testMode,
   goodyTypes,
+  tournamentIdOverride,
 }: {
   testMode: boolean;
   goodyTypes: GoodyType[];
@@ -22,7 +23,7 @@ export default function CreatePoolForm({
     <form action={action} noValidate className="flex flex-col gap-6 w-full max-w-sm">
       {testMode && <input type="hidden" name="mode" value="test" />}
       {tournamentIdOverride && (
-        <input type="hidden" name="tournament_ID" value={tournamentIdOverride} />
+        <input type="hidden" name="tournament_id" value={tournamentIdOverride} />
       )}
 
       <div>

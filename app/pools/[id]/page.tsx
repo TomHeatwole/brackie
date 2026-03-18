@@ -42,7 +42,7 @@ function MemberProgressIndicator({
   const hasProgress = status !== "none";
 
   return (
-    <div className="shrink-0" title={label} aria-label={label}>
+    <div className="relative inline-flex shrink-0 group" aria-label={label}>
       <svg width="16" height="16" viewBox="0 0 16 16" className="block">
         <circle
           cx="8"
@@ -67,6 +67,14 @@ function MemberProgressIndicator({
           />
         )}
       </svg>
+      <div className="pointer-events-none absolute -top-9 left-1/2 z-20 w-max max-w-xs -translate-x-1/2 rounded-md border border-emerald-500/60 bg-stone-900/95 px-2.5 py-1.5 text-[11px] text-stone-100 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex items-start gap-1.5">
+          {status !== "full" && (
+            <span className="mt-[1px] text-emerald-400 font-semibold">!</span>
+          )}
+          <span>{label}</span>
+        </div>
+      </div>
     </div>
   );
 }

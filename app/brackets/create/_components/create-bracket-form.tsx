@@ -21,7 +21,7 @@ export default function CreateBracketForm({
       {testMode && <input type="hidden" name="mode" value="test" />}
       {poolId && <input type="hidden" name="pool_id" value={poolId} />}
       {tournamentIdOverride && (
-        <input type="hidden" name="tournament_ID" value={tournamentIdOverride} />
+        <input type="hidden" name="tournament_id" value={tournamentIdOverride} />
       )}
 
       <div>

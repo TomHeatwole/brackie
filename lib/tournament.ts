@@ -28,8 +28,12 @@ export async function getActiveTournament(
 export function parseTournamentOverride(
   searchParams: Record<string, string | string[] | undefined>
 ): string | null {
-  const raw = searchParams?.tournament_ID;
-  const value = Array.isArray(raw) ? raw[0] : raw;
+  const rawUpper = searchParams?.tournament_ID;
+  const rawLower = searchParams?.tournament_id;
+  const chosen =
+    (Array.isArray(rawUpper) ? rawUpper[0] : rawUpper) ??
+    (Array.isArray(rawLower) ? rawLower[0] : rawLower);
+  const value = chosen ?? null;
   if (!value) return null;
 
   // Basic UUID v4-ish format check; keep loose to avoid blocking valid IDs.
