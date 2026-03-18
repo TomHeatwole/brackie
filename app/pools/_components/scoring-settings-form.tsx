@@ -11,6 +11,7 @@ import {
   DEFAULT_ROUND_POINTS,
   DEFAULT_UPSET_MULTIPLIERS,
 } from "@/lib/types";
+import ScoringTooltip from "@/app/_components/scoring-tooltip";
 
 interface ScoringSettingsFormProps {
   roundPoints?: RoundPoints;
@@ -127,25 +128,21 @@ export default function ScoringSettingsForm({
             Upset multipliers
           </legend>
           <div className="flex items-center gap-2">
-            <div className="relative group">
-              <button
-                type="button"
-                className="text-[11px] text-accent hover:underline"
-              >
-                How Upset points work
-              </button>
-              <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
-                Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
-                <a
-                  href="/rules"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-block text-[11px] text-accent hover:underline"
-                >
-                  See full Upset example
-                </a>
-              </div>
-            </div>
+            <ScoringTooltip
+              content={
+                <>
+                  Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
+                </>
+              }
+            />
+            <a
+              href="/rules"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-accent hover:underline"
+            >
+              How Upset points work
+            </a>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -194,25 +191,18 @@ export default function ScoringSettingsForm({
             Goodies
           </legend>
           <div className="flex items-center gap-2">
-            <div className="relative group">
-              <button
-                type="button"
-                className="text-[11px] text-accent hover:underline"
-              >
-                How Goodies work
-              </button>
-              <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
-                Goodies are optional bonus categories that award extra points on top of normal bracket scoring.
-                <a
-                  href="/rules#goodies"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-1 inline-block text-[11px] text-accent hover:underline"
-                >
-                  See all Goodies
-                </a>
-              </div>
-            </div>
+            <ScoringTooltip
+              variant="goodies"
+              content="Goodies are optional bonus categories that award extra points on top of your normal bracket score."
+            />
+            <a
+              href="/rules#goodies"
+              target="_blank"
+              rel="noreferrer"
+              className="text-[11px] text-accent hover:underline"
+            >
+              How Goodies work
+            </a>
             <label className="relative inline-flex items-center cursor-pointer">
               <input
                 type="checkbox"
@@ -227,7 +217,7 @@ export default function ScoringSettingsForm({
           </div>
         </div>
         <p className="text-xs text-muted-foreground mb-3">
-          Bonus scoring categories. Turn on and pick which to use; set points and optional Stroke rule per Goody. The Rules page explains how each Goody works.
+          Bonus scoring categories. Turn on and pick which to use; set points and optional Stroke rule per Goodie. The Rules page explains how each Goodie works.
         </p>
         {goodiesEnabled && (
           <div className="flex flex-col gap-2">

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { type PoolWithDetails } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
+import ScoringTooltip from "@/app/_components/scoring-tooltip";
 
 const ROUND_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
 const ROUND_LABELS: Record<string, string> = {
@@ -112,24 +113,22 @@ export default function PoolScoringDisplay({
               <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
                 Upset bonus
               </p>
-              <div className="relative group">
-                <button
-                  type="button"
+              <div className="flex items-center gap-2">
+                <ScoringTooltip
+                  content={
+                    <>
+                      Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
+                    </>
+                  }
+                />
+                <a
+                  href="/rules"
+                  target="_blank"
+                  rel="noreferrer"
                   className="text-[11px] text-accent hover:underline"
                 >
                   How Upset points work
-                </button>
-                <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-card-border bg-stone-950/95 px-3 py-2 text-[11px] text-stone-200 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
-                  Upset bonus = Upset multiplier × seed differential. Seed differential is the winning seed minus the seed that would be there if the bracket went all chalk.
-                  <a
-                    href="/rules"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="mt-1 inline-block text-[11px] text-accent hover:underline"
-                  >
-                    See full Upset example
-                  </a>
-                </div>
+                </a>
               </div>
             </div>
             {pool.upset_points_enabled ? (
@@ -166,24 +165,19 @@ export default function PoolScoringDisplay({
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-accent">
                   Goodies
                 </p>
-                <div className="relative group">
-                  <button
-                    type="button"
+                <div className="flex items-center gap-2">
+                  <ScoringTooltip
+                    variant="goodies"
+                    content="Goodies are optional bonus categories that can award extra points on top of your normal bracket score."
+                  />
+                  <a
+                    href="/rules#goodies"
+                    target="_blank"
+                    rel="noreferrer"
                     className="text-[11px] text-accent/90 hover:underline"
                   >
                     How Goodies work
-                  </button>
-                  <div className="pointer-events-none absolute right-0 z-10 mt-1 w-64 rounded-md border border-accent/40 bg-stone-950/95 px-3 py-2 text-[11px] text-stone-100 opacity-0 shadow-lg backdrop-blur-sm transition group-hover:opacity-100 group-hover:pointer-events-auto">
-                    Goodies are optional bonus categories that can award extra points on top of your normal bracket score.
-                    <a
-                      href="/rules#goodies"
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-1 inline-block text-[11px] text-accent hover:underline"
-                    >
-                      See all Goodies
-                    </a>
-                  </div>
+                  </a>
                 </div>
               </div>
               <ul className="space-y-2">

@@ -7,6 +7,7 @@ const PUBLIC_PATHS = [
   "/auth",
   "/finish-signing-up",
   "/robots.txt",
+  "/rules", // scoring rules — only page accessible without logging in
   "/pools/join", // so crawlers get join page HTML (and its OG title) instead of redirect to login
 ];
 

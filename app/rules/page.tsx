@@ -108,7 +108,7 @@ export default async function RulesPage({
                 <p className="text-sm text-muted-foreground">
                   You earn points for correctly picking the lowest seed that
                   wins at least one game in the first round. Only correctly
-                  picking that specific team and game earns this Goody.
+                  picking that specific team and game earns this Goodie.
                 </p>
               </div>
 
@@ -151,10 +151,10 @@ export default async function RulesPage({
                   Best region bracket
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  This Goody goes to the bracket with the most correct picks in
+                  This Goodie goes to the bracket with the most correct picks in
                   a single region. If multiple players tie for the best region,
-                  they share this Goody according to the Stroke rule setting for
-                  this Goody.
+                  they share this Goodie according to the Stroke rule setting for
+                  this Goodie.
                 </p>
               </div>
 
@@ -177,7 +177,7 @@ export default async function RulesPage({
                 <p className="text-sm text-muted-foreground">
                   Before the tournament, you pick an NIT champion from the
                   provided list of options. If your pick wins the NIT, you earn
-                  the NIT champion Goody points.
+                  the NIT champion Goodie points.
                 </p>
               </div>
 
@@ -188,7 +188,7 @@ export default async function RulesPage({
                 <p className="text-sm text-muted-foreground">
                   You try to predict the first round game with the largest
                   margin of victory. If the game you picked ends up having the
-                  biggest blowout margin, you earn this Goody.
+                  biggest blowout margin, you earn this Goodie.
                 </p>
               </div>
 
@@ -201,7 +201,7 @@ export default async function RulesPage({
                   Twelve, or Big East) will be the first to have all of its
                   teams eliminated from the tournament. If your conference is
                   the first to go out, you earn the configured points or the
-                  conference-multiplier scoring chosen for this Goody.
+                  conference-multiplier scoring chosen for this Goodie.
                 </p>
               </div>
 
@@ -211,13 +211,18 @@ export default async function RulesPage({
                 </h3>
                 <p className="text-sm text-muted-foreground">
                   This is your second, &quot;dark horse&quot; national champion
-                  pick. If your dark horse wins the national title, you earn
-                  this Goody based either on fixed points or on the same score a
-                  bracket would receive for correctly picking the real
-                  champion, depending on the scoring mode set by the
-                  commissioner. When Dark Horse is using bracket-upset scoring
-                  and multiple players hit it, those players <span className="font-semibold">split</span> the
-                  Dark Horse points; there is no &quot;second-closest&quot; Dark
+                  pick. Your Dark Horse must be at least a 3-seed (seeds 3–16).
+                  You may choose a 1- or 2-seed, but if anyone else
+                  in the pool picked that same team as their main champion, you
+                  lose Dark Horse eligibility for that pick — so to be safe,
+                  stick to seeds 3–16. If your dark horse wins the
+                  national title, you earn this Goodie based either on fixed
+                  points or on the same score a bracket would receive for
+                  correctly picking the real champion, depending on the scoring
+                  mode set by the commissioner. When Dark Horse is using
+                  bracket-upset scoring and multiple players hit it, those
+                  players <span className="font-semibold">split</span> the Dark
+                  Horse points; there is no &quot;second-closest&quot; Dark
                   Horse winner.
                 </p>
               </div>
@@ -231,25 +236,25 @@ export default async function RulesPage({
             <p className="text-sm text-muted-foreground">
               For some Goodies, commissioners can enable an additional{" "}
               <span className="font-medium text-stone-200">stroke rule</span>.
-              When the Stroke rule is on for a Goody, it controls how those
-              Goody points are awarded when nobody hits the exact result.
+              When the Stroke rule is on for a Goodie, it controls how those
+              Goodie points are awarded when nobody hits the exact result.
             </p>
             <ul className="list-disc list-inside space-y-1 text-sm text-muted-foreground">
               <li>
-                If at least one player gets the Goody exactly right (for
+                If at least one player gets the Goodie exactly right (for
                 example, correctly picking the exact lowest seed that wins in
-                the first round), each of those players earns the full Goody
+                the first round), each of those players earns the full Goodie
                 points.
               </li>
               <li>
-                If nobody gets the exact result, the points for that Goody go to
+                If nobody gets the exact result, the points for that Goodie go to
                 whoever came closest, based on the same seed-differential idea
                 used for Upsets.
               </li>
               <li>
                 When multiple players are tied for &quot;closest&quot;, they{" "}
                 <span className="font-medium text-stone-200">split</span> the
-                Goody points. For example, if a 15-seed beats a 2-seed in the
+                Goodie points. For example, if a 15-seed beats a 2-seed in the
                 first round and nobody had that exact 15-over-2, the points for
                 &quot;lowest seed to win first round&quot; would go to the next
                 closest correct picks.
@@ -257,22 +262,22 @@ export default async function RulesPage({
               <li>
                 In that example, if three players correctly had a 14-seed over a
                 3-seed as their lowest first-round upset, those three players
-                would split the Goody points equally. If instead those same
+                would split the Goodie points equally. If instead those same
                 three players had correctly picked the 15-over-2, each of them
-                would receive the full Goody points.
+                would receive the full Goodie points.
               </li>
               <li>
-                If the Stroke rule is off for a Goody, that Goody simply pays
+                If the Stroke rule is off for a Goodie, that Goodie simply pays
                 out its points normally when it is hit and does not reassign or
                 split points when nobody has the exact result.
               </li>
               <li>
-                For the Dark Horse National Champion Goody, when it is using
+                For the Dark Horse National Champion Goodie, when it is using
                 bracket-upset scoring, Dark Horse points are{" "}
                 <span className="font-medium text-stone-200">split by default</span>{" "}
                 among all players who correctly picked the Dark Horse champion.
                 There is no &quot;second-closest&quot; Dark Horse winner — if
-                nobody hits the Dark Horse exactly, the Dark Horse Goody does
+                nobody hits the Dark Horse exactly, the Dark Horse Goodie does
                 not roll down to a next-best pick.
               </li>
             </ul>
