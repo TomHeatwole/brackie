@@ -124,6 +124,7 @@ create table public.pool_brackets (
   pool_id uuid not null,
   bracket_id uuid not null,
   user_id uuid not null,
+  goodies_complete boolean not null default false,
   constraint pool_brackets_pkey primary key (id),
   constraint pool_brackets_pool_id_fkey foreign key (pool_id) references public.pools (id) on update cascade on delete cascade,
   constraint pool_brackets_bracket_id_fkey foreign key (bracket_id) references public.brackets (id) on update cascade on delete cascade,

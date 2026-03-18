@@ -5,7 +5,7 @@ import { getUserInfo } from "@/utils/user-info";
 import { getBracket } from "@/lib/brackets";
 import { getTeams, getGames, isTournamentLocked, getTournament } from "@/lib/tournament";
 import { getBracketStructure } from "@/lib/types";
-import { getPool } from "@/lib/pools";
+import { getPool, getPoolGoodiesWithTypes } from "@/lib/pools";
 import Navbar from "../../_components/navbar";
 import BracketEditor from "./_components/bracket-editor";
 import BracketCountdown from "./_components/bracket-countdown";
@@ -75,6 +75,12 @@ export default async function BracketDetailPage({
   const games = await getGames(supabase, bracket.tournament_id, testMode);
 
   const pool = poolId ? await getPool(supabase, poolId) : null;
+  const hasSelectableGoodiesForPool =
+    !!pool &&
+    pool.goodies_enabled &&
+    (await getPoolGoodiesWithTypes(supabase, pool.id)).some(
+      (pg) => pg.goody_types?.input_type === "user_input"
+    );
 
   const picksMap: Record<string, string> = {};
   for (const pick of bracket.picks) {
@@ -106,6 +112,8 @@ export default async function BracketDetailPage({
             locked={locked || !isOwner}
             poolId={pool ? poolId : undefined}
             poolName={pool?.name}
+            modeParam={modeParam}
+            hasSelectableGoodies={hasSelectableGoodiesForPool}
           />
         </div>
       </main>

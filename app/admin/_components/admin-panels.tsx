@@ -17,6 +17,7 @@ import {
   bulkUpdateTeamsFromConfigAction,
   getPoolsWithMembersForAdminAction,
   adminRemovePoolMemberAction,
+  duplicateTournamentAction,
   AdminActionResult,
   GameWithTeamNames,
   TeamConfigEntry,
@@ -152,6 +153,7 @@ export function TournamentManagerPanel({
   const [statusState, statusAction, statusPending] = useActionState(updateTournamentStatusAction, emptyResult);
   const [lockState, lockAction, lockPending] = useActionState(updateTournamentLockDateAction, emptyResult);
   const [seedState, seedAction, seedPending] = useActionState(seedTournamentAction, emptyResult);
+  const [duplicateState, duplicateAction, duplicatePending] = useActionState(duplicateTournamentAction, emptyResult);
   const [deleteMsg, setDeleteMsg] = useState<AdminActionResult | null>(null);
   const [clearMsg, setClearMsg] = useState<AdminActionResult | null>(null);
 
@@ -227,6 +229,15 @@ export function TournamentManagerPanel({
           <Btn type="submit" pending={seedPending}>Seed 64 Teams + 63 Games</Btn>
         </form>
         <StatusBadge result={seedState} />
+
+        {/* Duplicate */}
+        <form action={duplicateAction} className="flex items-center gap-2">
+          <input type="hidden" name="tournament_id" value={tournamentId} />
+          <Btn type="submit" pending={duplicatePending}>
+            Duplicate this tournament for testing
+          </Btn>
+        </form>
+        <StatusBadge result={duplicateState} />
 
         {/* Clear data */}
         <div className="flex gap-2">

@@ -9,6 +9,22 @@ import Navbar from "./_components/navbar";
 import PoolIcon from "./_components/pool-icon";
 import TeamIcon from "./_components/team-icon";
 
+function buildQuerySuffix(params: Record<string, string | string[] | undefined>): string {
+  const mode = params.mode;
+  const tournament = params.tournament_ID;
+  const parts: string[] = [];
+
+  if (mode === "test") {
+    parts.push("mode=test");
+  }
+
+  if (typeof tournament === "string" && tournament) {
+    parts.push(`tournament_ID=${encodeURIComponent(tournament)}`);
+  }
+
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+}
+
 export default async function Home({
   searchParams,
 }: {
@@ -16,32 +32,28 @@ export default async function Home({
 }) {
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
+  const { data } = await supabase.auth.getUser();
+  const user = data.user;
   if (!user) {
     redirect("/login");
   }
-
-  const userInfo = await getUserInfo(supabase, user.id);
   const params = await searchParams;
-  const testMode = params?.mode === "test";
-  const modeParam = testMode ? "?mode=test" : "";
+  const userInfo = await getUserInfo(supabase, user.id);
+  const querySuffix = buildQuerySuffix(params);
 
   const brackets = await getUserBrackets(supabase, user.id);
   const pools = await getUserPools(supabase, user.id);
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={querySuffix} />
       <main className="pt-16 pb-20 md:pb-8 min-h-screen flex justify-center">
         <div className="w-full max-w-5xl flex flex-col md:flex-row">
           {/* Your Brackets */}
           <section className="flex-1 border-b md:border-b-0 md:border-r border-card-border px-4 md:px-8 py-6 md:py-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Brackets</h2>
-              <Link href={`/brackets/create${modeParam}`} className="btn-outline">
+              <Link href={`/brackets/create${querySuffix}`} className="btn-outline">
                 + New
               </Link>
             </div>
@@ -51,7 +63,7 @@ export default async function Home({
                 <div className="text-4xl mb-3 opacity-20">🏀</div>
                 <p className="text-muted-foreground text-sm">No brackets yet</p>
                 <Link
-                  href={`/brackets/create${modeParam}`}
+                  href={`/brackets/create${querySuffix}`}
                   className="mt-3 inline-block text-sm text-accent hover:underline"
                 >
                   Create your first bracket &rarr;
@@ -64,7 +76,7 @@ export default async function Home({
                   return (
                     <Link
                       key={bracket.id}
-                      href={`/brackets/${bracket.id}${modeParam}`}
+                      href={`/brackets/${bracket.id}${querySuffix}`}
                       className="card p-3"
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -100,7 +112,7 @@ export default async function Home({
                 })}
                 {brackets.length > 5 && (
                   <Link
-                    href={`/brackets${modeParam}`}
+                    href={`/brackets${querySuffix}`}
                     className="text-sm text-muted hover:text-stone-300 text-center mt-2"
                   >
                     View all {brackets.length} brackets &rarr;
@@ -115,10 +127,10 @@ export default async function Home({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Pools</h2>
               <div className="flex gap-2">
-                <Link href={`/pools${modeParam}`} className="btn-outline">
+                <Link href={`/pools${querySuffix}`} className="btn-outline">
                   Join
                 </Link>
-                <Link href={`/pools/create${modeParam}`} className="btn-outline">
+                <Link href={`/pools/create${querySuffix}`} className="btn-outline">
                   + New
                 </Link>
               </div>
@@ -129,7 +141,7 @@ export default async function Home({
                 <div className="text-4xl mb-3 opacity-20">🏆</div>
                 <p className="text-muted-foreground text-sm">No pools yet</p>
                 <Link
-                  href={`/pools${modeParam}`}
+                  href={`/pools${querySuffix}`}
                   className="mt-3 inline-block text-sm text-accent hover:underline"
                 >
                   Join or create a pool &rarr;
@@ -140,7 +152,7 @@ export default async function Home({
                 {pools.slice(0, 5).map((pool) => (
                   <Link
                     key={pool.id}
-                    href={`/pools/${pool.id}${modeParam}`}
+                    href={`/pools/${pool.id}${querySuffix}`}
                     className="card p-3"
                   >
                     <div className="flex items-center gap-3">
@@ -159,7 +171,7 @@ export default async function Home({
                 ))}
                 {pools.length > 5 && (
                   <Link
-                    href={`/pools${modeParam}`}
+                    href={`/pools${querySuffix}`}
                     className="text-sm text-muted hover:text-stone-300 text-center mt-2"
                   >
                     View all {pools.length} pools &rarr;

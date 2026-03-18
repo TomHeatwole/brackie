@@ -4,8 +4,8 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { createBracket, saveBracketPicks } from "@/lib/brackets";
-import { getActiveTournament } from "@/lib/tournament";
-import { submitBracketToPool } from "@/lib/pools";
+import { getEffectiveTournament } from "@/lib/tournament";
+import { submitBracketToPool, getPoolGoodiesWithTypes } from "@/lib/pools";
 
 export interface CreateBracketFormState {
   error?: string;
@@ -23,6 +23,7 @@ export async function createBracketAction(
   const mode = formData.get("mode") as string | null;
   const testMode = mode === "test";
   const poolId = formData.get("pool_id") as string | null;
+   const overrideTournamentId = (formData.get("tournament_ID") as string | null) ?? null;
 
   if (!name) {
     return { fieldErrors: { name: "Bracket name is required." } };
@@ -37,7 +38,10 @@ export async function createBracketAction(
     return { error: "You must be logged in." };
   }
 
-  const tournament = await getActiveTournament(supabase, testMode);
+  const { tournament } = await getEffectiveTournament(supabase, {
+    testMode,
+    overrideTournamentId,
+  });
   if (!tournament) {
     return { error: "No active tournament found." };
   }
@@ -91,7 +95,7 @@ export async function saveAndSubmitToPoolAction(
   bracketId: string,
   poolId: string,
   picks: Record<string, string>
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; hasSelectableGoodies?: boolean }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) {
@@ -124,5 +128,20 @@ export async function saveAndSubmitToPoolAction(
   }
 
   revalidatePath(`/pools/${poolId}`);
-  return { success: true };
+
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("id, goodies_enabled")
+    .eq("id", poolId)
+    .single();
+
+  let hasSelectableGoodies = false;
+  if (pool?.goodies_enabled) {
+    const poolGoodiesWithTypes = await getPoolGoodiesWithTypes(supabase, pool.id);
+    hasSelectableGoodies = poolGoodiesWithTypes.some(
+      (pg) => pg.goody_types?.input_type === "user_input"
+    );
+  }
+
+  return { success: true, hasSelectableGoodies };
 }

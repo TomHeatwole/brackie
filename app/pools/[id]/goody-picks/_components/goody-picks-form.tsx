@@ -7,6 +7,7 @@ import {
   TournamentGame,
   ELITE_CONFERENCES,
 } from "@/lib/types";
+import ScoringTooltip from "@/app/_components/scoring-tooltip";
 import type { PoolGoodyWithType } from "@/lib/pools";
 import type { PoolBracketGoodyAnswer } from "@/lib/types";
 
@@ -147,12 +148,29 @@ export default function GoodyPicksForm({
             if (key === "dark_horse_champion") {
               return (
                 <div key={pg.id} className="space-y-2">
-                  <label
-                    htmlFor={`goody_${pg.goody_type_id}`}
-                    className="block text-sm font-medium text-stone-300"
-                  >
-                    {name}
-                  </label>
+                  <div className="flex items-center gap-2">
+                    <label
+                      htmlFor={`goody_${pg.goody_type_id}`}
+                      className="block text-sm font-medium text-stone-300"
+                    >
+                      {name}
+                    </label>
+                    <ScoringTooltip
+                      variant="goodies"
+                      content={
+                        <>
+                          Your Dark Horse must be at least a 3-seed (seeds 3–16).
+                          You may gamble on a 1- or 2-seed, but if anyone else in
+                          the pool has that team as their main champion, your
+                          Dark Horse pick becomes ineligible. To stay safe, stick
+                          to seeds 3–16. When Dark Horse uses bracket-upset
+                          scoring and multiple players hit it, those players{" "}
+                          <span className="font-semibold">split</span> the Dark
+                          Horse Goodie points.
+                        </>
+                      }
+                    />
+                  </div>
                   <select
                     id={`goody_${pg.goody_type_id}`}
                     name={`goody_${pg.goody_type_id}`}

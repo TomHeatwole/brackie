@@ -5,6 +5,22 @@ import { getUserInfo } from "@/utils/user-info";
 import Navbar from "../../_components/navbar";
 import CreateBracketForm from "./_components/create-bracket-form";
 
+function buildQuerySuffix(params: Record<string, string | string[] | undefined>): string {
+  const mode = params.mode;
+  const tournament = params.tournament_ID;
+  const parts: string[] = [];
+
+  if (mode === "test") {
+    parts.push("mode=test");
+  }
+
+  if (typeof tournament === "string" && tournament) {
+    parts.push(`tournament_ID=${encodeURIComponent(tournament)}`);
+  }
+
+  return parts.length > 0 ? `?${parts.join("&")}` : "";
+}
+
 export default async function CreateBracketPage({
   searchParams,
 }: {
@@ -16,23 +32,29 @@ export default async function CreateBracketPage({
 
   const userInfo = await getUserInfo(supabase, user.id);
   const params = await searchParams;
+  const querySuffix = buildQuerySuffix(params);
   const testMode = params?.mode === "test";
-  const modeParam = testMode ? "?mode=test" : "";
   const poolId = typeof params?.pool === "string" ? params.pool : undefined;
+  const tournamentIdOverride =
+    typeof params?.tournament_ID === "string" ? params.tournament_ID : undefined;
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={querySuffix} />
       <main className="pt-20 pb-20 md:pb-8 min-h-screen flex flex-col items-center">
         <div className="w-full max-w-md px-4">
           <Link
-            href={`/brackets${modeParam}`}
+            href={`/brackets${querySuffix}`}
             className="text-muted text-sm hover:text-stone-300 transition-colors"
           >
             &larr; Back to Brackets
           </Link>
           <h1 className="text-2xl font-semibold text-stone-100 mb-8 mt-4 text-center">Create a Bracket</h1>
-          <CreateBracketForm testMode={testMode} poolId={poolId} />
+          <CreateBracketForm
+            testMode={testMode}
+            poolId={poolId}
+            tournamentIdOverride={tournamentIdOverride}
+          />
         </div>
       </main>
     </div>

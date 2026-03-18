@@ -39,11 +39,17 @@ export async function submitBracketToPoolAction(
 
   revalidatePath(`/pools/${poolId}`);
 
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("goodies_enabled")
+    .eq("id", poolId)
+    .single();
+
   const poolGoodiesWithTypes = await getPoolGoodiesWithTypes(supabase, poolId);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
   );
-  if (userInputGoodies.length > 0) {
+  if (pool?.goodies_enabled && userInputGoodies.length > 0) {
     redirect(`/pools/${poolId}/goody-picks${modeParam}`);
   }
 

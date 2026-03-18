@@ -130,7 +130,7 @@ export async function getPoolMembers(
 
   const { data: poolBrackets } = await supabase
     .from("pool_brackets")
-    .select("user_id, bracket_id")
+    .select("user_id, bracket_id, goodies_complete")
     .eq("pool_id", poolId);
 
   const { data: brackets } = poolBrackets?.length
@@ -149,9 +149,13 @@ export async function getPoolMembers(
   }
 
   const bracketInfoMap = new Map<string, { name: string; id: string }>();
+  const goodiesCompleteUserIds = new Set<string>();
   for (const pb of poolBrackets ?? []) {
     const bracket = brackets?.find((b: { id: string; name: string }) => b.id === pb.bracket_id);
     if (bracket) bracketInfoMap.set(pb.user_id, { name: bracket.name, id: bracket.id });
+    if ((pb as { goodies_complete?: boolean }).goodies_complete) {
+      goodiesCompleteUserIds.add(pb.user_id);
+    }
   }
 
   const poolBracketUserIds = new Set((poolBrackets ?? []).map((pb: { user_id: string }) => pb.user_id));
@@ -168,6 +172,7 @@ export async function getPoolMembers(
       bracket_submitted: poolBracketUserIds.has(m.user_id),
       bracket_name: bracketInfo?.name,
       bracket_id: bracketInfo?.id,
+      goodies_complete: goodiesCompleteUserIds.has(m.user_id),
     };
   });
 }
@@ -526,6 +531,36 @@ export async function setPoolBracketGoodyAnswers(
   if (insertError) {
     console.error("Error inserting goodie answers:", insertError);
     return { success: false, error: "Failed to save goodie answers." };
+  }
+
+  // Update goodies_complete flag on pool_brackets so pool members can see who finished goodies
+  // without reading individual answers (which are protected by RLS).
+  try {
+    // Find the pool this bracket belongs to
+    const { data: poolBracket } = await supabase
+      .from("pool_brackets")
+      .select("pool_id")
+      .eq("id", poolBracketId)
+      .maybeSingle();
+
+    if (poolBracket?.pool_id) {
+      // Count how many user-input goodies are configured for this pool
+      const { data: poolGoodies } = await supabase
+        .from("pool_goodies")
+        .select("id, goody_types!inner(input_type)")
+        .eq("pool_id", poolBracket.pool_id)
+        .eq("goody_types.input_type", "user_input");
+
+      const requiredCount = poolGoodies?.length ?? 0;
+      const isComplete = requiredCount > 0 && answers.length >= requiredCount;
+
+      await supabase
+        .from("pool_brackets")
+        .update({ goodies_complete: isComplete })
+        .eq("id", poolBracketId);
+    }
+  } catch (err) {
+    console.error("Error updating goodies_complete flag:", err);
   }
 
   return { success: true };

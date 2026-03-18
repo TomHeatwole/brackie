@@ -74,6 +74,128 @@ export async function createTournamentAction(
   return { success: true, message: `Tournament "${name}" created.` };
 }
 
+export async function duplicateTournamentAction(
+  _prev: AdminActionResult,
+  formData: FormData
+): Promise<AdminActionResult> {
+  const sourceTournamentId = (formData.get("tournament_id") as string)?.trim();
+  if (!sourceTournamentId) {
+    return { success: false, message: "Tournament is required." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: source, error: sourceErr } = await supabase
+    .from("tournaments")
+    .select("*")
+    .eq("id", sourceTournamentId)
+    .single();
+
+  if (sourceErr || !source) {
+    return { success: false, message: "Source tournament not found." };
+  }
+
+  const { data: inserted, error: insertErr } = await supabase
+    .from("tournaments")
+    .insert({
+      name: `${source.name} (Copy)`,
+      year: source.year,
+      lock_date: null,
+      status: "upcoming",
+      region_top_left: source.region_top_left,
+      region_top_right: source.region_top_right,
+      region_bottom_left: source.region_bottom_left,
+      region_bottom_right: source.region_bottom_right,
+    })
+    .select("id")
+    .single();
+
+  if (insertErr || !inserted) {
+    return { success: false, message: insertErr?.message ?? "Failed to create duplicate tournament." };
+  }
+
+  const newTournamentId = inserted.id as string;
+
+  const { data: teams, error: teamsErr } = await supabase
+    .from("teams")
+    .select("id, name, seed, region, icon_url")
+    .eq("tournament_id", sourceTournamentId);
+
+  if (teamsErr) {
+    return { success: false, message: `Failed to load teams: ${teamsErr.message}` };
+  }
+
+  let teamIdMap = new Map<string, string>();
+
+  if (teams && teams.length > 0) {
+    const teamRows = teams.map((t) => ({
+      tournament_id: newTournamentId,
+      name: t.name,
+      seed: t.seed,
+      region: t.region,
+      icon_url: t.icon_url,
+    }));
+
+    const { data: newTeams, error: newTeamsErr } = await supabase
+      .from("teams")
+      .insert(teamRows)
+      .select("id, seed, region");
+
+    if (newTeamsErr || !newTeams) {
+      return { success: false, message: `Failed to duplicate teams: ${newTeamsErr?.message}` };
+    }
+
+    const byKey = new Map<string, string>();
+    for (const t of newTeams) {
+      byKey.set(`${t.region}-${t.seed}`, t.id as string);
+    }
+
+    teamIdMap = new Map<string, string>();
+    for (const t of teams) {
+      const key = `${t.region}-${t.seed}`;
+      const mapped = byKey.get(key);
+      if (mapped) {
+        teamIdMap.set(t.id as string, mapped);
+      }
+    }
+  }
+
+  const { data: games, error: gamesErr } = await supabase
+    .from("tournament_games")
+    .select("round, position, region, team1_id, team2_id")
+    .eq("tournament_id", sourceTournamentId);
+
+  if (gamesErr) {
+    return { success: false, message: `Failed to load games: ${gamesErr.message}` };
+  }
+
+  if (games && games.length > 0) {
+    const gameRows = games.map((g) => ({
+      tournament_id: newTournamentId,
+      round: g.round,
+      position: g.position,
+      region: g.region,
+      team1_id: g.team1_id ? teamIdMap.get(g.team1_id as string) ?? null : null,
+      team2_id: g.team2_id ? teamIdMap.get(g.team2_id as string) ?? null : null,
+      winner_id: null,
+    }));
+
+    const { error: insertGamesErr } = await supabase
+      .from("tournament_games")
+      .insert(gameRows);
+
+    if (insertGamesErr) {
+      return { success: false, message: `Failed to duplicate games: ${insertGamesErr.message}` };
+    }
+  }
+
+  revalidatePath("/admin");
+  return {
+    success: true,
+    message: `Tournament duplicated. New ID: ${newTournamentId}`,
+  };
+}
+
 export async function updateTournamentStatusAction(
   _prev: AdminActionResult,
   formData: FormData

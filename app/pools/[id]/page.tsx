@@ -20,6 +20,57 @@ import PoolScoringDisplay from "./_components/pool-scoring-display";
 import SubmitBracketForm from "./_components/submit-bracket-form";
 import RemoveMemberButton from "./_components/remove-member-button";
 
+type ProgressStatus = "none" | "half" | "full";
+
+function MemberProgressIndicator({
+  status,
+  label,
+}: {
+  status: ProgressStatus;
+  label: string;
+}) {
+  const strokeWidth = 3;
+  const radius = 8 - strokeWidth / 2;
+  const circumference = 2 * Math.PI * radius;
+
+  const getDashOffset = () => {
+    if (status === "none") return circumference;
+    if (status === "half") return circumference / 2;
+    return 0;
+  };
+
+  const hasProgress = status !== "none";
+
+  return (
+    <div className="shrink-0" title={label} aria-label={label}>
+      <svg width="16" height="16" viewBox="0 0 16 16" className="block">
+        <circle
+          cx="8"
+          cy="8"
+          r={radius}
+          stroke={hasProgress ? "#334155" : "#4b5563"}
+          strokeWidth={strokeWidth}
+          fill="none"
+        />
+        {hasProgress && (
+          <circle
+            cx="8"
+            cy="8"
+            r={radius}
+            stroke={status === "full" ? "#4ade80" : "#22c55e"}
+            strokeWidth={strokeWidth}
+            fill="none"
+            strokeDasharray={circumference}
+            strokeDashoffset={getDashOffset()}
+            strokeLinecap="round"
+            transform="rotate(-90 8 8)"
+          />
+        )}
+      </svg>
+    </div>
+  );
+}
+
 const OG_TITLE = "Join my pool on brackie!";
 const SHARE_DESCRIPTION = "Join my pool on brackie!";
 
@@ -106,6 +157,8 @@ export default async function PoolDetailPage({
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
   );
+  const hasSelectableGoodiesForPool =
+    pool.goodies_enabled && userInputGoodies.length > 0;
 
   const goodyAnswers =
     poolBracketRow && userInputGoodies.length > 0
@@ -207,6 +260,8 @@ export default async function PoolDetailPage({
                     brackets={userBrackets}
                     currentBracketId={poolBracketRow?.bracket_id}
                     modeParam={modeParam}
+                    hasSelectableGoodies={hasSelectableGoodiesForPool}
+                    poolName={pool.name}
                   />
                   {poolBracketRow?.bracket_id && (
                     <Link
@@ -239,6 +294,8 @@ export default async function PoolDetailPage({
                         brackets={userBrackets}
                         currentBracketId={poolBracketRow?.bracket_id}
                         modeParam={modeParam}
+                        hasSelectableGoodies={hasSelectableGoodiesForPool}
+                        poolName={pool.name}
                       />
                     </div>
                   )}
@@ -339,54 +396,91 @@ export default async function PoolDetailPage({
                   </div>
                 ))
               ) : (
-                members.map((member) => (
-                  <div
-                    key={member.id}
-                    className="px-4 py-3 flex items-center justify-between bg-background"
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <UserAvatar
-                        avatarUrl={member.avatar_url}
-                        firstName={member.first_name}
-                        lastName={member.last_name}
-                        size="sm"
-                      />
-                      <span className="text-stone-200 text-sm">
-                        {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
-                      </span>
-                      {member.user_id === pool.creator_id && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
-                          Creator
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-3 text-right">
-                      {member.bracket_submitted ? (
-                        member.bracket_id ? (
-                          <Link
-                            href={`/brackets/${member.bracket_id}${modeParam}`}
-                            className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
-                          >
-                            {member.bracket_name ?? "Bracket submitted"}
-                          </Link>
-                        ) : (
-                          <span className="text-xs text-green-400">
-                            {member.bracket_name ?? "Bracket submitted"}
-                          </span>
-                        )
-                      ) : (
-                        <span className="text-xs text-stone-600">No bracket</span>
-                      )}
-                      {isCreator && member.user_id !== pool.creator_id && (
-                        <RemoveMemberButton
-                          poolId={poolId}
-                          memberUserId={member.user_id}
-                          memberDisplayName={formatUserDisplayName(member.first_name, member.last_name) || "this member"}
+                members.map((member) => {
+                  const showProgress = !isActive && hasSelectableGoodiesForPool;
+
+                  let progressStatus: ProgressStatus = "none";
+                  let progressLabel = "";
+
+                  if (showProgress) {
+                    const hasBracket = !!member.bracket_submitted;
+                    const hasGoodies = !!member.goodies_complete;
+
+                    if (hasBracket && hasGoodies) {
+                      progressStatus = "full";
+                      progressLabel = "Bracket and goodies submitted";
+                    } else if (hasBracket || hasGoodies) {
+                      progressStatus = "half";
+                      if (hasBracket && !hasGoodies) {
+                        progressLabel = "Bracket submitted, goodies not submitted";
+                      } else if (!hasBracket && hasGoodies) {
+                        progressLabel = "Goodies submitted, bracket not submitted";
+                      } else {
+                        progressLabel = "In progress";
+                      }
+                    } else {
+                      progressStatus = "none";
+                      progressLabel = "Bracket and goodies not submitted";
+                    }
+                  }
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="px-4 py-3 flex items-center justify-between bg-background"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <UserAvatar
+                          avatarUrl={member.avatar_url}
+                          firstName={member.first_name}
+                          lastName={member.last_name}
+                          size="sm"
                         />
-                      )}
+                        <span className="text-stone-200 text-sm">
+                          {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
+                        </span>
+                        {showProgress && (
+                          <div className="ml-1">
+                            <MemberProgressIndicator
+                              status={progressStatus}
+                              label={progressLabel}
+                            />
+                          </div>
+                        )}
+                        {member.user_id === pool.creator_id && (
+                          <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground">
+                            Creator
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-3 text-right">
+                        {member.bracket_submitted ? (
+                          member.bracket_id ? (
+                            <Link
+                              href={`/brackets/${member.bracket_id}${modeParam}`}
+                              className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
+                            >
+                              {member.bracket_name ?? "Bracket submitted"}
+                            </Link>
+                          ) : (
+                            <span className="text-xs text-green-400">
+                              {member.bracket_name ?? "Bracket submitted"}
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-xs text-stone-600">No bracket</span>
+                        )}
+                        {isCreator && member.user_id !== pool.creator_id && (
+                          <RemoveMemberButton
+                            poolId={poolId}
+                            memberUserId={member.user_id}
+                            memberDisplayName={formatUserDisplayName(member.first_name, member.last_name) || "this member"}
+                          />
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>

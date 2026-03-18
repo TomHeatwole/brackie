@@ -264,6 +264,7 @@ alter table public.pool_brackets add column if not exists id uuid not null defau
 alter table public.pool_brackets add column if not exists pool_id uuid not null;
 alter table public.pool_brackets add column if not exists bracket_id uuid not null;
 alter table public.pool_brackets add column if not exists user_id uuid not null;
+alter table public.pool_brackets add column if not exists goodies_complete boolean not null default false;
 
 -- bracket_picks
 alter table public.bracket_picks add column if not exists id uuid not null default gen_random_uuid();

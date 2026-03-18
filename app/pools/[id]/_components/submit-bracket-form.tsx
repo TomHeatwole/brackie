@@ -11,6 +11,8 @@ interface Props {
   brackets: BracketWithPicks[];
   currentBracketId?: string;
   modeParam?: string;
+  hasSelectableGoodies?: boolean;
+  poolName?: string;
 }
 
 export default function SubmitBracketForm({
@@ -18,6 +20,8 @@ export default function SubmitBracketForm({
   brackets,
   currentBracketId,
   modeParam = "",
+  hasSelectableGoodies = false,
+  poolName,
 }: Props) {
   const [state, action, isPending] = useActionState(submitBracketToPoolAction, initialState);
 
@@ -61,7 +65,13 @@ export default function SubmitBracketForm({
           ))}
         </select>
         <button type="submit" disabled={isPending} className="btn-primary shrink-0">
-          {isPending ? "Submitting…" : currentBracketId ? "Update" : "Submit"}
+          {isPending
+            ? "Submitting…"
+            : currentBracketId
+              ? "Update"
+              : hasSelectableGoodies
+                ? `Submit to ${poolName ?? "pool"} and continue to Goodie Selection`
+                : "Submit"}
         </button>
       </div>
 

@@ -25,6 +25,49 @@ export async function getActiveTournament(
   return data;
 }
 
+export function parseTournamentOverride(
+  searchParams: Record<string, string | string[] | undefined>
+): string | null {
+  const raw = searchParams?.tournament_ID;
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (!value) return null;
+
+  // Basic UUID v4-ish format check; keep loose to avoid blocking valid IDs.
+  const uuidRegex = /^[0-9a-fA-F-]{20,}$/;
+  return uuidRegex.test(value) ? value : null;
+}
+
+export async function getEffectiveTournament(
+  supabase: SupabaseClient,
+  options: {
+    testMode: boolean;
+    overrideTournamentId?: string | null;
+  }
+): Promise<{ tournament: Tournament | null; overrideSource: "query" | "active" | "test" }> {
+  const { testMode, overrideTournamentId } = options;
+
+  if (testMode) {
+    return { tournament: TEST_TOURNAMENT, overrideSource: "test" };
+  }
+
+  const overrideId = overrideTournamentId ?? null;
+
+  if (overrideId) {
+    const { data } = await supabase
+      .from("tournaments")
+      .select("*")
+      .eq("id", overrideId)
+      .single();
+
+    if (data) {
+      return { tournament: data, overrideSource: "query" };
+    }
+  }
+
+  const active = await getActiveTournament(supabase, false);
+  return { tournament: active, overrideSource: "active" };
+}
+
 export async function getTournament(
   supabase: SupabaseClient,
   tournamentId: string,

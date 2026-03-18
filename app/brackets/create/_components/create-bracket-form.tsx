@@ -5,13 +5,24 @@ import { createBracketAction, CreateBracketFormState } from "../actions";
 
 const initialState: CreateBracketFormState = {};
 
-export default function CreateBracketForm({ testMode, poolId }: { testMode: boolean; poolId?: string }) {
+export default function CreateBracketForm({
+  testMode,
+  poolId,
+  tournamentIdOverride,
+}: {
+  testMode: boolean;
+  poolId?: string;
+  tournamentIdOverride?: string;
+}) {
   const [state, action, isPending] = useActionState(createBracketAction, initialState);
 
   return (
     <form action={action} noValidate className="flex flex-col gap-5 w-full max-w-sm">
       {testMode && <input type="hidden" name="mode" value="test" />}
       {poolId && <input type="hidden" name="pool_id" value={poolId} />}
+      {tournamentIdOverride && (
+        <input type="hidden" name="tournament_ID" value={tournamentIdOverride} />
+      )}
 
       <div>
         <label htmlFor="bracket-name" className="block text-xs font-medium mb-1.5 text-muted-foreground">

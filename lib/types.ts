@@ -176,6 +176,7 @@ export interface PoolMemberWithInfo extends PoolMember {
   bracket_submitted?: boolean;
   bracket_name?: string;
   bracket_id?: string;
+  goodies_complete?: boolean;
 }
 
 export interface BracketWithPicks extends Bracket {

@@ -17,6 +17,8 @@ interface Props {
   locked: boolean;
   poolId?: string;
   poolName?: string;
+  modeParam?: string;
+  hasSelectableGoodies?: boolean;
 }
 
 export default function BracketEditor({
@@ -29,6 +31,8 @@ export default function BracketEditor({
   locked,
   poolId,
   poolName,
+  modeParam = "",
+  hasSelectableGoodies = false,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
@@ -50,7 +54,10 @@ export default function BracketEditor({
           setSaveStatus("Submitted!");
           setTimeout(() => {
             startNavigation();
-            router.push(`/pools/${poolId}`);
+            const target = result.hasSelectableGoodies
+              ? `/pools/${poolId}/goody-picks${modeParam}`
+              : `/pools/${poolId}${modeParam}`;
+            router.push(target);
           }, 1000);
         } else {
           setSaveStatus("Saved!");
@@ -70,9 +77,12 @@ export default function BracketEditor({
     }
   }
 
-  const saveLabel = poolId && poolName
-    ? `Save and submit to ${poolName}`
-    : undefined;
+  const saveLabel =
+    poolId && poolName
+      ? hasSelectableGoodies
+        ? `Save and submit to ${poolName} and continue to Goodie Selection`
+        : `Save and submit to ${poolName}`
+      : undefined;
 
   return (
     <div>
