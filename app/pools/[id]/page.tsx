@@ -522,34 +522,6 @@ export default async function PoolDetailPage({
             </div>
           )}
 
-          {isActive && hallOfFame.length > 0 && (
-            <div className="rounded-lg overflow-hidden border border-card-border mt-4">
-              <div className="px-4 py-3 bg-card">
-                <h2 className="text-sm font-medium text-stone-300">Hall of Fame</h2>
-              </div>
-              <div className="divide-y divide-card-border/50 bg-background">
-                {hallOfFame.map((entry) => (
-                  <div key={entry.id} className="grid grid-cols-[3rem_1fr_1fr_1fr] items-center gap-x-3 px-4 py-3">
-                    <span className="text-base font-semibold text-stone-100 tabular-nums">
-                      {entry.year}
-                    </span>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0">🏆</span>
-                      <span className="text-stone-100 font-medium truncate">{entry.first_place}</span>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0">🥈</span>
-                      <span className="text-stone-300 truncate">{entry.second_place}</span>
-                    </div>
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="shrink-0">🥉</span>
-                      <span className="text-stone-400 truncate">{entry.third_place ?? "—"}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </main>
     </div>

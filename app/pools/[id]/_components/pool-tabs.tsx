@@ -73,6 +73,7 @@ export default function PoolTabs({
   const hasGoodies = pool.goodies_enabled && poolGoodiesWithTypes.length > 0;
   const hasHallOfFame = hallOfFame.length > 0;
   const teamById = new Map(teams.map((t) => [t.id, t]));
+  const totalPoolGoodyPoints = poolGoodiesWithTypes.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
 
   const defaultTab: TabKey = "scores";
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
@@ -138,7 +139,7 @@ export default function PoolTabs({
       >
         {children}
         <div
-          className={`absolute z-20 left-1/2 top-full mt-1 w-52 -translate-x-1/2 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-300 ${
+          className={`absolute z-20 right-0 bottom-full mb-1 w-52 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-300 whitespace-pre-line ${
             open ? "opacity-100" : "pointer-events-none opacity-0"
           } transition`}
         >
@@ -316,13 +317,15 @@ export default function PoolTabs({
                                   </a>
                                 )}
                               </div>
-                              <span className="ml-2 text-xl font-bold tabular-nums text-accent shrink-0">
-                                {score.totalPoints}
-                                <span className="text-sm font-medium text-accent/70 ml-0.5">pts</span>
-                              </span>
                             </div>
                             <div className="w-full md:w-auto md:flex-1 md:justify-center">
                               <div className="grid grid-cols-7 gap-2 px-0 md:px-4">
+                                <div className="flex flex-col items-center">
+                                  <span className="text-[11px] text-stone-500">Total</span>
+                                  <span className="text-xl text-accent tabular-nums font-bold">
+                                    {score.totalPoints}
+                                  </span>
+                                </div>
                                 {Array.from({ length: 6 }).map((_, i) => {
                                   const r = i + 1;
                                   const roundScore = score.perRound[r];
@@ -347,30 +350,22 @@ export default function PoolTabs({
                                     </div>
                                   );
                                 })}
-                                <div className="flex flex-col items-center">
-                                  <span className="text-[11px] text-stone-500">Goodies</span>
-                                  <span className="text-base text-stone-200 tabular-nums font-semibold">
-                                    {score.totalGoodyPoints ?? 0}
-                                  </span>
-                                  <span className="text-[11px] text-stone-600">(unscored)</span>
-                                </div>
                               </div>
                             </div>
                             <div className="flex items-center gap-6 text-right shrink-0">
-                              <HoverTooltip text="If all remaining bracket picks are correct, this is the max bracket score still available.">
+                              <div>
+                                <span className="text-[11px] text-stone-500 block">Goodies</span>
+                                <span className="text-base text-stone-200 tabular-nums font-semibold">
+                                  {score.totalGoodyPoints ?? 0}
+                                </span>
+                                <span className="text-[11px] text-stone-600 block">(unscored)</span>
+                              </div>
+                              <HoverTooltip text={`If all remaining picks are correct:\n• Bracket: ${score.possibleBracketPoints} pts\n• Goodies: ${totalPoolGoodyPoints - (score.totalGoodyPoints ?? 0)} pts`}>
                                 <div className="cursor-help">
                                   <span className="text-stone-400 text-base tabular-nums">
-                                    {score.possibleBracketPoints}
+                                    {score.possibleBracketPoints + totalPoolGoodyPoints - (score.totalGoodyPoints ?? 0)}
                                   </span>
-                                  <span className="text-stone-600 text-sm ml-0.5">brkt poss.</span>
-                                </div>
-                              </HoverTooltip>
-                              <HoverTooltip text="If all remaining goody picks are correct, this is the max goody score still available.">
-                                <div className="cursor-help">
-                                  <span className="text-stone-400 text-base tabular-nums">
-                                    {score.possibleGoodyPoints}
-                                  </span>
-                                  <span className="text-stone-600 text-sm ml-0.5">goody poss.</span>
+                                  <span className="text-stone-600 text-sm ml-0.5">possible</span>
                                 </div>
                               </HoverTooltip>
                             </div>
