@@ -14,13 +14,21 @@ export async function getActiveTournament(
     return TEST_TOURNAMENT;
   }
 
-  const { data: config } = await supabase
+  const { data: config, error: configError } = await supabase
     .from("site_config")
     .select("active_tournament_id")
     .eq("id", 1)
     .single();
 
-  if (!config?.active_tournament_id) return null;
+  if (configError) {
+    console.error("site_config query failed — has the table been created?", configError.message);
+    return null;
+  }
+
+  if (!config?.active_tournament_id) {
+    console.error("site_config.active_tournament_id is null — run UPDATE site_config SET active_tournament_id = '<uuid>' WHERE id = 1;");
+    return null;
+  }
 
   const { data } = await supabase
     .from("tournaments")

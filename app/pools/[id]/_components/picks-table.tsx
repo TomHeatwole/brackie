@@ -8,6 +8,7 @@ import type { PoolGoodyWithType } from "@/lib/pools";
 import TeamIcon from "@/app/_components/team-icon";
 import UserAvatar from "@/app/_components/user-avatar";
 import { formatUserDisplayName } from "@/utils/display-name";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 
 interface BracketPickEntry {
   bracketId: string;
@@ -95,6 +96,8 @@ export default function PicksTable({
     }
     return regions;
   });
+
+  const isMobile = useIsMobile();
 
   const teamById = useMemo(() => {
     const map = new Map<string, Team>();
@@ -349,7 +352,7 @@ export default function PicksTable({
         <p className="text-sm text-muted-foreground">No games match the selected filters.</p>
       ) : (
         <div className="scrollbar-custom-x overflow-x-auto rounded-md border border-card-border">
-          <table className="min-w-full text-sm border-collapse">
+          <table className={`min-w-full border-collapse ${isMobile ? 'text-[9px]' : 'text-sm'}`}>
             <thead>
               {/* Region grouping header */}
               {showRegionFilters && (
@@ -381,7 +384,7 @@ export default function PicksTable({
               )}
               {/* Game matchup header */}
               <tr>
-                <th className="sticky left-0 z-10 bg-stone-900 px-3 py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[190px] min-w-[190px]">
+                <th className="sticky left-0 z-10 bg-stone-900 px-1 py-1 md:px-3 md:py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[80px] min-w-[80px] md:w-[190px] md:min-w-[190px]">
                   Player
                 </th>
                 {filteredGames.map((game, idx) => {
@@ -392,22 +395,22 @@ export default function PicksTable({
                   return (
                     <th
                       key={game.id}
-                      className={`px-2 py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
+                      className={`px-0.5 py-1 md:px-2 md:py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
                         idx > 0 ? "border-l border-card-border" : ""
                       } ${isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""}`}
-                      style={{ minWidth: 140 }}
+                      style={{ minWidth: isMobile ? 65 : 140 }}
                     >
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="flex items-center gap-1">
-                          {t1.team && <TeamIcon team={t1.team} size="xs" />}
-                          <span className="text-stone-300 truncate max-w-[160px]">
+                          {!isMobile && t1.team && <TeamIcon team={t1.team} size="xs" />}
+                          <span className={`truncate ${isMobile ? 'text-stone-300 max-w-[55px]' : 'text-stone-300 max-w-[160px]'}`}>
                             {t1.team ? `(${t1.team.seed}) ${t1.label}` : t1.label}
                           </span>
                         </span>
-                        <span className="text-stone-600 text-[10px]">vs</span>
+                        <span className={`text-stone-600 ${isMobile ? 'text-[7px]' : 'text-[10px]'}`}>vs</span>
                         <span className="flex items-center gap-1">
-                          {t2.team && <TeamIcon team={t2.team} size="xs" />}
-                          <span className="text-stone-300 truncate max-w-[160px]">
+                          {!isMobile && t2.team && <TeamIcon team={t2.team} size="xs" />}
+                          <span className={`truncate ${isMobile ? 'text-stone-300 max-w-[55px]' : 'text-stone-300 max-w-[160px]'}`}>
                             {t2.team ? `(${t2.team.seed}) ${t2.label}` : t2.label}
                           </span>
                         </span>
@@ -429,30 +432,30 @@ export default function PicksTable({
                     className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}
                   >
                     <td
-                      className={`sticky left-0 z-10 px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
+                      className={`sticky left-0 z-10 px-1 py-0.5 md:px-3 md:py-2.5 border-r border-card-border w-[80px] min-w-[80px] md:w-[190px] md:min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
                       style={isCurrentUser ? {
                         backgroundColor: "var(--card-highlight)",
                         boxShadow: "inset 1px 0 0 0 var(--card-border-hover), inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)",
                       } : undefined}
                     >
-                      <div className="flex flex-col items-start gap-1">
-                        <div className="flex items-center gap-2 whitespace-nowrap">
-                          <UserAvatar
+                      <div className={`flex flex-col items-start ${isMobile ? 'gap-0' : 'gap-1'}`}>
+                        <div className={`flex items-center whitespace-nowrap ${isMobile ? 'gap-1' : 'gap-2'}`}>
+                          {!isMobile && <UserAvatar
                             avatarUrl={member.avatar_url}
                             firstName={member.first_name}
                             lastName={member.last_name}
                             size="xs"
-                          />
-                          <span className={`text-sm font-medium truncate max-w-[130px] ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
+                          />}
+                          <span className={`font-medium truncate ${isMobile ? 'max-w-[55px]' : 'text-sm max-w-[130px]'} ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
                             {name}
                           </span>
                           {isCurrentUser && (
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent shrink-0">
+                            <span className={`rounded bg-accent/20 text-accent shrink-0 ${isMobile ? 'text-[7px] px-0.5' : 'text-[10px] px-1.5 py-0.5'}`}>
                               You
                             </span>
                           )}
                         </div>
-                        {member.bracket_id && (
+                        {!isMobile && member.bracket_id && (
                           <a
                             href={`/brackets/${member.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
                             className="text-xs text-accent hover:underline ml-7"
@@ -480,23 +483,23 @@ export default function PicksTable({
                       return (
                         <td
                           key={game.id}
-                          className={`px-2 py-2.5 text-center ${statusClasses} ${
+                          className={`px-0.5 py-0.5 md:px-2 md:py-2.5 text-center ${statusClasses} ${
                             isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""
                           }`}
-                          style={{ minWidth: 140, ...(highlightShadow ? { boxShadow: highlightShadow } : {}) }}
+                          style={{ minWidth: isMobile ? 65 : 140, ...(highlightShadow ? { boxShadow: highlightShadow } : {}) }}
                         >
                           {status === "no-pick" ? (
                             <span className="text-stone-600">&mdash;</span>
                           ) : (
                             <div className="flex flex-col items-center gap-0.5">
-                              <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-                                {picked.team && <TeamIcon team={picked.team} size="xs" />}
-                                <span className="truncate max-w-[160px]">
-                                  {picked.team
-                                    ? `(${picked.team.seed}) ${picked.label}`
-                                    : picked.label}
-                                </span>
-                              </div>
+                            <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                              {!isMobile && picked.team && <TeamIcon team={picked.team} size="xs" />}
+                              <span className={`truncate ${isMobile ? 'max-w-[55px]' : 'max-w-[160px]'}`}>
+                                {picked.team
+                                  ? `(${picked.team.seed}) ${picked.label}`
+                                  : picked.label}
+                              </span>
+                            </div>
                               {pts > 0 && (
                                 <span className="text-[10px] text-emerald-400 font-medium">+{pts}</span>
                               )}
@@ -517,16 +520,16 @@ export default function PicksTable({
             <p className="text-sm text-muted-foreground">No goodies configured for this pool.</p>
           ) : (
             <div className="scrollbar-custom-x overflow-x-auto rounded-md border border-card-border">
-              <table className="min-w-full text-sm border-collapse">
+              <table className={`min-w-full border-collapse ${isMobile ? 'text-[9px]' : 'text-sm'}`}>
                 <thead>
                   <tr>
-                    <th className="sticky left-0 z-10 bg-stone-900 px-3 py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[190px] min-w-[190px]">
+                    <th className="sticky left-0 z-10 bg-stone-900 px-1 py-1 md:px-3 md:py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[80px] min-w-[80px] md:w-[190px] md:min-w-[190px]">
                       Player
                     </th>
                     {poolGoodiesWithTypes.map((pg, idx) => (
                       <th
                         key={pg.id}
-                        className={`px-2 py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
+                        className={`px-0.5 py-1 md:px-2 md:py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
                           idx > 0 ? "border-l border-card-border" : ""
                         }`}
                       >
@@ -554,30 +557,30 @@ export default function PicksTable({
                         className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}
                       >
                         <td
-                          className={`sticky left-0 z-10 px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
+                          className={`sticky left-0 z-10 px-1 py-0.5 md:px-3 md:py-2.5 border-r border-card-border w-[80px] min-w-[80px] md:w-[190px] md:min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
                           style={isCurrentUser ? {
                             backgroundColor: "var(--card-highlight)",
                             boxShadow: "inset 1px 0 0 0 var(--card-border-hover), inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)",
                           } : undefined}
                         >
-                          <div className="flex flex-col items-start gap-1">
-                            <div className="flex items-center gap-2 whitespace-nowrap">
-                              <UserAvatar
+                          <div className={`flex flex-col items-start ${isMobile ? 'gap-0' : 'gap-1'}`}>
+                            <div className={`flex items-center whitespace-nowrap ${isMobile ? 'gap-1' : 'gap-2'}`}>
+                              {!isMobile && <UserAvatar
                                 avatarUrl={member.avatar_url}
                                 firstName={member.first_name}
                                 lastName={member.last_name}
                                 size="xs"
-                              />
-                              <span className={`text-sm font-medium truncate max-w-[130px] ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
+                              />}
+                              <span className={`font-medium truncate ${isMobile ? 'max-w-[55px]' : 'text-sm max-w-[130px]'} ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
                                 {name}
                               </span>
                               {isCurrentUser && (
-                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent shrink-0">
+                                <span className={`rounded bg-accent/20 text-accent shrink-0 ${isMobile ? 'text-[7px] px-0.5' : 'text-[10px] px-1.5 py-0.5'}`}>
                                   You
                                 </span>
                               )}
                             </div>
-                            {member.bracket_id && (
+                            {!isMobile && member.bracket_id && (
                               <a
                                 href={`/brackets/${member.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
                                 className="text-xs text-accent hover:underline ml-7"
@@ -636,13 +639,13 @@ export default function PicksTable({
                             return (
                               <td
                                 key={pg.id}
-                                className={`px-2 py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
+                                className={`px-0.5 py-0.5 md:px-2 md:py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
                                 style={goodyHighlightShadow ? { boxShadow: goodyHighlightShadow } : undefined}
                               >
                                 <div className="flex flex-col items-center gap-0.5">
                                   {isWon ? (
                                     <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-                                      {displayTeam && <TeamIcon team={displayTeam} size="xs" />}
+                                      {!isMobile && displayTeam && <TeamIcon team={displayTeam} size="xs" />}
                                       <span className="text-emerald-300 text-xs block truncate max-w-[180px]">{displayText}</span>
                                     </div>
                                   ) : isOut ? (
@@ -676,7 +679,7 @@ export default function PicksTable({
                           return (
                             <td
                               key={pg.id}
-                              className={`px-2 py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
+                              className={`px-0.5 py-0.5 md:px-2 md:py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
                               style={goodyHighlightShadow ? { boxShadow: goodyHighlightShadow } : undefined}
                               title={display !== "—" ? display : undefined}
                             >

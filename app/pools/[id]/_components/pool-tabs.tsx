@@ -102,6 +102,7 @@ export default function PoolTabs({
   const [picksView, setPicksView] = useState<"table" | "bracket">("table");
   const [expandedGoodies, setExpandedGoodies] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     setActiveTabState(urlTab);
@@ -474,6 +475,55 @@ export default function PoolTabs({
                   <p className="text-sm text-muted-foreground">
                     Scores will appear here once brackets have been submitted and games are completed.
                   </p>
+                ) : isMobile ? (
+                  <div className="overflow-x-auto rounded-md border border-card-border">
+                    <table className="w-full border-collapse text-[9px]">
+                      <thead>
+                        <tr className="bg-stone-900">
+                          <th className="sticky left-0 z-10 bg-stone-900 px-1.5 py-1 text-left font-medium text-stone-500 border-b border-r border-card-border whitespace-nowrap">Player</th>
+                          <th className="px-1 py-1 text-center font-semibold text-accent border-b border-card-border whitespace-nowrap">Tot</th>
+                          {[1,2,3,4,5,6].map(r => (
+                            <th key={r} className="px-1 py-1 text-center font-medium text-stone-500 border-b border-card-border whitespace-nowrap">
+                              {["R64","R32","S16","E8","F4","Ch"][r-1]}
+                            </th>
+                          ))}
+                          {hasGoodies && <th className="px-1 py-1 text-center font-medium text-emerald-500/70 border-b border-card-border whitespace-nowrap">G</th>}
+                          <th className="px-1 py-1 text-center font-medium text-stone-600 border-b border-card-border whitespace-nowrap">Poss</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...scores].sort((a, b) => {
+                          if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+                          return b.possiblePoints - a.possiblePoints;
+                        }).map((score, index) => {
+                          const member = members.find((m) => m.user_id === score.userId);
+                          if (!member) return null;
+                          const name = formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
+                          const isCurrentUser = score.userId === currentUserId;
+                          return (
+                            <tr key={score.bracketId} className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}>
+                              <td className={`sticky left-0 z-10 px-1.5 py-1 border-r border-card-border whitespace-nowrap ${isCurrentUser ? "" : "bg-card"}`}>
+                                <div className="flex items-center gap-1">
+                                  <span className="text-stone-500 tabular-nums w-3 shrink-0 text-right">{index + 1}</span>
+                                  <span className={`truncate max-w-[65px] ${isCurrentUser ? "text-accent font-medium" : "text-stone-200"}`}>{name}</span>
+                                </div>
+                              </td>
+                              <td className="px-1 py-1 text-center tabular-nums font-bold text-accent">{score.totalPoints}</td>
+                              {[1,2,3,4,5,6].map(r => (
+                                <td key={r} className="px-1 py-1 text-center tabular-nums text-stone-300">{score.perRound[r]?.totalPoints ?? 0}</td>
+                              ))}
+                              {hasGoodies && (
+                                <td className={`px-1 py-1 text-center tabular-nums font-medium ${(score.totalGoodyPoints ?? 0) > 0 ? "text-emerald-300" : "text-stone-400"}`}>
+                                  {score.totalGoodyPoints ?? 0}
+                                </td>
+                              )}
+                              <td className="px-1 py-1 text-center tabular-nums text-stone-500">{score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}</td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
@@ -533,8 +583,8 @@ export default function PoolTabs({
                                 )}
                               </div>
                             </div>
-                            <div className="w-full md:w-auto md:flex-1 md:justify-center">
-                              <div className="grid grid-cols-7 gap-2 px-0 md:px-4">
+                            <div className="w-full md:w-auto md:flex-1 md:justify-center overflow-x-auto">
+                              <div className="grid grid-cols-7 gap-2 px-0 md:px-4 min-w-[460px] md:min-w-0">
                                 <div className="flex flex-col items-center">
                                   <span className="text-[11px] text-stone-500">Total</span>
                                   <span className="text-xl text-accent tabular-nums font-bold">
@@ -1105,21 +1155,21 @@ export default function PoolTabs({
               <div className="px-3 py-3">
                 <div className="divide-y divide-card-border/50">
                   {hallOfFame.map((entry) => (
-                    <div key={entry.id} className="grid grid-cols-[3rem_1fr_1fr_1fr] items-center gap-x-3 px-3 py-3">
-                      <span className="text-base font-semibold text-stone-100 tabular-nums">
+                    <div key={entry.id} className="grid grid-cols-[2.5rem_minmax(0,1fr)] md:grid-cols-[3rem_1fr_1fr_1fr] items-start md:items-center gap-x-2 md:gap-x-3 gap-y-0.5 md:gap-y-0 px-3 py-2 md:py-3">
+                      <span className="text-sm md:text-base font-semibold text-stone-100 tabular-nums row-span-3 md:row-span-1 self-center">
                         {entry.year}
                       </span>
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                         <span className="shrink-0">🏆</span>
-                        <span className="text-stone-100 font-medium truncate">{entry.first_place}</span>
+                        <span className="text-stone-100 font-medium truncate text-sm md:text-base">{entry.first_place}</span>
                       </div>
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                         <span className="shrink-0">🥈</span>
-                        <span className="text-stone-300 truncate">{entry.second_place}</span>
+                        <span className="text-stone-300 truncate text-sm md:text-base">{entry.second_place}</span>
                       </div>
-                      <div className="flex items-center gap-2 min-w-0">
+                      <div className="flex items-center gap-1.5 md:gap-2 min-w-0">
                         <span className="shrink-0">🥉</span>
-                        <span className="text-stone-400 truncate">{entry.third_place ?? "—"}</span>
+                        <span className="text-stone-400 truncate text-sm md:text-base">{entry.third_place ?? "—"}</span>
                       </div>
                     </div>
                   ))}
