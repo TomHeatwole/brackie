@@ -3,6 +3,7 @@
 import { useState, useMemo } from "react";
 import type { TournamentGame, Team, PoolMemberWithInfo } from "@/lib/types";
 import type { BracketScoreSummary, RoundGameStatus } from "@/lib/scoring";
+import type { PoolGoodyWithType } from "@/lib/pools";
 import TeamIcon from "@/app/_components/team-icon";
 import UserAvatar from "@/app/_components/user-avatar";
 import { formatUserDisplayName } from "@/utils/display-name";
@@ -21,6 +22,12 @@ interface PicksTableProps {
   scores: BracketScoreSummary[];
   poolId: string;
   modeParam?: string;
+  poolGoodiesWithTypes?: PoolGoodyWithType[];
+  goodyAnswers?: {
+    userId: string;
+    goodyTypeId: string;
+    value: Record<string, unknown> | null;
+  }[];
 }
 
 const ROUND_OPTIONS = [1, 2, 3, 4, 5] as const;
@@ -58,8 +65,11 @@ export default function PicksTable({
   scores,
   poolId,
   modeParam,
+  poolGoodiesWithTypes = [],
+  goodyAnswers = [],
 }: PicksTableProps) {
   const [selectedRound, setSelectedRound] = useState(1);
+  const [activeView, setActiveView] = useState<"round" | "goodies">("round");
   const [enabledRegions, setEnabledRegions] = useState<Set<string>>(() => {
     const regions = new Set<string>();
     for (const g of games) {
@@ -82,7 +92,7 @@ export default function PicksTable({
     return Array.from(set);
   }, [games]);
 
-  const showRegionFilters = selectedRound <= 4;
+  const showRegionFilters = activeView === "round" && selectedRound <= 4;
 
   const filteredGames = useMemo(() => {
     const roundsToShow = selectedRound === 5 ? new Set([5, 6]) : new Set([selectedRound]);
@@ -138,8 +148,25 @@ export default function PicksTable({
 
   const membersWithBrackets = useMemo(() => {
     const bracketUserIds = new Set(bracketPicks.map((bp) => bp.userId));
-    return members.filter((m) => bracketUserIds.has(m.user_id));
-  }, [members, bracketPicks]);
+    const filtered = members.filter((m) => bracketUserIds.has(m.user_id));
+
+    // Sort rows to match the Scores leaderboard:
+    // totalPoints desc, then possiblePoints desc.
+    const sortedScores = [...scores].sort((a, b) => {
+      if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+      return b.possiblePoints - a.possiblePoints;
+    });
+    const rankByUserId = new Map<string, number>();
+    for (let i = 0; i < sortedScores.length; i++) {
+      rankByUserId.set(sortedScores[i].userId, i);
+    }
+
+    return filtered.sort((a, b) => {
+      const ra = rankByUserId.get(a.user_id) ?? Number.MAX_SAFE_INTEGER;
+      const rb = rankByUserId.get(b.user_id) ?? Number.MAX_SAFE_INTEGER;
+      return ra - rb;
+    });
+  }, [members, bracketPicks, scores]);
 
   function getPickStatus(userId: string, gameId: string): PickStatus {
     const userPicks = picksByUserAndGame.get(userId);
@@ -175,6 +202,57 @@ export default function PicksTable({
     return { team: t, label: t.name };
   }
 
+  const gameById = useMemo(() => {
+    const map = new Map<string, TournamentGame>();
+    for (const g of games) map.set(g.id, g);
+    return map;
+  }, [games]);
+
+  const goodyByUser = useMemo(() => {
+    const map = new Map<string, Map<string, Record<string, unknown> | null>>();
+    for (const ans of goodyAnswers) {
+      const userMap = map.get(ans.userId) ?? new Map<string, Record<string, unknown> | null>();
+      userMap.set(ans.goodyTypeId, ans.value);
+      map.set(ans.userId, userMap);
+    }
+    return map;
+  }, [goodyAnswers]);
+
+  function formatGoodyAnswerValue(rawValue: Record<string, unknown> | null) {
+    if (!rawValue) return "—";
+
+    const value = rawValue as {
+      conference_key?: unknown;
+      nit_matchup?: unknown;
+      team_id?: unknown;
+      game_id?: unknown;
+    };
+
+    if (value.conference_key) return String(value.conference_key);
+    if (value.nit_matchup) return String(value.nit_matchup);
+
+    if (value.team_id) {
+      const teamId = String(value.team_id);
+      const t = teamById.get(teamId);
+      if (t) return `${t.name} (${t.seed})`;
+      return `Team ${teamId}`;
+    }
+
+    if (value.game_id) {
+      const gameId = String(value.game_id);
+      const g = gameById.get(gameId);
+      if (!g) return `Game ${gameId}`;
+
+      const t1 = g.team1_id ? teamById.get(g.team1_id) : null;
+      const t2 = g.team2_id ? teamById.get(g.team2_id) : null;
+      if (t1 && t2) return `${t1.name} (${t1.seed}) vs ${t2.name} (${t2.seed})`;
+
+      return `Game ${gameId}`;
+    }
+
+    return "—";
+  }
+
   const regionBoundaryGameIds = useMemo(() => {
     if (!showRegionFilters) return new Set<string>();
     const ids = new Set<string>();
@@ -188,7 +266,7 @@ export default function PicksTable({
     return ids;
   }, [filteredGames, showRegionFilters]);
 
-  if (games.length === 0 || bracketPicks.length === 0) {
+  if (activeView === "round" && (games.length === 0 || bracketPicks.length === 0)) {
     return (
       <p className="text-sm text-muted-foreground">
         Picks will appear here once brackets have been submitted and games are available.
@@ -204,9 +282,12 @@ export default function PicksTable({
           <button
             key={r}
             type="button"
-            onClick={() => setSelectedRound(r)}
+            onClick={() => {
+              setActiveView("round");
+              setSelectedRound(r);
+            }}
             className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
-              selectedRound === r
+              activeView === "round" && selectedRound === r
                 ? "bg-accent text-white"
                 : "bg-card border border-card-border text-stone-400 hover:text-stone-200 hover:border-card-border-hover"
             }`}
@@ -214,6 +295,17 @@ export default function PicksTable({
             {ROUND_SHORT_LABELS[r]}
           </button>
         ))}
+        <button
+          type="button"
+          onClick={() => setActiveView("goodies")}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeView === "goodies"
+              ? "bg-accent text-white"
+              : "bg-card border border-card-border text-stone-400 hover:text-stone-200 hover:border-card-border-hover"
+          }`}
+        >
+          Goodies
+        </button>
       </div>
 
       {/* Region filters */}
@@ -235,7 +327,7 @@ export default function PicksTable({
       )}
 
       {/* Table */}
-      {filteredGames.length === 0 ? (
+      {activeView === "round" ? (filteredGames.length === 0 ? (
         <p className="text-sm text-muted-foreground">No games match the selected filters.</p>
       ) : (
         <div className="scrollbar-custom-x overflow-x-auto rounded-md border border-card-border">
@@ -379,6 +471,86 @@ export default function PicksTable({
             </tbody>
           </table>
         </div>
+      )) : (
+        <>
+          {poolGoodiesWithTypes.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No goodies configured for this pool.</p>
+          ) : (
+            <div className="scrollbar-custom-x overflow-x-auto rounded-md border border-card-border">
+              <table className="min-w-full text-sm border-collapse">
+                <thead>
+                  <tr>
+                    <th className="sticky left-0 z-10 bg-stone-900 px-3 py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[190px] min-w-[190px]">
+                      Player
+                    </th>
+                    {poolGoodiesWithTypes.map((pg, idx) => (
+                      <th
+                        key={pg.id}
+                        className={`px-2 py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
+                          idx > 0 ? "border-l border-card-border" : ""
+                        }`}
+                      >
+                        <div className="flex flex-col items-center gap-0.5">
+                          <span className="text-stone-300 text-[11px] font-semibold">
+                            {pg.goody_types?.name ?? "Goodie"}
+                          </span>
+                        </div>
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {membersWithBrackets.map((member) => {
+                    const name =
+                      formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
+                    const userMap = goodyByUser.get(member.user_id) ?? new Map();
+                    return (
+                      <tr key={member.user_id} className="border-b border-card-border last:border-b-0">
+                        <td className="sticky left-0 z-10 bg-card px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px]">
+                          <div className="flex flex-col items-start gap-1">
+                            <div className="flex items-center gap-2 whitespace-nowrap">
+                              <UserAvatar
+                                avatarUrl={member.avatar_url}
+                                firstName={member.first_name}
+                                lastName={member.last_name}
+                                size="xs"
+                              />
+                              <span className="text-stone-200 text-sm font-medium truncate max-w-[130px]">
+                                {name}
+                              </span>
+                            </div>
+                            {member.bracket_id && (
+                              <a
+                                href={`/brackets/${member.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
+                                className="text-xs text-accent hover:underline ml-7"
+                              >
+                                {member.bracket_name ?? "Bracket submitted"}
+                              </a>
+                            )}
+                          </div>
+                        </td>
+                        {poolGoodiesWithTypes.map((pg) => {
+                          const raw = userMap.get(pg.goody_type_id) ?? null;
+                          const display = formatGoodyAnswerValue(raw);
+                          return (
+                            <td
+                              key={pg.id}
+                              className="px-2 py-2.5 text-center border-l-0 border-b border-card-border"
+                            >
+                              <span className="block truncate max-w-[220px] text-stone-300">
+                                {display}
+                              </span>
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

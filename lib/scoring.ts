@@ -40,6 +40,8 @@ export interface BracketScoreSummary {
   totalGoodyPoints: number;
   totalPoints: number;
   possiblePoints: number;
+  possibleBracketPoints: number;
+  possibleGoodyPoints: number;
 }
 
 interface PoolScoringContext {
@@ -418,7 +420,9 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
     const totalGoodyPoints = 0;
     const totalPoints = totalBracketPoints + totalGoodyPoints;
 
-    const possiblePoints = Object.values(possiblePerRound).reduce((a, b) => a + b, 0) + totalGoodyPoints;
+    const possibleBracketPoints = Object.values(possiblePerRound).reduce((a, b) => a + b, 0);
+    const possibleGoodyPoints = totalGoodyPoints;
+    const possiblePoints = possibleBracketPoints + possibleGoodyPoints;
 
     summaries.push({
       bracketId: bracket.id,
@@ -428,6 +432,8 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
       totalGoodyPoints,
       totalPoints,
       possiblePoints,
+      possibleBracketPoints,
+      possibleGoodyPoints,
     });
   }
 

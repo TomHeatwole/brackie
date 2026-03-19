@@ -375,10 +375,22 @@ function TournamentManagerPanel({
 
 // ── Game Results (set winner per game) ──
 
+function sortGamesByBracketOrder(games: GameWithTeamNames[]): GameWithTeamNames[] {
+  return [...games].sort((a, b) => {
+    if (a.round !== b.round) return a.round - b.round;
+    const regionCmp = (a.region ?? "").localeCompare(b.region ?? "");
+    if (regionCmp !== 0) return regionCmp;
+    return a.position - b.position;
+  });
+}
+
+type GameTab = "pending" | "completed";
+
 function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
   const [games, setGames] = useState<GameWithTeamNames[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<AdminActionResult | null>(null);
+  const [activeTab, setActiveTab] = useState<GameTab>("pending");
 
   useEffect(() => {
     if (!tournamentId) {
@@ -387,7 +399,7 @@ function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
     }
     setLoading(true);
     getTournamentGamesForAdminAction(tournamentId).then((res) => {
-      setGames(res.games);
+      setGames(sortGamesByBracketOrder(res.games));
       setLoading(false);
     });
   }, [tournamentId]);
@@ -397,9 +409,15 @@ function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
     const result = await setGameWinnerAction(gameId, winnerId);
     setMsg(result);
     if (result.success) {
-      getTournamentGamesForAdminAction(tournamentId).then((res) => setGames(res.games));
+      getTournamentGamesForAdminAction(tournamentId).then((res) =>
+        setGames(sortGamesByBracketOrder(res.games))
+      );
     }
   }
+
+  const pendingGames = games.filter((g) => !g.winner_id);
+  const completedGames = games.filter((g) => g.winner_id);
+  const displayedGames = activeTab === "pending" ? pendingGames : completedGames;
 
   if (!tournamentId) {
     return (
@@ -438,53 +456,87 @@ function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
     <Card title="Game Results">
       <p className="text-stone-500 text-xs mb-3">Set winner for each game. Overrides any scraped data.</p>
       {msg && <StatusBadge result={msg} />}
-      <div className="overflow-x-auto max-h-[420px] overflow-y-auto space-y-2">
-        {games.map((g) => (
-          <div
-            key={g.id}
-            className="flex flex-wrap items-center gap-2 py-2 px-3 rounded border border-card-border bg-background text-sm"
-          >
-            <span className="text-stone-500 font-mono w-20 shrink-0">{roundLabels[g.round] ?? `R${g.round}`}</span>
-            <span className="text-stone-400 shrink-0">{g.team1_name ?? "TBD"}</span>
-            <span className="text-stone-600">vs</span>
-            <span className="text-stone-400 shrink-0">{g.team2_name ?? "TBD"}</span>
-            <span className="text-stone-600 text-xs shrink-0">→</span>
-            <div className="flex gap-1 flex-wrap">
-              <button
-                type="button"
-                onClick={() => handleSetWinner(g.id, g.team1_id)}
-                disabled={!g.team1_id}
-                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
-                  g.winner_id === g.team1_id
-                    ? "bg-green-800 text-green-200"
-                    : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                }`}
-              >
-                {g.team1_name ?? "TBD"}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetWinner(g.id, g.team2_id)}
-                disabled={!g.team2_id}
-                className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
-                  g.winner_id === g.team2_id
-                    ? "bg-green-800 text-green-200"
-                    : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
-                }`}
-              >
-                {g.team2_name ?? "TBD"}
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSetWinner(g.id, null)}
-                className="rounded px-2 py-0.5 text-xs font-medium bg-stone-700 text-stone-500 hover:bg-stone-600"
-              >
-                Clear
-              </button>
-            </div>
-          </div>
-        ))}
+
+      <div className="flex gap-1 mb-3">
+        <button
+          type="button"
+          onClick={() => setActiveTab("pending")}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === "pending"
+              ? "bg-accent text-white"
+              : "bg-stone-800 text-stone-400 hover:text-stone-200"
+          }`}
+        >
+          Pending ({pendingGames.length})
+        </button>
+        <button
+          type="button"
+          onClick={() => setActiveTab("completed")}
+          className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+            activeTab === "completed"
+              ? "bg-accent text-white"
+              : "bg-stone-800 text-stone-400 hover:text-stone-200"
+          }`}
+        >
+          Completed ({completedGames.length})
+        </button>
       </div>
+
+      {displayedGames.length === 0 ? (
+        <p className="text-stone-500 text-sm">
+          {activeTab === "pending"
+            ? "All games have a winner entered."
+            : "No games have a winner entered yet."}
+        </p>
+      ) : (
+        <div className="overflow-x-auto max-h-[420px] overflow-y-auto space-y-2">
+          {displayedGames.map((g) => (
+            <div
+              key={g.id}
+              className="flex flex-wrap items-center gap-2 py-2 px-3 rounded border border-card-border bg-background text-sm"
+            >
+              <span className="text-stone-500 font-mono w-20 shrink-0">{roundLabels[g.round] ?? `R${g.round}`}</span>
+              <span className="text-stone-400 shrink-0">{g.team1_name ?? "TBD"}</span>
+              <span className="text-stone-600">vs</span>
+              <span className="text-stone-400 shrink-0">{g.team2_name ?? "TBD"}</span>
+              <span className="text-stone-600 text-xs shrink-0">→</span>
+              <div className="flex gap-1 flex-wrap">
+                <button
+                  type="button"
+                  onClick={() => handleSetWinner(g.id, g.team1_id)}
+                  disabled={!g.team1_id}
+                  className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                    g.winner_id === g.team1_id
+                      ? "bg-green-800 text-green-200"
+                      : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }`}
+                >
+                  {g.team1_name ?? "TBD"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetWinner(g.id, g.team2_id)}
+                  disabled={!g.team2_id}
+                  className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
+                    g.winner_id === g.team2_id
+                      ? "bg-green-800 text-green-200"
+                      : "bg-stone-700 text-stone-300 hover:bg-stone-600 disabled:opacity-40 disabled:cursor-not-allowed"
+                  }`}
+                >
+                  {g.team2_name ?? "TBD"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleSetWinner(g.id, null)}
+                  className="rounded px-2 py-0.5 text-xs font-medium bg-stone-700 text-stone-500 hover:bg-stone-600"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </Card>
   );
 }

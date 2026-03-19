@@ -235,12 +235,15 @@ export default async function PoolDetailPage({
       (row: {
         goody_type_id: string;
         value: Record<string, unknown> | null;
-        pool_brackets: { user_id: string; pool_id: string }[];
-      }) => ({
-        userId: row.pool_brackets[0].user_id,
-        goodyTypeId: row.goody_type_id,
-        value: row.value ?? null,
-      })
+        pool_brackets: { user_id: string; pool_id: string } | { user_id: string; pool_id: string }[];
+      }) => {
+        const pb = Array.isArray(row.pool_brackets) ? row.pool_brackets[0] : row.pool_brackets;
+        return {
+          userId: pb.user_id,
+          goodyTypeId: row.goody_type_id,
+          value: row.value ?? null,
+        };
+      }
     ) ?? [];
 
   const scoringContext = isActive

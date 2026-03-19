@@ -119,6 +119,35 @@ export default function PoolTabs({
     return `${t.name} (${t.seed})`;
   }
 
+  function HoverTooltip({
+    text,
+    children,
+  }: {
+    text: string;
+    children: ReactNode;
+  }) {
+    const isMobile = useIsMobile();
+    const [open, setOpen] = useState(false);
+
+    return (
+      <div
+        className="relative inline-flex"
+        onMouseEnter={() => { if (!isMobile) setOpen(true); }}
+        onMouseLeave={() => { if (!isMobile) setOpen(false); }}
+        onClick={() => { if (isMobile) setOpen((o) => !o); }}
+      >
+        {children}
+        <div
+          className={`absolute z-20 left-1/2 top-full mt-1 w-52 -translate-x-1/2 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-300 ${
+            open ? "opacity-100" : "pointer-events-none opacity-0"
+          } transition`}
+        >
+          {text}
+        </div>
+      </div>
+    );
+  }
+
   function RoundPointsTooltip({
     round,
     evaluatedGames,
@@ -134,7 +163,6 @@ export default function PoolTabs({
     const correct = evaluatedGames.filter((g) => g.status === "correct");
     const incorrect = evaluatedGames.filter((g) => g.status === "wrong" || g.status === "dead");
 
-    // Show higher-value scoring picks first.
     const sortedCorrect = [...correct].sort((a, b) => b.pointsAwarded - a.pointsAwarded);
     const sortedIncorrect = [...incorrect].sort(
       (a, b) => (b.pointsIfCorrect ?? 0) - (a.pointsIfCorrect ?? 0)
@@ -288,6 +316,10 @@ export default function PoolTabs({
                                   </a>
                                 )}
                               </div>
+                              <span className="ml-2 text-xl font-bold tabular-nums text-accent shrink-0">
+                                {score.totalPoints}
+                                <span className="text-sm font-medium text-accent/70 ml-0.5">pts</span>
+                              </span>
                             </div>
                             <div className="w-full md:w-auto md:flex-1 md:justify-center">
                               <div className="grid grid-cols-7 gap-2 px-0 md:px-4">
@@ -325,18 +357,22 @@ export default function PoolTabs({
                               </div>
                             </div>
                             <div className="flex items-center gap-6 text-right shrink-0">
-                              <div>
-                                <span className="text-stone-200 font-semibold tabular-nums text-base">
-                                  {score.totalPoints}
-                                </span>
-                                <span className="text-stone-500 text-sm ml-0.5">pts</span>
-                              </div>
-                              <div>
-                                <span className="text-stone-400 text-base tabular-nums">
-                                  {score.possiblePoints}
-                                </span>
-                                <span className="text-stone-600 text-sm ml-0.5">possible</span>
-                              </div>
+                              <HoverTooltip text="If all remaining bracket picks are correct, this is the max bracket score still available.">
+                                <div className="cursor-help">
+                                  <span className="text-stone-400 text-base tabular-nums">
+                                    {score.possibleBracketPoints}
+                                  </span>
+                                  <span className="text-stone-600 text-sm ml-0.5">brkt poss.</span>
+                                </div>
+                              </HoverTooltip>
+                              <HoverTooltip text="If all remaining goody picks are correct, this is the max goody score still available.">
+                                <div className="cursor-help">
+                                  <span className="text-stone-400 text-base tabular-nums">
+                                    {score.possibleGoodyPoints}
+                                  </span>
+                                  <span className="text-stone-600 text-sm ml-0.5">goody poss.</span>
+                                </div>
+                              </HoverTooltip>
                             </div>
                           </div>
                         );
@@ -357,6 +393,8 @@ export default function PoolTabs({
                   scores={scores}
                   poolId={poolId}
                   modeParam={modeParam}
+                  poolGoodiesWithTypes={poolGoodiesWithTypes}
+                  goodyAnswers={goodyAnswers}
                 />
               </div>
             )}
