@@ -75,10 +75,11 @@ pool_goodies
 - DELETE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_goodies.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 
 pool_bracket_goody_answers
-- SELECT: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
-- INSERT: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
-- UPDATE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
-- DELETE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
+- SELECT: (owner of pool_bracket) OR (tournament lock_date has passed) OR (admin)
+  - Blocks viewing someone else's goodie picks before games start
+- INSERT: (owner of pool_bracket) OR (admin)
+- UPDATE: (owner of pool_bracket) OR (admin)
+- DELETE: (owner of pool_bracket) OR (admin)
 
 pool_hall_of_fame
 - SELECT: true

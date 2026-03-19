@@ -318,28 +318,40 @@ create policy "pool_goodies_delete" on public.pool_goodies for delete using (
 );
 
 -- -----------------------------------------------------------------------------
--- pool_bracket_goody_answers (own submission only)
+-- pool_bracket_goody_answers (own submission; after lock all can read; admin bypass)
 -- -----------------------------------------------------------------------------
 alter table public.pool_bracket_goody_answers enable row level security;
 
 drop policy if exists "pool_bracket_goody_answers_select" on public.pool_bracket_goody_answers;
 create policy "pool_bracket_goody_answers_select" on public.pool_bracket_goody_answers for select using (
   exists (select 1 from public.pool_brackets pb where pb.id = pool_bracket_goody_answers.pool_bracket_id and pb.user_id = auth.uid())
+  or exists (
+    select 1 from public.pool_brackets pb
+    join public.pools p on p.id = pb.pool_id
+    join public.tournaments t on t.id = p.tournament_id
+    where pb.id = pool_bracket_goody_answers.pool_bracket_id
+      and t.lock_date is not null
+      and t.lock_date <= now()
+  )
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
 );
 
 drop policy if exists "pool_bracket_goody_answers_insert" on public.pool_bracket_goody_answers;
 create policy "pool_bracket_goody_answers_insert" on public.pool_bracket_goody_answers for insert with check (
   exists (select 1 from public.pool_brackets pb where pb.id = pool_bracket_goody_answers.pool_bracket_id and pb.user_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
 );
 
 drop policy if exists "pool_bracket_goody_answers_update" on public.pool_bracket_goody_answers;
 create policy "pool_bracket_goody_answers_update" on public.pool_bracket_goody_answers for update using (
   exists (select 1 from public.pool_brackets pb where pb.id = pool_bracket_goody_answers.pool_bracket_id and pb.user_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
 );
 
 drop policy if exists "pool_bracket_goody_answers_delete" on public.pool_bracket_goody_answers;
 create policy "pool_bracket_goody_answers_delete" on public.pool_bracket_goody_answers for delete using (
   exists (select 1 from public.pool_brackets pb where pb.id = pool_bracket_goody_answers.pool_bracket_id and pb.user_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
 );
 
 -- -----------------------------------------------------------------------------

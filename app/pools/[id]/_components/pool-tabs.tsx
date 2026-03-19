@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback, useRef } from "react";
 import type { ReactNode } from "react";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import type { PoolWithDetails, PoolMemberWithInfo, Team, TournamentGame, HallOfFameEntry } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
 import type { BracketScoreSummary, RoundGameEvaluation } from "@/lib/scoring";
@@ -75,8 +76,28 @@ export default function PoolTabs({
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const totalPoolGoodyPoints = poolGoodiesWithTypes.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
 
-  const defaultTab: TabKey = "scores";
-  const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const validTabs: TabKey[] = ["scoring", "scores", "picks", "goodies", "hall-of-fame"];
+  const tabParam = searchParams.get("tab");
+  const activeTab: TabKey =
+    tabParam && validTabs.includes(tabParam as TabKey) ? (tabParam as TabKey) : "scores";
+
+  const setActiveTab = useCallback(
+    (tab: TabKey) => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (tab === "scores") {
+        params.delete("tab");
+      } else {
+        params.set("tab", tab);
+      }
+      const qs = params.toString();
+      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+    },
+    [searchParams, router, pathname]
+  );
 
   const tabs: { key: TabKey; label: string }[] = [
     { key: "scoring", label: "Scoring" },
@@ -120,15 +141,18 @@ export default function PoolTabs({
     return `${t.name} (${t.seed})`;
   }
 
-  function HoverTooltip({
-    text,
+  function PossiblePointsTooltip({
+    bracketPossible,
+    goodies,
     children,
   }: {
-    text: string;
+    bracketPossible: number;
+    goodies: PoolGoodyWithType[];
     children: ReactNode;
   }) {
     const isMobile = useIsMobile();
     const [open, setOpen] = useState(false);
+    const goodyTotal = goodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
 
     return (
       <div
@@ -139,11 +163,41 @@ export default function PoolTabs({
       >
         {children}
         <div
-          className={`absolute z-20 right-0 bottom-full mb-1 w-52 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-300 whitespace-pre-line ${
+          className={`absolute z-50 right-0 bottom-full mb-1 w-64 rounded-md border px-3 py-2.5 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
             open ? "opacity-100" : "pointer-events-none opacity-0"
           } transition`}
         >
-          {text}
+          <div className="font-semibold mb-2">Possible Points Remaining:</div>
+          <table className="w-full text-left">
+            <tbody>
+              <tr>
+                <td className="py-0.5 text-stone-400">Bracket</td>
+                <td className="py-0.5 text-right tabular-nums text-stone-200">{bracketPossible} pts</td>
+              </tr>
+              <tr>
+                <td className="py-0.5 text-stone-400">Goodies</td>
+                <td className="py-0.5 text-right tabular-nums text-stone-200">{goodyTotal} pts</td>
+              </tr>
+            </tbody>
+          </table>
+          {goodies.length > 0 && (
+            <div className="mt-1.5 pl-2 border-l border-card-border">
+              {goodies.map((pg) => (
+                <div key={pg.id} className="flex justify-between gap-2 py-0.5">
+                  <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
+                  <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
+                </div>
+              ))}
+            </div>
+          )}
+          <table className="w-full text-left mt-1.5">
+            <tbody>
+              <tr className="border-t border-card-border">
+                <td className="pt-1.5 font-semibold text-stone-200">Total</td>
+                <td className="pt-1.5 text-right tabular-nums font-semibold text-stone-200">{bracketPossible + goodyTotal} pts</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     );
@@ -160,6 +214,8 @@ export default function PoolTabs({
   }) {
     const isMobile = useIsMobile();
     const [open, setOpen] = useState(false);
+    const [showAbove, setShowAbove] = useState(false);
+    const triggerRef = useRef<HTMLDivElement>(null);
 
     const correct = evaluatedGames.filter((g) => g.status === "correct");
     const incorrect = evaluatedGames.filter((g) => g.status === "wrong" || g.status === "dead");
@@ -169,62 +225,70 @@ export default function PoolTabs({
       (a, b) => (b.pointsIfCorrect ?? 0) - (a.pointsIfCorrect ?? 0)
     );
 
+    function handleOpen() {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setShowAbove(spaceBelow < 280);
+      }
+      setOpen(true);
+    }
+
     return (
       <div
+        ref={triggerRef}
         className="relative inline-flex"
-        onMouseEnter={() => {
-          if (!isMobile) setOpen(true);
-        }}
-        onMouseLeave={() => {
-          if (!isMobile) setOpen(false);
-        }}
-        onClick={() => {
-          if (isMobile) setOpen((o) => !o);
-        }}
+        onMouseEnter={() => { if (!isMobile) handleOpen(); }}
+        onMouseLeave={() => { if (!isMobile) setOpen(false); }}
+        onClick={() => { if (isMobile) { if (open) setOpen(false); else handleOpen(); } }}
       >
         {children}
 
         <div
-          className={`absolute z-20 left-1/2 top-full mt-1 w-72 -translate-x-1/2 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
+          className={`absolute z-50 left-1/2 -translate-x-1/2 w-72 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
+            showAbove ? "bottom-full mb-1" : "top-full mt-1"
+          } ${
             open ? "opacity-100" : "pointer-events-none opacity-0"
           } transition`}
         >
           <div className="font-semibold mb-2">{ROUND_HOVER_LABELS[round]} picks</div>
 
-          {sortedCorrect.length > 0 ? (
-            <div className="mb-2">
-              <div className="font-semibold text-stone-100">Correct</div>
-              <div className="mt-1 space-y-1">
-                {sortedCorrect.map((g) => (
-                  <div key={g.gameId} className="flex justify-between gap-3">
-                    <span className="min-w-0 truncate text-emerald-300">
-                      {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
-                    </span>
-                    <span className="tabular-nums text-emerald-200">{g.pointsAwarded} pts</span>
-                  </div>
-                ))}
+          <div className="max-h-52 overflow-y-auto scrollbar-custom-y">
+            {sortedCorrect.length > 0 ? (
+              <div className="mb-2">
+                <div className="font-semibold text-stone-100">Correct</div>
+                <div className="mt-1 space-y-1">
+                  {sortedCorrect.map((g) => (
+                    <div key={g.gameId} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate text-emerald-300">
+                        {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
+                      </span>
+                      <span className="tabular-nums text-emerald-200">{g.pointsAwarded} pts</span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {sortedIncorrect.length > 0 ? (
-            <div>
-              <div className="font-semibold text-stone-100">Incorrect</div>
-              <div className="mt-1 space-y-1">
-                {sortedIncorrect.map((g) => (
-                  <div key={g.gameId} className="flex justify-between gap-3">
-                    <span className="min-w-0 truncate text-red-300">
-                      {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
-                    </span>
-                  </div>
-                ))}
+            {sortedIncorrect.length > 0 ? (
+              <div>
+                <div className="font-semibold text-stone-100">Incorrect</div>
+                <div className="mt-1 space-y-1">
+                  {sortedIncorrect.map((g) => (
+                    <div key={g.gameId} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate text-red-300">
+                        {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
-          ) : null}
+            ) : null}
 
-          {sortedCorrect.length === 0 && sortedIncorrect.length === 0 ? (
-            <div className="text-stone-500">No picks evaluated yet.</div>
-          ) : null}
+            {sortedCorrect.length === 0 && sortedIncorrect.length === 0 ? (
+              <div className="text-stone-500">No picks evaluated yet.</div>
+            ) : null}
+          </div>
         </div>
       </div>
     );
@@ -253,7 +317,7 @@ export default function PoolTabs({
         </div>
       </aside>
       <div className="min-w-0">
-        <div className="border border-card-border rounded-lg overflow-hidden bg-card/60">
+        <div className="border border-card-border rounded-lg bg-card/60">
           <div className="bg-background/80">
             {activeTab === "scoring" && (
               <div className="px-4 py-4">
@@ -360,14 +424,17 @@ export default function PoolTabs({
                                 </span>
                                 <span className="text-[11px] text-stone-600 block">(unscored)</span>
                               </div>
-                              <HoverTooltip text={`If all remaining picks are correct:\n• Bracket: ${score.possibleBracketPoints} pts\n• Goodies: ${totalPoolGoodyPoints - (score.totalGoodyPoints ?? 0)} pts`}>
+                              <PossiblePointsTooltip
+                                bracketPossible={score.possibleBracketPoints}
+                                goodies={poolGoodiesWithTypes}
+                              >
                                 <div className="cursor-help">
                                   <span className="text-stone-400 text-base tabular-nums">
                                     {score.possibleBracketPoints + totalPoolGoodyPoints - (score.totalGoodyPoints ?? 0)}
                                   </span>
                                   <span className="text-stone-600 text-sm ml-0.5">possible</span>
                                 </div>
-                              </HoverTooltip>
+                              </PossiblePointsTooltip>
                             </div>
                           </div>
                         );
