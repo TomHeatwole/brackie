@@ -343,6 +343,32 @@ create policy "pool_bracket_goody_answers_delete" on public.pool_bracket_goody_a
 );
 
 -- -----------------------------------------------------------------------------
+-- pool_hall_of_fame (pool creator or admin write)
+-- -----------------------------------------------------------------------------
+alter table public.pool_hall_of_fame enable row level security;
+
+drop policy if exists "pool_hall_of_fame_select" on public.pool_hall_of_fame;
+create policy "pool_hall_of_fame_select" on public.pool_hall_of_fame for select using (true);
+
+drop policy if exists "pool_hall_of_fame_insert" on public.pool_hall_of_fame;
+create policy "pool_hall_of_fame_insert" on public.pool_hall_of_fame for insert with check (
+  exists (select 1 from public.pools where pools.id = pool_hall_of_fame.pool_id and pools.creator_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+drop policy if exists "pool_hall_of_fame_update" on public.pool_hall_of_fame;
+create policy "pool_hall_of_fame_update" on public.pool_hall_of_fame for update using (
+  exists (select 1 from public.pools where pools.id = pool_hall_of_fame.pool_id and pools.creator_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+drop policy if exists "pool_hall_of_fame_delete" on public.pool_hall_of_fame;
+create policy "pool_hall_of_fame_delete" on public.pool_hall_of_fame for delete using (
+  exists (select 1 from public.pools where pools.id = pool_hall_of_fame.pool_id and pools.creator_id = auth.uid())
+  or exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+-- -----------------------------------------------------------------------------
 -- pending_login_redirect (select/delete by email in JWT; insert anyone; no update)
 -- Case-insensitive email match so JWT email (original case) matches stored lowercase.
 -- -----------------------------------------------------------------------------

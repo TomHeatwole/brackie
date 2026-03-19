@@ -5,6 +5,7 @@ import {
   PoolMemberWithInfo,
   PoolGoody,
   PoolBracketGoodyAnswer,
+  HallOfFameEntry,
   RoundPoints,
   UpsetMultipliers,
   GoodyScoringMode,
@@ -515,6 +516,19 @@ export async function getPoolBracketGoodyAnswers(
     .from("pool_bracket_goody_answers")
     .select("*")
     .eq("pool_bracket_id", poolBracketId);
+  return data ?? [];
+}
+
+export async function getPoolHallOfFame(
+  supabase: SupabaseClient,
+  poolId: string
+): Promise<HallOfFameEntry[]> {
+  const { data } = await supabase
+    .from("pool_hall_of_fame")
+    .select("*")
+    .eq("pool_id", poolId)
+    .order("year", { ascending: false });
+
   return data ?? [];
 }
 

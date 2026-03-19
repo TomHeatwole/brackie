@@ -215,6 +215,23 @@ create table public.pool_bracket_goody_answers (
 ) TABLESPACE pg_default;
 
 -- =============================================================================
+-- pool_hall_of_fame (references pools)
+-- Previous season winners per pool (write-in names, not user accounts).
+-- =============================================================================
+create table public.pool_hall_of_fame (
+  id uuid not null default gen_random_uuid(),
+  pool_id uuid not null,
+  year integer not null,
+  first_place character varying not null,
+  second_place character varying not null,
+  third_place character varying null,
+  created_at timestamp with time zone not null default now(),
+  constraint pool_hall_of_fame_pkey primary key (id),
+  constraint pool_hall_of_fame_pool_id_fkey foreign key (pool_id) references public.pools (id) on update cascade on delete cascade,
+  constraint pool_hall_of_fame_pool_year_unique unique (pool_id, year)
+) TABLESPACE pg_default;
+
+-- =============================================================================
 -- pending_login_redirect (no deps; used to persist "next" by email across magic-link open)
 -- =============================================================================
 create table public.pending_login_redirect (

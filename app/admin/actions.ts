@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { removePoolMember } from "@/lib/pools";
-import { REGIONS, SEED_MATCHUPS, FINAL_FOUR_MATCHUPS, Region } from "@/lib/types";
+import { REGIONS, SEED_MATCHUPS, FINAL_FOUR_MATCHUPS, Region, HallOfFameEntry } from "@/lib/types";
 
 const DEFAULT_TEAM_NAMES: Record<Region, string[]> = {
   East: [
@@ -711,4 +711,101 @@ export async function adminRemovePoolMemberAction(
   revalidatePath("/pools");
   revalidatePath(`/pools/${poolId}`);
   return { success: true, message: "Player removed from pool." };
+}
+
+// ── Hall of Fame ──
+
+export interface PoolForAdmin {
+  id: string;
+  name: string;
+  invite_code: string;
+}
+
+export async function getAllPoolsForAdminAction(): Promise<{
+  pools: PoolForAdmin[];
+  error?: string;
+}> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { pools: [], error: "Not authenticated." };
+
+  const userInfo = await getUserInfo(supabase, user.id);
+  if (!userInfo?.is_site_admin) return { pools: [], error: "Not an admin." };
+
+  const { data: pools, error } = await supabase
+    .from("pools")
+    .select("id, name, invite_code")
+    .order("name");
+
+  if (error) return { pools: [], error: error.message };
+  return { pools: pools ?? [] };
+}
+
+export async function getHallOfFameForAdminAction(
+  poolId: string
+): Promise<{ entries: HallOfFameEntry[]; error?: string }> {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("pool_hall_of_fame")
+    .select("*")
+    .eq("pool_id", poolId)
+    .order("year", { ascending: false });
+
+  if (error) return { entries: [], error: error.message };
+  return { entries: data ?? [] };
+}
+
+export async function upsertHallOfFameEntryAction(
+  poolId: string,
+  entry: { id?: string; year: number; first_place: string; second_place: string; third_place: string | null }
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+
+  if (!entry.year || !entry.first_place.trim() || !entry.second_place.trim()) {
+    return { success: false, message: "Year, 1st place, and 2nd place are required." };
+  }
+
+  const row = {
+    pool_id: poolId,
+    year: entry.year,
+    first_place: entry.first_place.trim(),
+    second_place: entry.second_place.trim(),
+    third_place: entry.third_place?.trim() || null,
+  };
+
+  if (entry.id) {
+    const { error } = await supabase
+      .from("pool_hall_of_fame")
+      .update(row)
+      .eq("id", entry.id);
+
+    if (error) return { success: false, message: error.message };
+  } else {
+    const { error } = await supabase
+      .from("pool_hall_of_fame")
+      .insert(row);
+
+    if (error) return { success: false, message: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath(`/pools/${poolId}`);
+  return { success: true, message: entry.id ? "Entry updated." : "Entry added." };
+}
+
+export async function deleteHallOfFameEntryAction(
+  entryId: string,
+  poolId: string
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("pool_hall_of_fame")
+    .delete()
+    .eq("id", entryId);
+
+  if (error) return { success: false, message: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath(`/pools/${poolId}`);
+  return { success: true, message: "Entry deleted." };
 }

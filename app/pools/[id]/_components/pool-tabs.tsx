@@ -1,15 +1,17 @@
 "use client";
 
 import { useState } from "react";
-import type { PoolWithDetails, PoolMemberWithInfo } from "@/lib/types";
+import type { ReactNode } from "react";
+import type { PoolWithDetails, PoolMemberWithInfo, Team, TournamentGame, HallOfFameEntry } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
-import type { BracketScoreSummary } from "@/lib/scoring";
+import type { BracketScoreSummary, RoundGameEvaluation } from "@/lib/scoring";
 import PoolScoringDisplay from "./pool-scoring-display";
+import PicksTable from "./picks-table";
 import UserAvatar from "@/app/_components/user-avatar";
 import { formatUserDisplayName } from "@/utils/display-name";
-import { GAMES_PER_ROUND } from "@/lib/types";
+import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 
-type TabKey = "scoring" | "scores" | "picks" | "goodies";
+type TabKey = "scoring" | "scores" | "picks" | "goodies" | "hall-of-fame";
 
 const ROUND_LABELS: Record<number, string> = {
   1: "Rd. 64",
@@ -20,11 +22,29 @@ const ROUND_LABELS: Record<number, string> = {
   6: "Champion",
 };
 
+const ROUND_HOVER_LABELS: Record<number, string> = {
+  1: "Rd. 64",
+  2: "Rd. 32",
+  3: "Sweet16",
+  4: "Elite8",
+  5: "Final4",
+  6: "Champion",
+};
+
+interface BracketPickEntry {
+  bracketId: string;
+  userId: string;
+  picks: { game_id: string; picked_team_id: string }[];
+}
+
 interface PoolTabsProps {
   pool: PoolWithDetails;
   poolId: string;
   members: PoolMemberWithInfo[];
   poolGoodiesWithTypes: PoolGoodyWithType[];
+  teams?: Team[];
+  games?: TournamentGame[];
+  bracketPicks?: BracketPickEntry[];
   isCreator: boolean;
   modeParam: string;
   scores?: BracketScoreSummary[];
@@ -33,6 +53,7 @@ interface PoolTabsProps {
     goodyTypeId: string;
     value: Record<string, unknown> | null;
   }[];
+  hallOfFame?: HallOfFameEntry[];
 }
 
 export default function PoolTabs({
@@ -40,12 +61,18 @@ export default function PoolTabs({
   poolId,
   members,
   poolGoodiesWithTypes,
+  teams = [],
+  games = [],
+  bracketPicks = [],
   isCreator,
   modeParam,
   scores = [],
   goodyAnswers = [],
+  hallOfFame = [],
 }: PoolTabsProps) {
   const hasGoodies = pool.goodies_enabled && poolGoodiesWithTypes.length > 0;
+  const hasHallOfFame = hallOfFame.length > 0;
+  const teamById = new Map(teams.map((t) => [t.id, t]));
 
   const defaultTab: TabKey = "scores";
   const [activeTab, setActiveTab] = useState<TabKey>(defaultTab);
@@ -55,6 +82,7 @@ export default function PoolTabs({
     { key: "scores", label: "Scores" },
     { key: "picks", label: "Picks" },
     { key: "goodies", label: "Goodies" },
+    ...(hasHallOfFame ? [{ key: "hall-of-fame" as TabKey, label: "Hall of Fame" }] : []),
   ];
 
   function formatGoodyAnswerValue(
@@ -83,6 +111,94 @@ export default function PoolTabs({
     }
 
     return "—";
+  }
+
+  function getTeamLabel(teamId: string) {
+    const t = teamById.get(teamId);
+    if (!t) return `Team ${teamId}`;
+    return `${t.name} (${t.seed})`;
+  }
+
+  function RoundPointsTooltip({
+    round,
+    evaluatedGames,
+    children,
+  }: {
+    round: number;
+    evaluatedGames: RoundGameEvaluation[];
+    children: ReactNode;
+  }) {
+    const isMobile = useIsMobile();
+    const [open, setOpen] = useState(false);
+
+    const correct = evaluatedGames.filter((g) => g.status === "correct");
+    const incorrect = evaluatedGames.filter((g) => g.status === "wrong" || g.status === "dead");
+
+    // Show higher-value scoring picks first.
+    const sortedCorrect = [...correct].sort((a, b) => b.pointsAwarded - a.pointsAwarded);
+    const sortedIncorrect = [...incorrect].sort(
+      (a, b) => (b.pointsIfCorrect ?? 0) - (a.pointsIfCorrect ?? 0)
+    );
+
+    return (
+      <div
+        className="relative inline-flex"
+        onMouseEnter={() => {
+          if (!isMobile) setOpen(true);
+        }}
+        onMouseLeave={() => {
+          if (!isMobile) setOpen(false);
+        }}
+        onClick={() => {
+          if (isMobile) setOpen((o) => !o);
+        }}
+      >
+        {children}
+
+        <div
+          className={`absolute z-20 left-1/2 top-full mt-1 w-72 -translate-x-1/2 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
+            open ? "opacity-100" : "pointer-events-none opacity-0"
+          } transition`}
+        >
+          <div className="font-semibold mb-2">{ROUND_HOVER_LABELS[round]} picks</div>
+
+          {sortedCorrect.length > 0 ? (
+            <div className="mb-2">
+              <div className="font-semibold text-stone-100">Correct</div>
+              <div className="mt-1 space-y-1">
+                {sortedCorrect.map((g) => (
+                  <div key={g.gameId} className="flex justify-between gap-3">
+                    <span className="min-w-0 truncate text-emerald-300">
+                      {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
+                    </span>
+                    <span className="tabular-nums text-emerald-200">{g.pointsAwarded} pts</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {sortedIncorrect.length > 0 ? (
+            <div>
+              <div className="font-semibold text-stone-100">Incorrect</div>
+              <div className="mt-1 space-y-1">
+                {sortedIncorrect.map((g) => (
+                  <div key={g.gameId} className="flex justify-between gap-3">
+                    <span className="min-w-0 truncate text-red-300">
+                      {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : null}
+
+          {sortedCorrect.length === 0 && sortedIncorrect.length === 0 ? (
+            <div className="text-stone-500">No picks evaluated yet.</div>
+          ) : null}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -126,12 +242,12 @@ export default function PoolTabs({
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">
                       <h3 className="text-sm font-medium text-stone-200">Scores</h3>
-                      <span className="text-xs text-stone-500">
-                        Points · Possible (remaining)
-                      </span>
                     </div>
                     <div className="divide-y divide-card-border rounded-md border border-card-border bg-background/60">
-                      {scores.map((score, index) => {
+                      {[...scores].sort((a, b) => {
+                        if (b.totalPoints !== a.totalPoints) return b.totalPoints - a.totalPoints;
+                        return b.possiblePoints - a.possiblePoints;
+                      }).map((score, index) => {
                         const member = members.find((m) => m.user_id === score.userId);
                         if (!member) return null;
                         const name =
@@ -178,16 +294,24 @@ export default function PoolTabs({
                                 {Array.from({ length: 6 }).map((_, i) => {
                                   const r = i + 1;
                                   const roundScore = score.perRound[r];
-                                  const totalGamesInRound = GAMES_PER_ROUND[r] ?? 0;
                                   return (
                                     <div key={r} className="flex flex-col items-center">
                                       <span className="text-[11px] text-stone-500">{ROUND_LABELS[r]}</span>
-                                      <span className="text-base text-stone-200 tabular-nums font-semibold">
-                                        {roundScore?.totalPoints ?? 0}
-                                      </span>
-                                      <span className="text-[11px] text-stone-600">
-                                        {roundScore?.gamesCorrect ?? 0}/{totalGamesInRound}
-                                      </span>
+                                      <RoundPointsTooltip
+                                        round={r}
+                                        evaluatedGames={roundScore?.evaluatedGames ?? []}
+                                      >
+                                        <div className="flex flex-col items-center">
+                                          <div className="flex items-baseline justify-center">
+                                            <span className="text-base text-stone-200 tabular-nums font-semibold">
+                                              {roundScore?.totalPoints ?? 0}
+                                            </span>
+                                          </div>
+                                          <span className="text-[11px] text-stone-600">
+                                            {roundScore?.gamesCorrect ?? 0}/{roundScore?.gamesPlayed ?? 0}
+                                          </span>
+                                        </div>
+                                      </RoundPointsTooltip>
                                     </div>
                                   );
                                 })}
@@ -224,8 +348,14 @@ export default function PoolTabs({
             )}
 
             {activeTab === "picks" && (
-              <div className="px-4 py-4 text-sm text-muted-foreground">
-                <p>Picks visualizations will appear here once wired up.</p>
+              <div className="px-3 py-3">
+                <PicksTable
+                  games={games}
+                  teams={teams}
+                  members={members}
+                  bracketPicks={bracketPicks}
+                  scores={scores}
+                />
               </div>
             )}
 
@@ -323,6 +453,33 @@ export default function PoolTabs({
                     </div>
                   </>
                 )}
+              </div>
+            )}
+
+            {activeTab === "hall-of-fame" && hasHallOfFame && (
+              <div className="px-3 py-3">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-card-border">
+                        <th className="text-left px-3 py-2 text-stone-400 font-medium">Year</th>
+                        <th className="text-left px-3 py-2 text-amber-400 font-medium">1st</th>
+                        <th className="text-left px-3 py-2 text-stone-400 font-medium">2nd</th>
+                        <th className="text-left px-3 py-2 text-stone-500 font-medium">3rd</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {hallOfFame.map((entry) => (
+                        <tr key={entry.id} className="border-b border-card-border/50 last:border-b-0">
+                          <td className="px-3 py-2 text-stone-100 font-semibold tabular-nums">{entry.year}</td>
+                          <td className="px-3 py-2 text-stone-100">{entry.first_place}</td>
+                          <td className="px-3 py-2 text-stone-300">{entry.second_place}</td>
+                          <td className="px-3 py-2 text-stone-400">{entry.third_place ?? "—"}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             )}
           </div>

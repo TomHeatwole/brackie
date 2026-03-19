@@ -148,6 +148,16 @@ export const ELITE_CONFERENCES = [
 ] as const;
 export type EliteConferenceKey = (typeof ELITE_CONFERENCES)[number];
 
+export interface HallOfFameEntry {
+  id: string;
+  pool_id: string;
+  year: number;
+  first_place: string;
+  second_place: string;
+  third_place: string | null;
+  created_at: string;
+}
+
 export interface PoolMember {
   id: string;
   pool_id: string;

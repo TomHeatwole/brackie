@@ -8,6 +8,7 @@ import {
   getPoolMembers,
   getPoolGoodiesWithTypes,
   getPoolBracketGoodyAnswers,
+  getPoolHallOfFame,
 } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
 import { getTournament, resolveEffectiveTournamentId, parseTournamentOverride } from "@/lib/tournament";
@@ -202,9 +203,10 @@ export default async function PoolDetailPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const [poolGoodiesWithTypes, tournament] = await Promise.all([
+  const [poolGoodiesWithTypes, tournament, hallOfFame] = await Promise.all([
     getPoolGoodiesWithTypes(supabase, poolId),
     getTournament(supabase, effectiveTournamentId, testMode),
+    getPoolHallOfFame(supabase, poolId),
   ]);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
@@ -245,6 +247,13 @@ export default async function PoolDetailPage({
     ? await buildPoolScoringContext(supabase, pool, { testMode })
     : null;
   const poolScores = scoringContext ? scoreBracketsForPool(scoringContext) : [];
+  const activeTeams = scoringContext?.teams ?? [];
+  const activeGames = scoringContext?.games ?? [];
+  const bracketPicks = (scoringContext?.brackets ?? []).map((b) => ({
+    bracketId: b.id,
+    userId: b.user_id,
+    picks: b.picks.map((p) => ({ game_id: p.game_id, picked_team_id: p.picked_team_id })),
+  }));
 
   return (
     <div className="min-h-screen bg-background">
@@ -301,9 +310,44 @@ export default async function PoolDetailPage({
               modeParam={modeParam}
               scores={poolScores}
               goodyAnswers={allGoodyAnswers}
+              teams={activeTeams}
+              games={activeGames}
+              bracketPicks={bracketPicks}
+              hallOfFame={hallOfFame}
             />
           ) : (
-            <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
+            <>
+              <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
+              {hallOfFame.length > 0 && (
+                <div className="rounded-lg overflow-hidden border border-card-border mt-4">
+                  <div className="px-4 py-3 bg-card flex items-center justify-between">
+                    <h2 className="text-sm font-medium text-stone-300">Hall of Fame</h2>
+                  </div>
+                  <div className="overflow-x-auto bg-background">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-card-border">
+                          <th className="text-left px-3 py-2 text-stone-400 font-medium">Year</th>
+                          <th className="text-left px-3 py-2 text-amber-400 font-medium">1st</th>
+                          <th className="text-left px-3 py-2 text-stone-400 font-medium">2nd</th>
+                          <th className="text-left px-3 py-2 text-stone-500 font-medium">3rd</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {hallOfFame.map((entry) => (
+                          <tr key={entry.id} className="border-b border-card-border/50 last:border-b-0">
+                            <td className="px-3 py-2 text-stone-100 font-semibold tabular-nums">{entry.year}</td>
+                            <td className="px-3 py-2 text-stone-100">{entry.first_place}</td>
+                            <td className="px-3 py-2 text-stone-300">{entry.second_place}</td>
+                            <td className="px-3 py-2 text-stone-400">{entry.third_place ?? "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {!isActive && !isMember && (

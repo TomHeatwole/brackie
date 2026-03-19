@@ -16,6 +16,20 @@ export interface PerRoundScore {
   basePoints: number;
   upsetPoints: number;
   totalPoints: number;
+  /** Games in this round that are either scored already or became impossible due to earlier wrong picks. */
+  evaluatedGames: RoundGameEvaluation[];
+}
+
+export type RoundGameStatus = "correct" | "wrong" | "dead";
+
+export interface RoundGameEvaluation {
+  gameId: string;
+  pickedTeamId: string | null;
+  status: RoundGameStatus;
+  /** Points awarded right now (0 for wrong/dead or unscored games). */
+  pointsAwarded: number;
+  /** Points this pick would be worth if it were correct (used for "missing" tooltip). */
+  pointsIfCorrect: number;
 }
 
 export interface BracketScoreSummary {
@@ -257,6 +271,7 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
         basePoints: 0,
         upsetPoints: 0,
         totalPoints: 0,
+        evaluatedGames: [],
       };
       possiblePerRound[r] = 0;
     }
@@ -323,11 +338,26 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
     }
 
     for (const game of games) {
-      const pickedTeamId = pickMap.get(game.id);
-      if (!pickedTeamId) continue;
-
       const round = game.round;
       const roundScore = perRound[round];
+      const pickedTeamId = pickMap.get(game.id) ?? null;
+
+      const basePts = getRoundPointsFor(pool, round);
+
+      // Points this pick would be worth if it ended up being correct (used for possible/missing display).
+      let upsetBonusIfCorrect = 0;
+      if (pickedTeamId && pool.upset_points_enabled) {
+        const { isUpset: upset, seedDifferential } = isUpset(
+          pickedTeamId,
+          game,
+          teamSeedsById
+        );
+        if (upset && seedDifferential > 0) {
+          const mult = getUpsetMultiplierFor(pool, round);
+          upsetBonusIfCorrect = mult * seedDifferential;
+        }
+      }
+      const pointsIfCorrect = basePts + upsetBonusIfCorrect;
 
       // Actual points (based on real winners so far)
       if (game.winner_id != null) {
@@ -336,44 +366,46 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
         if (pickedTeamId === game.winner_id) {
           roundScore.gamesCorrect += 1;
 
-          const basePts = getRoundPointsFor(pool, round);
           roundScore.basePoints += basePts;
+          roundScore.upsetPoints += upsetBonusIfCorrect;
+          roundScore.totalPoints += pointsIfCorrect;
+          possiblePerRound[round] += pointsIfCorrect;
 
-          let upsetBonus = 0;
-          if (pool.upset_points_enabled) {
-            const { isUpset: upset, seedDifferential } = isUpset(
-              game.winner_id,
-              game,
-              teamSeedsById
-            );
-            if (upset && seedDifferential > 0) {
-              const mult = getUpsetMultiplierFor(pool, round);
-              upsetBonus = mult * seedDifferential;
-              roundScore.upsetPoints += upsetBonus;
-            }
-          }
-
-          roundScore.totalPoints += basePts + upsetBonus;
-          possiblePerRound[round] += basePts + upsetBonus;
+          roundScore.evaluatedGames.push({
+            gameId: game.id,
+            pickedTeamId,
+            status: "correct",
+            pointsAwarded: pointsIfCorrect,
+            pointsIfCorrect,
+          });
+        } else {
+          roundScore.evaluatedGames.push({
+            gameId: game.id,
+            pickedTeamId,
+            status: "wrong",
+            pointsAwarded: 0,
+            pointsIfCorrect,
+          });
         }
-      } else {
-        // Possible points (assuming all remaining picks can still be correct),
-        // respecting whether the bracket is already "dead" due to earlier wrong picks.
-        if (aliveForPick.get(game.id) === true) {
-          const basePts = getRoundPointsFor(pool, round);
-          let upsetBonus = 0;
-          if (pool.upset_points_enabled) {
-            const { isUpset: upset, seedDifferential } = isUpset(
-              pickedTeamId,
-              game,
-              teamSeedsById
-            );
-            if (upset && seedDifferential > 0) {
-              const mult = getUpsetMultiplierFor(pool, round);
-              upsetBonus = mult * seedDifferential;
-            }
-          }
-          possiblePerRound[round] += basePts + upsetBonus;
+      }
+
+      // Unplayed (winner not known yet): if the user's pick is already dead due to earlier wrong picks,
+      // we still count it in `gamesPlayed` as a "missing/wrong" slot.
+      if (game.winner_id == null) {
+        const alive = aliveForPick.get(game.id) === true;
+        if (!alive) {
+          // Only count evaluated slots when the pick is already impossible.
+          roundScore.gamesPlayed += 1;
+          roundScore.evaluatedGames.push({
+            gameId: game.id,
+            pickedTeamId,
+            status: "dead",
+            pointsAwarded: 0,
+            pointsIfCorrect,
+          });
+        } else {
+          // Possible points: if they get everything right from here, they'd score pointsIfCorrect.
+          possiblePerRound[round] += pointsIfCorrect;
         }
       }
     }

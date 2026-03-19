@@ -3,11 +3,12 @@ interface UserAvatarProps {
   firstName?: string | null;
   lastName?: string | null;
   email?: string | null;
-  size?: "sm" | "md" | "lg";
+  size?: "xs" | "sm" | "md" | "lg";
   className?: string;
 }
 
 const sizeClasses = {
+  xs: "w-4 h-4 text-[8px]",
   sm: "w-6 h-6 text-xs",
   md: "w-8 h-8 text-sm",
   lg: "w-16 h-16 text-2xl",

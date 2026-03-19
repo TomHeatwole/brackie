@@ -197,6 +197,20 @@ create table if not exists public.pool_bracket_goody_answers (
   constraint pool_bracket_goody_answers_pool_bracket_goody_unique unique (pool_bracket_id, goody_type_id)
 ) TABLESPACE pg_default;
 
+-- pool_hall_of_fame (references pools)
+create table if not exists public.pool_hall_of_fame (
+  id uuid not null default gen_random_uuid(),
+  pool_id uuid not null,
+  year integer not null,
+  first_place character varying not null,
+  second_place character varying not null,
+  third_place character varying null,
+  created_at timestamp with time zone not null default now(),
+  constraint pool_hall_of_fame_pkey primary key (id),
+  constraint pool_hall_of_fame_pool_id_fkey foreign key (pool_id) references public.pools (id) on update cascade on delete cascade,
+  constraint pool_hall_of_fame_pool_year_unique unique (pool_id, year)
+) TABLESPACE pg_default;
+
 -- pending_login_redirect (no deps; used to persist "next" by email across magic-link open)
 create table if not exists public.pending_login_redirect (
   email text not null,
@@ -320,6 +334,15 @@ alter table public.pool_bracket_goody_answers add column if not exists id uuid n
 alter table public.pool_bracket_goody_answers add column if not exists pool_bracket_id uuid not null;
 alter table public.pool_bracket_goody_answers add column if not exists goody_type_id uuid not null;
 alter table public.pool_bracket_goody_answers add column if not exists value jsonb not null default 'null'::jsonb;
+
+-- pool_hall_of_fame
+alter table public.pool_hall_of_fame add column if not exists id uuid not null default gen_random_uuid();
+alter table public.pool_hall_of_fame add column if not exists pool_id uuid not null;
+alter table public.pool_hall_of_fame add column if not exists year integer not null default 0;
+alter table public.pool_hall_of_fame add column if not exists first_place character varying not null default '';
+alter table public.pool_hall_of_fame add column if not exists second_place character varying not null default '';
+alter table public.pool_hall_of_fame add column if not exists third_place character varying null;
+alter table public.pool_hall_of_fame add column if not exists created_at timestamp with time zone not null default now();
 
 -- pending_login_redirect
 alter table public.pending_login_redirect add column if not exists email text not null;

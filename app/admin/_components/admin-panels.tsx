@@ -18,11 +18,17 @@ import {
   getPoolsWithMembersForAdminAction,
   adminRemovePoolMemberAction,
   duplicateTournamentAction,
+  getAllPoolsForAdminAction,
+  getHallOfFameForAdminAction,
+  upsertHallOfFameEntryAction,
+  deleteHallOfFameEntryAction,
   AdminActionResult,
   GameWithTeamNames,
   TeamConfigEntry,
   PoolWithMembersForAdmin,
+  PoolForAdmin,
 } from "../actions";
+import type { HallOfFameEntry } from "@/lib/types";
 
 const emptyResult: AdminActionResult = { success: false, message: "" };
 const emptyQuery = { success: false, message: "", rows: [] as Record<string, unknown>[] };
@@ -93,13 +99,14 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 // ── Admin Dashboard (toolbar + tab panels) ──
 
-type AdminTab = "manage" | "games" | "teams" | "pools" | "create" | "query";
+type AdminTab = "manage" | "games" | "teams" | "pools" | "hall-of-fame" | "create" | "query";
 
 const ADMIN_TABS: { id: AdminTab; label: string; needsTournament: boolean }[] = [
   { id: "manage", label: "Manage", needsTournament: true },
   { id: "games", label: "Games", needsTournament: true },
   { id: "teams", label: "Teams", needsTournament: true },
   { id: "pools", label: "Pools", needsTournament: true },
+  { id: "hall-of-fame", label: "Hall of Fame", needsTournament: false },
   { id: "create", label: "Create", needsTournament: false },
   { id: "query", label: "DB Query", needsTournament: false },
 ];
@@ -209,6 +216,7 @@ export function AdminDashboard({
       {activeTab === "games" && <GameResultsPanel tournamentId={tournamentId} />}
       {activeTab === "teams" && <TeamsPanel tournamentId={tournamentId} />}
       {activeTab === "pools" && <PoolsPanel tournamentId={tournamentId} />}
+      {activeTab === "hall-of-fame" && <HallOfFamePanel />}
       {activeTab === "create" && <CreateTournamentPanel />}
       {activeTab === "query" && <RawTablePanel />}
     </div>
@@ -741,6 +749,222 @@ function PoolsPanel({ tournamentId }: { tournamentId: string }) {
   );
 }
 
+// ── Hall of Fame ──
+
+function HallOfFamePanel() {
+  const [pools, setPools] = useState<PoolForAdmin[]>([]);
+  const [selectedPoolId, setSelectedPoolId] = useState("");
+  const [entries, setEntries] = useState<HallOfFameEntry[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<AdminActionResult | null>(null);
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formYear, setFormYear] = useState("");
+  const [formFirst, setFormFirst] = useState("");
+  const [formSecond, setFormSecond] = useState("");
+  const [formThird, setFormThird] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    getAllPoolsForAdminAction().then((res) => {
+      setPools(res.pools);
+      if (res.pools.length > 0 && !selectedPoolId) {
+        setSelectedPoolId(res.pools[0].id);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    if (!selectedPoolId) {
+      setEntries([]);
+      return;
+    }
+    setLoading(true);
+    setMsg(null);
+    getHallOfFameForAdminAction(selectedPoolId).then((res) => {
+      setEntries(res.entries);
+      setLoading(false);
+    });
+  }, [selectedPoolId]);
+
+  function resetForm() {
+    setEditingId(null);
+    setFormYear("");
+    setFormFirst("");
+    setFormSecond("");
+    setFormThird("");
+  }
+
+  function startEdit(entry: HallOfFameEntry) {
+    setEditingId(entry.id);
+    setFormYear(String(entry.year));
+    setFormFirst(entry.first_place);
+    setFormSecond(entry.second_place);
+    setFormThird(entry.third_place ?? "");
+  }
+
+  async function handleSave() {
+    if (!selectedPoolId) return;
+    const year = parseInt(formYear, 10);
+    if (!year || !formFirst.trim() || !formSecond.trim()) {
+      setMsg({ success: false, message: "Year, 1st place, and 2nd place are required." });
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    const result = await upsertHallOfFameEntryAction(selectedPoolId, {
+      id: editingId ?? undefined,
+      year,
+      first_place: formFirst,
+      second_place: formSecond,
+      third_place: formThird.trim() || null,
+    });
+    setMsg(result);
+    setSaving(false);
+    if (result.success) {
+      resetForm();
+      getHallOfFameForAdminAction(selectedPoolId).then((res) => setEntries(res.entries));
+    }
+  }
+
+  async function handleDelete(entryId: string) {
+    if (!confirm("Delete this Hall of Fame entry?")) return;
+    setMsg(null);
+    const result = await deleteHallOfFameEntryAction(entryId, selectedPoolId);
+    setMsg(result);
+    if (result.success) {
+      getHallOfFameForAdminAction(selectedPoolId).then((res) => setEntries(res.entries));
+    }
+  }
+
+  return (
+    <Card title="Hall of Fame">
+      <div className="flex flex-col gap-4">
+        <div>
+          <Label>Pool</Label>
+          {pools.length === 0 ? (
+            <p className="text-stone-500 text-sm">No pools found.</p>
+          ) : (
+            <Select
+              value={selectedPoolId}
+              onChange={(e) => {
+                setSelectedPoolId(e.target.value);
+                resetForm();
+              }}
+            >
+              {pools.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name} ({p.invite_code})
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+
+        {msg && <StatusBadge result={msg} />}
+
+        {selectedPoolId && (
+          <>
+            <div className="border border-card-border rounded-md p-3 bg-stone-900/40">
+              <h3 className="text-xs font-semibold text-stone-300 mb-2">
+                {editingId ? "Edit Entry" : "Add Entry"}
+              </h3>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label>Year</Label>
+                  <Input
+                    type="number"
+                    placeholder="2024"
+                    value={formYear}
+                    onChange={(e) => setFormYear(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>1st Place</Label>
+                  <Input
+                    placeholder="Winner name"
+                    value={formFirst}
+                    onChange={(e) => setFormFirst(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>2nd Place</Label>
+                  <Input
+                    placeholder="Runner-up name"
+                    value={formSecond}
+                    onChange={(e) => setFormSecond(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <Label>3rd Place (optional)</Label>
+                  <Input
+                    placeholder="3rd place name"
+                    value={formThird}
+                    onChange={(e) => setFormThird(e.target.value)}
+                  />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-3">
+                <Btn type="button" onClick={handleSave} pending={saving}>
+                  {editingId ? "Update" : "Add"}
+                </Btn>
+                {editingId && (
+                  <Btn type="button" variant="danger" onClick={resetForm}>
+                    Cancel
+                  </Btn>
+                )}
+              </div>
+            </div>
+
+            {loading ? (
+              <p className="text-stone-500 text-sm">Loading entries…</p>
+            ) : entries.length === 0 ? (
+              <p className="text-stone-500 text-sm">No Hall of Fame entries for this pool yet.</p>
+            ) : (
+              <div className="space-y-2 max-h-[420px] overflow-y-auto">
+                {entries.map((entry) => (
+                  <div
+                    key={entry.id}
+                    className="flex items-center justify-between gap-3 py-2 px-3 rounded border border-card-border bg-background text-sm"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="font-semibold text-stone-100">{entry.year}</div>
+                      <div className="text-stone-300 text-xs mt-0.5 space-y-0.5">
+                        <div>
+                          <span className="text-amber-400 font-medium">1st</span>{" "}
+                          {entry.first_place}
+                        </div>
+                        <div>
+                          <span className="text-stone-400 font-medium">2nd</span>{" "}
+                          {entry.second_place}
+                        </div>
+                        {entry.third_place && (
+                          <div>
+                            <span className="text-amber-700 font-medium">3rd</span>{" "}
+                            {entry.third_place}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex gap-1 shrink-0">
+                      <Btn type="button" onClick={() => startEdit(entry)}>
+                        Edit
+                      </Btn>
+                      <Btn type="button" variant="danger" onClick={() => handleDelete(entry.id)}>
+                        Delete
+                      </Btn>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 // ── Raw Table Viewer ──
 
 function RawTablePanel() {
@@ -761,6 +985,7 @@ function RawTablePanel() {
               <option value="pools">pools</option>
               <option value="pool_members">pool_members</option>
               <option value="pool_brackets">pool_brackets</option>
+              <option value="pool_hall_of_fame">pool_hall_of_fame</option>
               <option value="user_info">user_info</option>
             </Select>
           </div>

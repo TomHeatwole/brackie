@@ -80,6 +80,12 @@ pool_bracket_goody_answers
 - UPDATE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
 - DELETE: EXISTS (SELECT 1 FROM public.pool_brackets pb WHERE pb.id = pool_bracket_goody_answers.pool_bracket_id AND pb.user_id = ( SELECT auth.uid()))
 
+pool_hall_of_fame
+- SELECT: true
+- INSERT: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_hall_of_fame.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- UPDATE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_hall_of_fame.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- DELETE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_hall_of_fame.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+
 pending_login_redirect
 - SELECT: (auth.jwt()->>'email') = email
 - INSERT: true
