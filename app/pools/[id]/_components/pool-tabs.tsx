@@ -485,7 +485,7 @@ export default function PoolTabs({
                   </p>
                 ) : isMobile ? (
                   <>
-                  <div className="overflow-x-auto rounded-md border border-card-border">
+                  <div className="overflow-x-auto overflow-y-hidden rounded-md border border-card-border">
                     <table className="w-full border-collapse text-[9px]">
                       <thead>
                         <tr className="bg-stone-900">
@@ -698,7 +698,7 @@ export default function PoolTabs({
                                 )}
                               </div>
                             </div>
-                            <div className="w-full md:w-auto md:flex-1 md:justify-center overflow-x-auto">
+                            <div className="w-full md:w-auto md:flex-1 md:justify-center overflow-x-auto overflow-y-hidden">
                               <div className="grid grid-cols-7 gap-2 px-0 md:px-4 min-w-[460px] md:min-w-0">
                                 <div className="flex flex-col items-center">
                                   <span className="text-[11px] text-stone-500">Total</span>

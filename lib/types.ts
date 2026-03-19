@@ -150,7 +150,7 @@ export const ELITE_CONFERENCES = [
   "ACC",
   "SEC",
   "Big Ten",
-  "Big Twelve",
+  "Big 12",
   "Big East",
 ] as const;
 export type EliteConferenceKey = (typeof ELITE_CONFERENCES)[number];

@@ -266,6 +266,14 @@ export default async function PoolDetailPage({
                 const userAnswer = allGoodyAnswers.find(a => a.userId === score.userId && a.goodyTypeId === goodyTypeId);
                 const pickedTeamId = userAnswer?.value ? (userAnswer.value as Record<string, unknown>).team_id : null;
                 if (pickedTeamId) {
+                  let upsetBonus = 0;
+                  if (pool.upset_points_enabled) {
+                    const dhTeam = scoringContext?.teams.find(t => t.id === String(pickedTeamId));
+                    const seedDiff = dhTeam ? dhTeam.seed - 1 : 0;
+                    if (seedDiff > 0) {
+                      upsetBonus = (pool.upset_multipliers?.["6"] ?? 20) * seedDiff;
+                    }
+                  }
                   let aliveSamePickers = 0;
                   for (const a of allGoodyAnswers) {
                     if (a.goodyTypeId !== goodyTypeId) continue;
@@ -275,7 +283,7 @@ export default async function PoolDetailPage({
                       aliveSamePickers++;
                     }
                   }
-                  possiblePts = Math.ceil(basePts / Math.max(1, aliveSamePickers));
+                  possiblePts = Math.ceil((basePts + upsetBonus) / Math.max(1, aliveSamePickers));
                 } else {
                   possiblePts = basePts;
                 }

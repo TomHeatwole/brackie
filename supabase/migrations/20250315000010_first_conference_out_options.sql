@@ -3,6 +3,6 @@ update public.goody_types
 set config = jsonb_set(
   coalesce(config, '{}'::jsonb),
   '{conference_options}',
-  '["ACC", "SEC", "Big Ten", "Big Twelve", "Big East"]'::jsonb
+  '["ACC", "SEC", "Big Ten", "Big 12", "Big East"]'::jsonb
 )
 where key = 'first_conference_out';

@@ -274,7 +274,7 @@ function CreateTournamentPanel() {
 
 // ── Tournament Manager (no dropdown; receives tournamentId from parent) ──
 
-const DEFAULT_CONFERENCES = ["ACC", "SEC", "Big Ten", "Big Twelve", "Big East"];
+const DEFAULT_CONFERENCES = ["ACC", "SEC", "Big Ten", "Big 12", "Big East"];
 
 function TournamentManagerPanel({
   tournamentId,

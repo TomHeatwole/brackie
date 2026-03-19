@@ -69,7 +69,7 @@ export default function BracketCard({ bracket, modeParam }: Props) {
         <span className="sr-only">Open bracket</span>
       </Link>
 
-      <div className="relative z-10">
+      <div className="relative z-10 pointer-events-none">
         <div className="flex items-center justify-between">
           <span className="text-stone-100 font-medium">
             {bracket.name}
@@ -77,7 +77,7 @@ export default function BracketCard({ bracket, modeParam }: Props) {
           <button
             onClick={handleDelete}
             disabled={deleting}
-            className={`text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50 ${
+            className={`pointer-events-auto text-xs px-2.5 py-1 rounded-md transition-colors cursor-pointer disabled:opacity-50 ${
               confirmDelete
                 ? "text-danger bg-danger/10"
                 : "text-muted hover:bg-white/5 hover:text-red-400"
@@ -89,7 +89,7 @@ export default function BracketCard({ bracket, modeParam }: Props) {
         </div>
         {showDeleteDialog && (
           <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60"
+            className="pointer-events-auto fixed inset-0 z-50 flex items-center justify-center bg-black/60"
             onPointerDown={(e) => {
               e.preventDefault();
               e.stopPropagation();

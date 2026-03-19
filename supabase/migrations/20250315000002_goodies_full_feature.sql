@@ -72,7 +72,7 @@ values
   ('sixteen_seed_bonus', '16-seed bonus', 'Points per correctly picked game won by a 16-seed.', 5, 'bracket_derived', null),
   ('nit_champion', 'NIT champion', 'Correctly pick the NIT champion.', 20, 'user_input', null),
   ('biggest_first_round_blowout', 'Biggest first round blowout', 'Correctly pick the first round game with the largest margin of victory.', 15, 'user_input', null),
-  ('first_conference_out', 'First conference out', 'Correctly pick the first elite conference to have all teams eliminated.', 20, 'user_input', '{"conference_options": ["ACC", "SEC", "Big Ten", "Big Twelve", "Big East"]}'::jsonb),
+  ('first_conference_out', 'First conference out', 'Correctly pick the first elite conference to have all teams eliminated.', 20, 'user_input', '{"conference_options": ["ACC", "SEC", "Big Ten", "Big 12", "Big East"]}'::jsonb),
   ('dark_horse_champion', 'Dark Horse National Champion', 'Your second pick for national champion (dark horse).', 30, 'user_input', null)
 on conflict (key) do update set
   name = excluded.name,
