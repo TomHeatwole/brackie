@@ -8,27 +8,8 @@ import { TOTAL_GAMES } from "@/lib/types";
 import Navbar from "./_components/navbar";
 import PoolIcon from "./_components/pool-icon";
 import TeamIcon from "./_components/team-icon";
-
-function buildQuerySuffix(params: Record<string, string | string[] | undefined>): string {
-  const mode = params.mode;
-  const tournamentUpper = params.tournament_ID;
-  const tournamentLower = params.tournament_id;
-  const tournament =
-    (Array.isArray(tournamentUpper) ? tournamentUpper[0] : tournamentUpper) ??
-    (Array.isArray(tournamentLower) ? tournamentLower[0] : tournamentLower) ??
-    "";
-  const parts: string[] = [];
-
-  if (mode === "test") {
-    parts.push("mode=test");
-  }
-
-  if (tournament) {
-    parts.push(`tournament_id=${encodeURIComponent(tournament)}`);
-  }
-
-  return parts.length > 0 ? `?${parts.join("&")}` : "";
-}
+import { buildQuerySuffix } from "@/lib/query";
+import { getTournament, resolveEffectiveTournamentId } from "@/lib/tournament";
 
 export default async function Home({
   searchParams,
@@ -49,6 +30,27 @@ export default async function Home({
   const brackets = await getUserBrackets(supabase, user.id);
   const pools = await getUserPools(supabase, user.id);
 
+  const effectiveTournamentId = await resolveEffectiveTournamentId(supabase, {
+    searchParams: params,
+  });
+
+  const activeTournament =
+    effectiveTournamentId != null
+      ? await getTournament(supabase, effectiveTournamentId, params?.mode === "test")
+      : null;
+  const isActiveOrCompleted =
+    activeTournament?.status === "active" || activeTournament?.status === "completed";
+
+  const filteredBrackets =
+    effectiveTournamentId != null
+      ? brackets.filter((b) => b.tournament_id === effectiveTournamentId)
+      : brackets;
+
+  const filteredPools =
+    effectiveTournamentId != null
+      ? pools.filter((p) => p.tournament_id === effectiveTournamentId)
+      : pools;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Dashboard" modeParam={querySuffix} />
@@ -58,25 +60,33 @@ export default async function Home({
           <section className="flex-1 border-b md:border-b-0 md:border-r border-card-border px-4 md:px-8 py-6 md:py-10">
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Brackets</h2>
-              <Link href={`/brackets/create${querySuffix}`} className="btn-outline">
-                + New
-              </Link>
+              {!isActiveOrCompleted && (
+                <Link href={`/brackets/create${querySuffix}`} className="btn-outline">
+                  + New
+                </Link>
+              )}
             </div>
 
-            {brackets.length === 0 ? (
+            {filteredBrackets.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-4xl mb-3 opacity-20">🏀</div>
-                <p className="text-muted-foreground text-sm">No brackets yet</p>
-                <Link
-                  href={`/brackets/create${querySuffix}`}
-                  className="mt-3 inline-block text-sm text-accent hover:underline"
-                >
-                  Create your first bracket &rarr;
-                </Link>
+                <p className="text-muted-foreground text-sm">
+                  {isActiveOrCompleted
+                    ? "Bracket creation is closed for this tournament."
+                    : "No brackets yet"}
+                </p>
+                {!isActiveOrCompleted && (
+                  <Link
+                    href={`/brackets/create${querySuffix}`}
+                    className="mt-3 inline-block text-sm text-accent hover:underline"
+                  >
+                    Create your first bracket &rarr;
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {brackets.slice(0, 5).map((bracket) => {
+                {filteredBrackets.slice(0, 5).map((bracket) => {
                   const pct = Math.round((bracket.pick_count / TOTAL_GAMES) * 100);
                   return (
                     <Link
@@ -115,12 +125,12 @@ export default async function Home({
                     </Link>
                   );
                 })}
-                {brackets.length > 5 && (
+                {filteredBrackets.length > 5 && (
                   <Link
                     href={`/brackets${querySuffix}`}
                     className="text-sm text-muted hover:text-stone-300 text-center mt-2"
                   >
-                    View all {brackets.length} brackets &rarr;
+                    View all {filteredBrackets.length} brackets &rarr;
                   </Link>
                 )}
               </div>
@@ -132,29 +142,43 @@ export default async function Home({
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-xl font-semibold text-stone-100">Your Pools</h2>
               <div className="flex gap-2">
-                <Link href={`/pools${querySuffix}`} className="btn-outline">
-                  Join
-                </Link>
-                <Link href={`/pools/create${querySuffix}`} className="btn-outline">
-                  + New
-                </Link>
+                {isActiveOrCompleted ? (
+                  <Link href={`/pools${querySuffix}`} className="btn-outline">
+                    View
+                  </Link>
+                ) : (
+                  <>
+                    <Link href={`/pools${querySuffix}`} className="btn-outline">
+                      Join
+                    </Link>
+                    <Link href={`/pools/create${querySuffix}`} className="btn-outline">
+                      + New
+                    </Link>
+                  </>
+                )}
               </div>
             </div>
 
-            {pools.length === 0 ? (
+            {filteredPools.length === 0 ? (
               <div className="text-center py-16">
                 <div className="text-4xl mb-3 opacity-20">🏆</div>
-                <p className="text-muted-foreground text-sm">No pools yet</p>
-                <Link
-                  href={`/pools${querySuffix}`}
-                  className="mt-3 inline-block text-sm text-accent hover:underline"
-                >
-                  Join or create a pool &rarr;
-                </Link>
+                <p className="text-muted-foreground text-sm">
+                  {isActiveOrCompleted
+                    ? "Pool creation and joining are closed for this tournament."
+                    : "No pools yet"}
+                </p>
+                {!isActiveOrCompleted && (
+                  <Link
+                    href={`/pools${querySuffix}`}
+                    className="mt-3 inline-block text-sm text-accent hover:underline"
+                  >
+                    Join or create a pool &rarr;
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="flex flex-col gap-2">
-                {pools.slice(0, 5).map((pool) => (
+                {filteredPools.slice(0, 5).map((pool) => (
                   <Link
                     key={pool.id}
                     href={`/pools/${pool.id}${querySuffix}`}
@@ -174,12 +198,12 @@ export default async function Home({
                     </div>
                   </Link>
                 ))}
-                {pools.length > 5 && (
+                {filteredPools.length > 5 && (
                   <Link
                     href={`/pools${querySuffix}`}
                     className="text-sm text-muted hover:text-stone-300 text-center mt-2"
                   >
-                    View all {pools.length} pools &rarr;
+                    View all {filteredPools.length} pools &rarr;
                   </Link>
                 )}
               </div>

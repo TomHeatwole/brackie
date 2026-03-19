@@ -3,7 +3,14 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getBracket } from "@/lib/brackets";
-import { getTeams, getGames, isTournamentLocked, getTournament } from "@/lib/tournament";
+import {
+  getTeams,
+  getGames,
+  isTournamentLocked,
+  getTournament,
+  resolveEffectiveTournamentId,
+  parseTournamentOverride,
+} from "@/lib/tournament";
 import { getBracketStructure } from "@/lib/types";
 import { getPool, getPoolGoodiesWithTypes } from "@/lib/pools";
 import Navbar from "../../_components/navbar";
@@ -24,30 +31,40 @@ export default async function BracketDetailPage({
   const { id: bracketId } = await params;
   const sp = await searchParams;
   const testMode = sp?.mode === "test";
-  const modeParam = testMode ? "?mode=test" : "";
+  const modeSuffix = testMode ? "?mode=test" : "";
   const poolId = typeof sp?.pool === "string" ? sp.pool : undefined;
 
   const userInfo = await getUserInfo(supabase, user.id);
   const bracket = await getBracket(supabase, bracketId);
   if (!bracket) notFound();
 
+  const overrideId = parseTournamentOverride(sp);
+  const effectiveTournamentId =
+    overrideId ??
+    (await resolveEffectiveTournamentId(supabase, {
+      searchParams: sp,
+      fallbackTournamentId: bracket.tournament_id,
+    })) ??
+    bracket.tournament_id;
+
   const isOwner = bracket.user_id === user.id;
 
-  const tournament = await getTournament(supabase, bracket.tournament_id, testMode);
-  const locked = tournament ? isTournamentLocked(tournament) : false;
+  const tournament = await getTournament(supabase, effectiveTournamentId, testMode);
+  const isTournamentUpcoming = tournament?.status === "upcoming";
+  const isLockedForEditing = tournament ? isTournamentLocked(tournament) : false;
 
-  // Non-owner viewing before games start: show countdown instead of bracket
-  if (!isOwner && !locked) {
+  // Non-owner viewing while the tournament is upcoming: show countdown instead of bracket
+  if (!isOwner && isTournamentUpcoming) {
     return (
       <div className="min-h-screen bg-background">
-        <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
+        <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeSuffix} />
         <main className="pt-16 min-h-screen">
           <div className="px-4 mb-4">
             <Link
-              href={`/brackets${modeParam}`}
+              href={poolId ? `/pools/${poolId}${modeSuffix}` : `/brackets${modeSuffix}`}
               className="text-muted text-sm hover:text-stone-300 transition-colors"
             >
-              &larr; Back to Brackets
+              &larr; {poolId ? "Back to Pool" : "Back to Brackets"}
             </Link>
           </div>
           <div className="px-2">
@@ -59,7 +76,7 @@ export default async function BracketDetailPage({
             ) : (
               <div className="flex min-h-[60vh] flex-col items-center justify-center">
                 <p className="text-muted-foreground text-center">
-                  This bracket will be revealed when the tournament begins.
+                  This bracket will be revealed when the tournament becomes Active.
                   <br />
                   <span className="text-sm">Lock date not yet set.</span>
                 </p>
@@ -71,8 +88,8 @@ export default async function BracketDetailPage({
     );
   }
 
-  const teams = await getTeams(supabase, bracket.tournament_id, testMode);
-  const games = await getGames(supabase, bracket.tournament_id, testMode);
+  const teams = await getTeams(supabase, effectiveTournamentId, testMode);
+  const games = await getGames(supabase, effectiveTournamentId, testMode);
 
   const pool = poolId ? await getPool(supabase, poolId) : null;
   const hasSelectableGoodiesForPool =
@@ -91,14 +108,14 @@ export default async function BracketDetailPage({
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeParam} />
+      <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={modeSuffix} />
       <main className="pt-16 pb-20 md:pb-8 min-h-screen">
         <div className="px-4 mb-4">
           <Link
-            href={`/brackets${modeParam}`}
+            href={pool ? `/pools/${poolId}${modeSuffix}` : `/brackets${modeSuffix}`}
             className="text-muted text-sm hover:text-stone-300 transition-colors"
           >
-            &larr; Back to Brackets
+            &larr; {pool ? `Back to ${pool.name}` : "Back to Brackets"}
           </Link>
         </div>
         <div className="px-2">
@@ -109,10 +126,10 @@ export default async function BracketDetailPage({
             games={games}
             bracketStructure={bracketStructure}
             initialPicks={picksMap}
-            locked={locked || !isOwner}
+            locked={isLockedForEditing || !isOwner}
             poolId={pool ? poolId : undefined}
             poolName={pool?.name}
-            modeParam={modeParam}
+            modeParam={modeSuffix}
             hasSelectableGoodies={hasSelectableGoodiesForPool}
           />
         </div>

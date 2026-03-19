@@ -3,7 +3,7 @@ import { redirect, notFound } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getPool, getPoolGoodiesWithTypes, getPoolBracketGoodyAnswers } from "@/lib/pools";
-import { getTeams, getGames } from "@/lib/tournament";
+import { getTeams, getGames, resolveEffectiveTournamentId, parseTournamentOverride } from "@/lib/tournament";
 import Navbar from "../../../_components/navbar";
 import GoodyPicksForm from "./_components/goody-picks-form";
 
@@ -46,10 +46,19 @@ export default async function GoodyPicksPage({
     redirect(`/pools/${poolId}${modeParam}`);
   }
 
+  const overrideId = parseTournamentOverride(sp);
+  const effectiveTournamentId =
+    overrideId ??
+    (await resolveEffectiveTournamentId(supabase, {
+      searchParams: sp,
+      fallbackTournamentId: pool.tournament_id,
+    })) ??
+    pool.tournament_id;
+
   const [goodyAnswers, teams, allGames] = await Promise.all([
     getPoolBracketGoodyAnswers(supabase, poolBracketRow.id),
-    getTeams(supabase, pool.tournament_id, testMode),
-    getGames(supabase, pool.tournament_id, testMode),
+    getTeams(supabase, effectiveTournamentId, testMode),
+    getGames(supabase, effectiveTournamentId, testMode),
   ]);
   const firstRoundGames = allGames.filter((g) => g.round === 1);
 

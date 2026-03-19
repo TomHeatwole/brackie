@@ -3,6 +3,11 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { getGoodyTypes } from "@/lib/goodies";
+import {
+  getTournament,
+  resolveEffectiveTournamentId,
+  parseTournamentOverride,
+} from "@/lib/tournament";
 import Navbar from "../../_components/navbar";
 import CreatePoolForm from "./_components/create-pool-form";
 
@@ -45,6 +50,25 @@ export default async function CreatePoolPage({
     (Array.isArray(params?.tournament_ID) ? params.tournament_ID[0] : params?.tournament_ID) ??
     (Array.isArray(params?.tournament_id) ? params.tournament_id[0] : params?.tournament_id) ??
     undefined;
+
+  const overrideId = parseTournamentOverride(params);
+  const effectiveTournamentId =
+    overrideId ??
+    (await resolveEffectiveTournamentId(supabase, {
+      searchParams: params,
+      allowTestMode: true,
+    }));
+
+  const effectiveTournament = effectiveTournamentId
+    ? await getTournament(supabase, effectiveTournamentId, testMode)
+    : null;
+
+  const isActiveOrCompleted =
+    effectiveTournament?.status === "active" || effectiveTournament?.status === "completed";
+
+  if (!testMode && isActiveOrCompleted) {
+    redirect(`/pools${querySuffix}`);
+  }
 
   return (
     <div className="min-h-screen bg-background">

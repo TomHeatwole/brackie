@@ -10,13 +10,15 @@ import {
   getPoolBracketGoodyAnswers,
 } from "@/lib/pools";
 import { getUserBrackets } from "@/lib/brackets";
-import { getTournament } from "@/lib/tournament";
+import { getTournament, resolveEffectiveTournamentId, parseTournamentOverride } from "@/lib/tournament";
+import { buildPoolScoringContext, scoreBracketsForPool } from "@/lib/scoring";
 import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
 import UserAvatar from "../../_components/user-avatar";
 import InviteCodeDisplay from "./_components/invite-code-display";
 import PoolScoringDisplay from "./_components/pool-scoring-display";
+import PoolTabs from "./_components/pool-tabs";
 import SubmitBracketForm from "./_components/submit-bracket-form";
 import RemoveMemberButton from "./_components/remove-member-button";
 
@@ -24,10 +26,12 @@ type ProgressStatus = "none" | "half" | "full";
 
 function MemberProgressIndicator({
   status,
-  label,
+  hasBracket,
+  hasGoodies,
 }: {
   status: ProgressStatus;
-  label: string;
+  hasBracket: boolean;
+  hasGoodies: boolean;
 }) {
   const strokeWidth = 3;
   const radius = 8 - strokeWidth / 2;
@@ -41,8 +45,13 @@ function MemberProgressIndicator({
 
   const hasProgress = status !== "none";
 
+  const ariaLabelParts: string[] = [];
+  ariaLabelParts.push(hasBracket ? "Bracket submitted" : "Bracket not submitted");
+  ariaLabelParts.push(hasGoodies ? "Goodies completed" : "Goodies not completed");
+  const ariaLabel = ariaLabelParts.join(", ");
+
   return (
-    <div className="relative inline-flex shrink-0 group" aria-label={label}>
+    <div className="relative inline-flex shrink-0 group" aria-label={ariaLabel}>
       <svg width="16" height="16" viewBox="0 0 16 16" className="block">
         <circle
           cx="8"
@@ -67,12 +76,38 @@ function MemberProgressIndicator({
           />
         )}
       </svg>
-      <div className="pointer-events-none absolute -top-9 left-1/2 z-20 w-max max-w-xs -translate-x-1/2 rounded-md border border-emerald-500/60 bg-stone-900/95 px-2.5 py-1.5 text-[11px] text-stone-100 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
-        <div className="flex items-start gap-1.5">
-          {status !== "full" && (
-            <span className="mt-[1px] text-emerald-400 font-semibold">!</span>
-          )}
-          <span>{label}</span>
+      <div className="pointer-events-none absolute -top-12 left-1/2 z-20 w-max max-w-xs -translate-x-1/2 rounded-md border border-emerald-500/60 bg-stone-900/95 px-2.5 py-1.5 text-[11px] text-stone-100 shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+        <div className="flex flex-col gap-1">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ${
+                hasBracket
+                  ? "bg-emerald-500 text-stone-950"
+                  : "bg-amber-400 text-stone-950"
+              }`}
+            >
+              {hasBracket ? "✓" : "!"}
+            </span>
+            <span>
+              <span className="font-semibold">Bracket:</span>{" "}
+              {hasBracket ? "Submitted" : "Not submitted"}
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-semibold ${
+                hasGoodies
+                  ? "bg-emerald-500 text-stone-950"
+                  : "bg-amber-400 text-stone-950"
+              }`}
+            >
+              {hasGoodies ? "✓" : "!"}
+            </span>
+            <span>
+              <span className="font-semibold">Goodies:</span>{" "}
+              {hasGoodies ? "Completed" : "Not completed"}
+            </span>
+          </div>
         </div>
       </div>
     </div>
@@ -141,10 +176,19 @@ export default async function PoolDetailPage({
 
   const userInfo = await getUserInfo(supabase, user.id);
 
+  const overrideId = parseTournamentOverride(sp);
+  const effectiveTournamentId =
+    overrideId ??
+    (await resolveEffectiveTournamentId(supabase, {
+      searchParams: sp,
+      fallbackTournamentId: pool.tournament_id,
+    })) ??
+    pool.tournament_id;
+
   const members = await getPoolMembers(supabase, poolId);
   const allUserBrackets = await getUserBrackets(supabase, user.id);
   const userBrackets = allUserBrackets.filter(
-    (b) => b.tournament_id === pool.tournament_id
+    (b) => b.tournament_id === effectiveTournamentId
   );
 
   const currentUserPoolBracket = members.find(
@@ -160,7 +204,7 @@ export default async function PoolDetailPage({
 
   const [poolGoodiesWithTypes, tournament] = await Promise.all([
     getPoolGoodiesWithTypes(supabase, poolId),
-    getTournament(supabase, pool.tournament_id, testMode),
+    getTournament(supabase, effectiveTournamentId, testMode),
   ]);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
@@ -179,19 +223,40 @@ export default async function PoolDetailPage({
   const isMember = members.some((m) => m.user_id === user.id);
   const isCreator = pool.creator_id === user.id;
 
-  // Placeholder scores for active mode (real scoring algorithm later)
-  const membersWithScores = members.map((m, i) => ({
-    ...m,
-    points: (members.length - i) * 12 + (i % 3) * 5,
-    possiblePoints: i % 2 === 0 ? 340 + (i % 4) * 20 : 280 - (i % 3) * 15,
-  }));
-  const sortedByPoints = [...membersWithScores].sort((a, b) => b.points - a.points);
+  const { data: allGoodyAnswersRaw } = await supabase
+    .from("pool_bracket_goody_answers")
+    .select("goody_type_id, value, pool_brackets!inner(user_id, pool_id)")
+    .eq("pool_brackets.pool_id", poolId);
+
+  const allGoodyAnswers =
+    allGoodyAnswersRaw?.map(
+      (row: {
+        goody_type_id: string;
+        value: Record<string, unknown> | null;
+        pool_brackets: { user_id: string; pool_id: string };
+      }) => ({
+        userId: row.pool_brackets.user_id,
+        goodyTypeId: row.goody_type_id,
+        value: row.value ?? null,
+      })
+    ) ?? [];
+
+  const scoringContext = isActive
+    ? await buildPoolScoringContext(supabase, pool, { testMode })
+    : null;
+  const poolScores = scoringContext ? scoreBracketsForPool(scoringContext) : [];
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Pools" modeParam={modeParam} />
       <main className="pt-20 pb-20 md:pb-8 min-h-screen flex justify-center">
-        <div className="w-full max-w-2xl px-4">
+        <div
+          className={
+            isActive
+              ? "w-full max-w-screen-2xl px-4 md:px-6"
+              : "w-full max-w-2xl px-4"
+          }
+        >
           <Link
             href={`/pools${modeParam}`}
             className="text-muted text-sm hover:text-stone-300 transition-colors"
@@ -226,9 +291,22 @@ export default async function PoolDetailPage({
             </div>
           </div>
 
-          <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
+          {isActive ? (
+            <PoolTabs
+              pool={pool}
+              poolId={poolId}
+              members={members}
+              poolGoodiesWithTypes={poolGoodiesWithTypes}
+              isCreator={isCreator}
+              modeParam={modeParam}
+              scores={poolScores}
+              goodyAnswers={allGoodyAnswers}
+            />
+          ) : (
+            <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />
+          )}
 
-          {!isMember && (
+          {!isActive && !isMember && (
             <div className="card p-4 mb-6">
               <h2 className="text-sm font-medium text-stone-300 mb-1">Join this pool</h2>
               <p className="text-muted text-xs mb-4">
@@ -343,92 +421,26 @@ export default async function PoolDetailPage({
             </div>
           )}
 
-          <div className="rounded-lg overflow-hidden border border-card-border">
-            <div className="px-4 py-3 bg-card flex items-center justify-between">
-              <h2 className="text-sm font-medium text-stone-300">
-                {isActive ? "Scores" : "Members"}
-              </h2>
-              {isActive && (
-                <span className="text-xs text-stone-500">
-                  Points · Possible (remaining)
-                </span>
-              )}
-            </div>
-            <div className="divide-y divide-card-border">
-              {isActive ? (
-                sortedByPoints.map((member, rank) => (
-                  <div
-                    key={member.id}
-                    className="px-4 py-3 flex items-center justify-between bg-background"
-                  >
-                    <div className="flex items-center gap-2.5 flex-1 min-w-0">
-                      <span className="text-stone-500 font-mono text-sm w-6 shrink-0">
-                        {rank + 1}
-                      </span>
-                      <UserAvatar
-                        avatarUrl={member.avatar_url}
-                        firstName={member.first_name}
-                        lastName={member.last_name}
-                        size="sm"
-                      />
-                      <span className="text-stone-200 text-sm truncate">
-                        {formatUserDisplayName(member.first_name, member.last_name) || "Anonymous"}
-                      </span>
-                      {member.user_id === pool.creator_id && (
-                        <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground shrink-0">
-                          Creator
-                        </span>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-6 shrink-0 text-right">
-                      <div>
-                        <span className="text-stone-200 font-semibold tabular-nums">
-                          {member.points}
-                        </span>
-                        <span className="text-stone-500 text-xs ml-0.5">pts</span>
-                      </div>
-                      <div>
-                        <span className="text-stone-400 text-sm tabular-nums">
-                          {member.possiblePoints}
-                        </span>
-                        <span className="text-stone-600 text-xs ml-0.5">possible</span>
-                      </div>
-                      {isCreator && member.user_id !== pool.creator_id && (
-                        <RemoveMemberButton
-                          poolId={poolId}
-                          memberUserId={member.user_id}
-                          memberDisplayName={formatUserDisplayName(member.first_name, member.last_name) || "this member"}
-                        />
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                members.map((member) => {
-                  const showProgress = !isActive && hasSelectableGoodiesForPool;
+          {!isActive && (
+            <div className="rounded-lg overflow-hidden border border-card-border mt-4">
+              <div className="px-4 py-3 bg-card flex items-center justify-between">
+                <h2 className="text-sm font-medium text-stone-300">Members</h2>
+              </div>
+              <div className="divide-y divide-card-border">
+                {members.map((member) => {
+                  const showProgress = hasSelectableGoodiesForPool;
+
+                  const hasBracket = !!member.bracket_submitted;
+                  const hasGoodies = !!member.goodies_complete;
 
                   let progressStatus: ProgressStatus = "none";
-                  let progressLabel = "";
-
                   if (showProgress) {
-                    const hasBracket = !!member.bracket_submitted;
-                    const hasGoodies = !!member.goodies_complete;
-
                     if (hasBracket && hasGoodies) {
                       progressStatus = "full";
-                      progressLabel = "Bracket and goodies submitted";
                     } else if (hasBracket || hasGoodies) {
                       progressStatus = "half";
-                      if (hasBracket && !hasGoodies) {
-                        progressLabel = "Bracket submitted, goodies not submitted";
-                      } else if (!hasBracket && hasGoodies) {
-                        progressLabel = "Goodies submitted, bracket not submitted";
-                      } else {
-                        progressLabel = "In progress";
-                      }
                     } else {
                       progressStatus = "none";
-                      progressLabel = "Bracket and goodies not submitted";
                     }
                   }
 
@@ -451,7 +463,8 @@ export default async function PoolDetailPage({
                           <div className="ml-1">
                             <MemberProgressIndicator
                               status={progressStatus}
-                              label={progressLabel}
+                              hasBracket={hasBracket}
+                              hasGoodies={hasGoodies}
                             />
                           </div>
                         )}
@@ -465,7 +478,7 @@ export default async function PoolDetailPage({
                         {member.bracket_submitted ? (
                           member.bracket_id ? (
                             <Link
-                              href={`/brackets/${member.bracket_id}${modeParam}`}
+                              href={`/brackets/${member.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
                               className="text-xs text-green-400 hover:text-green-300 hover:underline transition-colors"
                             >
                               {member.bracket_name ?? "Bracket submitted"}
@@ -488,10 +501,11 @@ export default async function PoolDetailPage({
                       </div>
                     </div>
                   );
-                })
-              )}
+                })}
+              </div>
             </div>
-          </div>
+          )}
+
         </div>
       </main>
     </div>

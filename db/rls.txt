@@ -62,6 +62,12 @@ goody_types
 - UPDATE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 - DELETE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 
+goody_results
+- SELECT: true
+- INSERT: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- UPDATE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- DELETE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+
 pool_goodies
 - SELECT: true
 - INSERT: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_goodies.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)

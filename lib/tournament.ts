@@ -41,6 +41,41 @@ export function parseTournamentOverride(
   return uuidRegex.test(value) ? value : null;
 }
 
+export async function resolveEffectiveTournamentId(
+  supabase: SupabaseClient,
+  options: {
+    searchParams: Record<string, string | string[] | undefined>;
+    fallbackTournamentId?: string | null;
+    allowTestMode?: boolean;
+  }
+): Promise<string | null> {
+  const { searchParams, fallbackTournamentId, allowTestMode = false } = options;
+
+  if (allowTestMode && isTestMode(searchParams)) {
+    return TEST_TOURNAMENT.id;
+  }
+
+  const overrideId = parseTournamentOverride(searchParams);
+  if (overrideId) {
+    const { data } = await supabase
+      .from("tournaments")
+      .select("id")
+      .eq("id", overrideId)
+      .single();
+
+    if (data?.id) {
+      return data.id as string;
+    }
+  }
+
+  if (fallbackTournamentId) {
+    return fallbackTournamentId;
+  }
+
+  const active = await getActiveTournament(supabase, false);
+  return active?.id ?? null;
+}
+
 export async function getEffectiveTournament(
   supabase: SupabaseClient,
   options: {

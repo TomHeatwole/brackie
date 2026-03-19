@@ -2,6 +2,12 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
+import {
+  getTournament,
+  resolveEffectiveTournamentId,
+  parseTournamentOverride,
+} from "@/lib/tournament";
+import { getPool } from "@/lib/pools";
 import Navbar from "../../_components/navbar";
 import CreateBracketForm from "./_components/create-bracket-form";
 
@@ -45,16 +51,37 @@ export default async function CreateBracketPage({
     (Array.isArray(params?.tournament_id) ? params.tournament_id[0] : params?.tournament_id) ??
     undefined;
 
+  const overrideId = parseTournamentOverride(params);
+  const effectiveTournamentId =
+    overrideId ??
+    (await resolveEffectiveTournamentId(supabase, {
+      searchParams: params,
+      allowTestMode: true,
+    }));
+
+  const effectiveTournament = effectiveTournamentId
+    ? await getTournament(supabase, effectiveTournamentId, testMode)
+    : null;
+
+  const isActiveOrCompleted =
+    effectiveTournament?.status === "active" || effectiveTournament?.status === "completed";
+
+  if (!testMode && isActiveOrCompleted) {
+    redirect(`/brackets${querySuffix}`);
+  }
+
+  const pool = poolId ? await getPool(supabase, poolId) : null;
+
   return (
     <div className="min-h-screen bg-background">
       <Navbar userEmail={user.email} firstName={userInfo?.first_name} lastName={userInfo?.last_name} avatarUrl={userInfo?.avatar_url} activeTab="Brackets" modeParam={querySuffix} />
       <main className="pt-20 pb-20 md:pb-8 min-h-screen flex flex-col items-center">
         <div className="w-full max-w-md px-4">
           <Link
-            href={`/brackets${querySuffix}`}
+            href={pool ? `/pools/${poolId}${testMode ? "?mode=test" : ""}` : `/brackets${querySuffix}`}
             className="text-muted text-sm hover:text-stone-300 transition-colors"
           >
-            &larr; Back to Brackets
+            &larr; {pool ? `Back to ${pool.name}` : "Back to Brackets"}
           </Link>
           <h1 className="text-2xl font-semibold text-stone-100 mb-8 mt-4 text-center">Create a Bracket</h1>
           <CreateBracketForm

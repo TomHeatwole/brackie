@@ -269,6 +269,29 @@ create policy "goody_types_delete" on public.goody_types for delete using (
 );
 
 -- -----------------------------------------------------------------------------
+-- goody_results (admin-only write)
+-- -----------------------------------------------------------------------------
+alter table public.goody_results enable row level security;
+
+drop policy if exists "goody_results_select" on public.goody_results;
+create policy "goody_results_select" on public.goody_results for select using (true);
+
+drop policy if exists "goody_results_insert" on public.goody_results;
+create policy "goody_results_insert" on public.goody_results for insert with check (
+  exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+drop policy if exists "goody_results_update" on public.goody_results;
+create policy "goody_results_update" on public.goody_results for update using (
+  exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+drop policy if exists "goody_results_delete" on public.goody_results;
+create policy "goody_results_delete" on public.goody_results for delete using (
+  exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+-- -----------------------------------------------------------------------------
 -- pool_goodies (pool creator or admin)
 -- -----------------------------------------------------------------------------
 alter table public.pool_goodies enable row level security;

@@ -5,6 +5,7 @@ import {
   updatePoolScoringSettings,
   updatePoolDetails,
   setPoolGoodies,
+  deletePool,
   ScoringSettings,
   SetPoolGoodyInput,
 } from "@/lib/pools";
@@ -21,6 +22,11 @@ export interface UpdatePoolSettingsState {
   fieldErrors?: {
     name?: string;
   };
+}
+
+export interface DeletePoolState {
+  error?: string;
+  success?: boolean;
 }
 
 const ROUND_KEYS = ["1", "2", "3", "4", "5", "6"] as const;
@@ -66,6 +72,31 @@ function parseGoodies(formData: FormData): SetPoolGoodyInput[] {
       scoring_config: scoringConfig,
     };
   });
+}
+
+export async function deletePoolAction(poolId: string): Promise<DeletePoolState> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return { error: "You must be logged in." };
+  }
+
+  const { data: pool } = await supabase
+    .from("pools")
+    .select("creator_id")
+    .eq("id", poolId)
+    .single();
+
+  if (!pool || pool.creator_id !== user.id) {
+    return { error: "You do not have permission to delete this pool." };
+  }
+
+  const result = await deletePool(supabase, poolId);
+  if (!result.success) {
+    return { error: result.error ?? "Failed to delete pool." };
+  }
+
+  return { success: true };
 }
 
 export async function updatePoolSettingsAction(

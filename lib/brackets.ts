@@ -27,6 +27,18 @@ export async function getUserBrackets(
     picksByBracket.set(pick.bracket_id, existing);
   }
 
+  // Count how many pools each bracket is submitted to so we can warn before deletion.
+  const { data: poolBrackets } = await supabase
+    .from("pool_brackets")
+    .select("bracket_id")
+    .in("bracket_id", bracketIds);
+
+  const poolSubmissionCounts = new Map<string, number>();
+  for (const pb of poolBrackets ?? []) {
+    const id = (pb as { bracket_id: string }).bracket_id;
+    poolSubmissionCounts.set(id, (poolSubmissionCounts.get(id) ?? 0) + 1);
+  }
+
   const tournamentIds = [...new Set(brackets.map((b: Bracket) => b.tournament_id))];
   const { data: champGames } = await supabase
     .from("tournament_games")
@@ -90,6 +102,7 @@ export async function getUserBrackets(
       champion_name: champTeam?.name,
       champion_seed: champTeam?.seed,
       champion_icon_url: champTeam?.icon_url ?? null,
+      pool_submission_count: poolSubmissionCounts.get(b.id) ?? 0,
     };
   });
 }

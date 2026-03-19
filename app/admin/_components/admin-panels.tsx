@@ -645,14 +645,32 @@ export function PoolsPanel({ tournamentId }: { tournamentId: string }) {
 
 // ── Wrapper: shared tournament selection for manager + game results + teams ──
 
-export function AdminTournamentPanels({ tournaments }: { tournaments: Tournament[] }) {
-  const [tournamentId, setTournamentId] = useState(tournaments[0]?.id ?? "");
+export function AdminTournamentPanels({
+  tournaments,
+  initialTournamentId,
+}: {
+  tournaments: Tournament[];
+  initialTournamentId?: string;
+}) {
+  const [tournamentId, setTournamentId] = useState(
+    initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)
+      ? initialTournamentId
+      : tournaments[0]?.id ?? ""
+  );
 
   useEffect(() => {
-    if (tournaments.length > 0 && !tournaments.find((t) => t.id === tournamentId)) {
+    if (!tournaments.length) {
+      setTournamentId("");
+      return;
+    }
+    if (initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)) {
+      setTournamentId(initialTournamentId);
+      return;
+    }
+    if (!tournaments.find((t) => t.id === tournamentId)) {
       setTournamentId(tournaments[0].id);
     }
-  }, [tournaments, tournamentId]);
+  }, [tournaments, initialTournamentId, tournamentId]);
 
   return (
     <>

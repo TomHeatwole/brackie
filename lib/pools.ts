@@ -271,6 +271,23 @@ export async function updatePoolScoringSettings(
   return { success: true };
 }
 
+export async function deletePool(
+  supabase: SupabaseClient,
+  poolId: string
+): Promise<{ success: boolean; error?: string }> {
+  const { error } = await supabase
+    .from("pools")
+    .delete()
+    .eq("id", poolId);
+
+  if (error) {
+    console.error("Error deleting pool:", error);
+    return { success: false, error: "Failed to delete pool." };
+  }
+
+  return { success: true };
+}
+
 export async function getPoolGoodies(
   supabase: SupabaseClient,
   poolId: string

@@ -154,6 +154,22 @@ create table if not exists public.goody_types (
   constraint goody_types_key_unique unique (key)
 ) TABLESPACE pg_default;
 
+-- goody_results (references tournaments, goody_types)
+-- Canonical tournament-level outcomes for goodies that cannot be derived
+-- implicitly from bracket/tournament data (e.g. NIT champion, first conference
+-- out, biggest first-round blowout).
+create table if not exists public.goody_results (
+  id uuid not null default gen_random_uuid(),
+  tournament_id uuid not null,
+  goody_type_id uuid not null,
+  value jsonb not null,
+  created_at timestamp with time zone not null default now(),
+  constraint goody_results_pkey primary key (id),
+  constraint goody_results_tournament_id_fkey foreign key (tournament_id) references public.tournaments (id) on update cascade on delete cascade,
+  constraint goody_results_goody_type_id_fkey foreign key (goody_type_id) references public.goody_types (id) on update cascade on delete cascade,
+  constraint goody_results_tournament_goody_unique unique (tournament_id, goody_type_id)
+) TABLESPACE pg_default;
+
 -- pool_goodies (references pools, goody_types)
 create table if not exists public.pool_goodies (
   id uuid not null default gen_random_uuid(),
@@ -282,6 +298,13 @@ alter table public.goody_types add column if not exists default_points integer n
 alter table public.goody_types add column if not exists input_type character varying not null default 'bracket_derived';
 alter table public.goody_types add column if not exists config jsonb null;
 alter table public.goody_types add column if not exists created_at timestamp with time zone not null default now();
+
+-- goody_results
+alter table public.goody_results add column if not exists id uuid not null default gen_random_uuid();
+alter table public.goody_results add column if not exists tournament_id uuid not null;
+alter table public.goody_results add column if not exists goody_type_id uuid not null;
+alter table public.goody_results add column if not exists value jsonb not null default 'null'::jsonb;
+alter table public.goody_results add column if not exists created_at timestamp with time zone not null default now();
 
 -- pool_goodies
 alter table public.pool_goodies add column if not exists id uuid not null default gen_random_uuid();

@@ -59,9 +59,9 @@ export default function BracketCountdown({
   if (diff.totalMs === 0) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center gap-6">
-        <p className="text-2xl text-stone-300">The bracket is now visible!</p>
+        <p className="text-2xl text-stone-300">Countdown finished.</p>
         <p className="text-muted-foreground text-sm">
-          Refresh the page to view it.
+          Refresh the page once the tournament status switches to Active.
         </p>
       </div>
     );
@@ -74,7 +74,7 @@ export default function BracketCountdown({
           {bracketName}
         </h1>
         <p className="mt-2 text-muted-foreground">
-          This bracket will be revealed when the games begin
+          This bracket is shielded until the tournament becomes Active
         </p>
       </div>
 

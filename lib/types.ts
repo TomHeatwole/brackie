@@ -185,6 +185,8 @@ export interface BracketWithPicks extends Bracket {
   champion_name?: string;
   champion_seed?: number;
   champion_icon_url?: string | null;
+  /** How many pools this bracket is currently submitted to (for UX warnings). */
+  pool_submission_count?: number;
 }
 
 export const REGIONS = ["East", "West", "South", "Midwest"] as const;
