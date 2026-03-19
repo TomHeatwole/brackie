@@ -91,9 +91,133 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
   );
 }
 
+// ── Admin Dashboard (toolbar + tab panels) ──
+
+type AdminTab = "manage" | "games" | "teams" | "pools" | "create" | "query";
+
+const ADMIN_TABS: { id: AdminTab; label: string; needsTournament: boolean }[] = [
+  { id: "manage", label: "Manage", needsTournament: true },
+  { id: "games", label: "Games", needsTournament: true },
+  { id: "teams", label: "Teams", needsTournament: true },
+  { id: "pools", label: "Pools", needsTournament: true },
+  { id: "create", label: "Create", needsTournament: false },
+  { id: "query", label: "DB Query", needsTournament: false },
+];
+
+function TournamentSelector({
+  tournaments,
+  tournamentId,
+  onTournamentIdChange,
+}: {
+  tournaments: Tournament[];
+  tournamentId: string;
+  onTournamentIdChange: (id: string) => void;
+}) {
+  if (tournaments.length === 0) {
+    return (
+      <div className="card rounded-lg px-4 py-3">
+        <p className="text-stone-500 text-sm">No tournaments yet. Switch to Create to add one.</p>
+      </div>
+    );
+  }
+
+  const selected = tournaments.find((t) => t.id === tournamentId);
+
+  return (
+    <div className="card rounded-lg px-4 py-3 flex items-center gap-3">
+      <span className="text-xs font-medium text-stone-400 shrink-0">Tournament</span>
+      <select
+        value={tournamentId}
+        onChange={(e) => onTournamentIdChange(e.target.value)}
+        className="input-field rounded py-1.5 cursor-pointer flex-1 min-w-0"
+      >
+        {tournaments.map((t) => (
+          <option key={t.id} value={t.id}>
+            {t.name} ({t.status})
+          </option>
+        ))}
+      </select>
+      {selected && (
+        <span className="text-[10px] text-stone-600 font-mono truncate max-w-[180px] hidden sm:block">
+          {selected.id}
+        </span>
+      )}
+    </div>
+  );
+}
+
+export function AdminDashboard({
+  tournaments,
+  initialTournamentId,
+}: {
+  tournaments: Tournament[];
+  initialTournamentId?: string;
+}) {
+  const [activeTab, setActiveTab] = useState<AdminTab>("manage");
+  const [tournamentId, setTournamentId] = useState(
+    initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)
+      ? initialTournamentId
+      : tournaments[0]?.id ?? ""
+  );
+
+  useEffect(() => {
+    if (!tournaments.length) {
+      setTournamentId("");
+      return;
+    }
+    if (initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)) {
+      setTournamentId(initialTournamentId);
+      return;
+    }
+    if (!tournaments.find((t) => t.id === tournamentId)) {
+      setTournamentId(tournaments[0].id);
+    }
+  }, [tournaments, initialTournamentId, tournamentId]);
+
+  const selected = tournaments.find((t) => t.id === tournamentId);
+  const tabNeedsTournament = ADMIN_TABS.find((t) => t.id === activeTab)?.needsTournament ?? false;
+
+  return (
+    <div className="flex flex-col gap-4">
+      <nav className="flex items-center gap-0.5 rounded-lg p-1 bg-stone-900/60 border border-stone-800 overflow-x-auto">
+        {ADMIN_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`px-3 py-1.5 rounded-md text-sm font-medium whitespace-nowrap transition-colors cursor-pointer ${
+              activeTab === tab.id
+                ? "bg-stone-700 text-stone-100 shadow-sm"
+                : "text-stone-400 hover:text-stone-200 hover:bg-stone-800/60"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </nav>
+
+      {tabNeedsTournament && (
+        <TournamentSelector
+          tournaments={tournaments}
+          tournamentId={tournamentId}
+          onTournamentIdChange={setTournamentId}
+        />
+      )}
+
+      {activeTab === "manage" && (
+        <TournamentManagerPanel tournamentId={tournamentId} selected={selected} />
+      )}
+      {activeTab === "games" && <GameResultsPanel tournamentId={tournamentId} />}
+      {activeTab === "teams" && <TeamsPanel tournamentId={tournamentId} />}
+      {activeTab === "pools" && <PoolsPanel tournamentId={tournamentId} />}
+      {activeTab === "create" && <CreateTournamentPanel />}
+      {activeTab === "query" && <RawTablePanel />}
+    </div>
+  );
+}
+
 // ── Create Tournament ──
 
-export function CreateTournamentPanel() {
+function CreateTournamentPanel() {
   const [state, action, pending] = useActionState(createTournamentAction, emptyResult);
   return (
     <Card title="Create Tournament">
@@ -141,14 +265,12 @@ export function CreateTournamentPanel() {
 
 // ── Tournament Manager (no dropdown; receives tournamentId from parent) ──
 
-export function TournamentManagerPanel({
-  tournaments,
+function TournamentManagerPanel({
   tournamentId,
-  onTournamentIdChange,
+  selected,
 }: {
-  tournaments: Tournament[];
   tournamentId: string;
-  onTournamentIdChange: (id: string) => void;
+  selected?: Tournament;
 }) {
   const [statusState, statusAction, statusPending] = useActionState(updateTournamentStatusAction, emptyResult);
   const [lockState, lockAction, lockPending] = useActionState(updateTournamentLockDateAction, emptyResult);
@@ -158,44 +280,20 @@ export function TournamentManagerPanel({
   const [clearMsg, setClearMsg] = useState<AdminActionResult | null>(null);
 
   useEffect(() => {
-    if (tournaments.length > 0 && !tournaments.find((t) => t.id === tournamentId)) {
-      onTournamentIdChange(tournaments[0].id);
-    }
-  }, [tournaments, tournamentId, onTournamentIdChange]);
+    setDeleteMsg(null);
+    setClearMsg(null);
+  }, [tournamentId]);
 
-  if (tournaments.length === 0) {
+  if (!tournamentId) {
     return (
       <Card title="Manage Tournament">
-        <p className="text-stone-500 text-sm">No tournaments yet. Create one above.</p>
+        <p className="text-stone-500 text-sm">No tournaments yet. Switch to Create to add one.</p>
       </Card>
     );
   }
 
-  const selected = tournaments.find((t) => t.id === tournamentId);
-
   return (
     <Card title="Manage Tournament">
-      <div className="mb-4">
-        <Label>Select Tournament</Label>
-        <Select
-          value={tournamentId}
-          onChange={(e) => {
-            onTournamentIdChange(e.target.value);
-            setDeleteMsg(null);
-            setClearMsg(null);
-          }}
-        >
-          {tournaments.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name} ({t.status})
-            </option>
-          ))}
-        </Select>
-        {selected && (
-          <p className="text-[10px] text-stone-600 mt-1 font-mono break-all">{selected.id}</p>
-        )}
-      </div>
-
       <div className="flex flex-col gap-4">
         {/* Status */}
         <form action={statusAction} className="flex items-end gap-2">
@@ -269,7 +367,7 @@ export function TournamentManagerPanel({
 
 // ── Game Results (set winner per game) ──
 
-export function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
+function GameResultsPanel({ tournamentId }: { tournamentId: string }) {
   const [games, setGames] = useState<GameWithTeamNames[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<AdminActionResult | null>(null);
@@ -395,7 +493,7 @@ interface TeamRow {
 
 type LocalEdits = Record<string, { name?: string; icon_url?: string }>;
 
-export function TeamsPanel({ tournamentId }: { tournamentId: string }) {
+function TeamsPanel({ tournamentId }: { tournamentId: string }) {
   const [teams, setTeams] = useState<TeamRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadConfigPending, setLoadConfigPending] = useState(false);
@@ -546,7 +644,7 @@ function memberDisplayName(m: PoolWithMembersForAdmin["members"][number]): strin
   return m.user_id.slice(0, 8) + "…";
 }
 
-export function PoolsPanel({ tournamentId }: { tournamentId: string }) {
+function PoolsPanel({ tournamentId }: { tournamentId: string }) {
   const [pools, setPools] = useState<PoolWithMembersForAdmin[]>([]);
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<AdminActionResult | null>(null);
@@ -643,52 +741,9 @@ export function PoolsPanel({ tournamentId }: { tournamentId: string }) {
   );
 }
 
-// ── Wrapper: shared tournament selection for manager + game results + teams ──
-
-export function AdminTournamentPanels({
-  tournaments,
-  initialTournamentId,
-}: {
-  tournaments: Tournament[];
-  initialTournamentId?: string;
-}) {
-  const [tournamentId, setTournamentId] = useState(
-    initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)
-      ? initialTournamentId
-      : tournaments[0]?.id ?? ""
-  );
-
-  useEffect(() => {
-    if (!tournaments.length) {
-      setTournamentId("");
-      return;
-    }
-    if (initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)) {
-      setTournamentId(initialTournamentId);
-      return;
-    }
-    if (!tournaments.find((t) => t.id === tournamentId)) {
-      setTournamentId(tournaments[0].id);
-    }
-  }, [tournaments, initialTournamentId, tournamentId]);
-
-  return (
-    <>
-      <TournamentManagerPanel
-        tournaments={tournaments}
-        tournamentId={tournamentId}
-        onTournamentIdChange={setTournamentId}
-      />
-      <GameResultsPanel tournamentId={tournamentId} />
-      <TeamsPanel tournamentId={tournamentId} />
-      <PoolsPanel tournamentId={tournamentId} />
-    </>
-  );
-}
-
 // ── Raw Table Viewer ──
 
-export function RawTablePanel() {
+function RawTablePanel() {
   const [state, action, pending] = useActionState(rawSelectAction, emptyQuery);
 
   return (

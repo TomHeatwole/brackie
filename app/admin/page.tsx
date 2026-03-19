@@ -3,11 +3,7 @@ import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { Tournament } from "@/lib/types";
 import Navbar from "../_components/navbar";
-import {
-  CreateTournamentPanel,
-  AdminTournamentPanels,
-  RawTablePanel,
-} from "./_components/admin-panels";
+import { AdminDashboard } from "./_components/admin-panels";
 import { buildQuerySuffix } from "@/lib/query";
 import { parseTournamentOverride } from "@/lib/tournament";
 
@@ -56,11 +52,7 @@ export default async function AdminPage({
             </span>
           </div>
 
-          <div className="flex flex-col gap-6">
-            <CreateTournamentPanel />
-            <AdminTournamentPanels tournaments={tournamentsList} initialTournamentId={initialTournamentId} />
-            <RawTablePanel />
-          </div>
+          <AdminDashboard tournaments={tournamentsList} initialTournamentId={initialTournamentId} />
         </div>
       </main>
     </div>
