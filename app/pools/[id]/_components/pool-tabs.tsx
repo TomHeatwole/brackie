@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect, useTransition } from "react";
 import type { ReactNode } from "react";
 import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import type { PoolWithDetails, PoolMemberWithInfo, Team, TournamentGame, HallOfFameEntry } from "@/lib/types";
+import type { PoolWithDetails, PoolMemberWithInfo, Team, TournamentGame, HallOfFameEntry, BracketStructure } from "@/lib/types";
 import type { PoolGoodyWithType } from "@/lib/pools";
-import type { BracketScoreSummary, RoundGameEvaluation } from "@/lib/scoring";
+import type { BracketScoreSummary, RoundGameEvaluation, GoodyScoreEntry } from "@/lib/scoring";
+import { LOWEST_SEED_GOODY_ROUNDS, getBracketDerivedGoodyAnswer } from "@/lib/scoring";
 import PoolScoringDisplay from "./pool-scoring-display";
 import PicksTable from "./picks-table";
+import PicksBracketView from "./picks-bracket-view";
 import UserAvatar from "@/app/_components/user-avatar";
 import { formatUserDisplayName } from "@/utils/display-name";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
@@ -54,7 +56,13 @@ interface PoolTabsProps {
     goodyTypeId: string;
     value: Record<string, unknown> | null;
   }[];
+  goodyResults?: {
+    goody_type_id: string;
+    value: Record<string, unknown>;
+  }[];
   hallOfFame?: HallOfFameEntry[];
+  currentUserId?: string;
+  bracketStructure?: BracketStructure;
 }
 
 export default function PoolTabs({
@@ -69,12 +77,17 @@ export default function PoolTabs({
   modeParam,
   scores = [],
   goodyAnswers = [],
+  goodyResults = [],
   hallOfFame = [],
+  currentUserId,
+  bracketStructure,
 }: PoolTabsProps) {
   const hasGoodies = pool.goodies_enabled && poolGoodiesWithTypes.length > 0;
   const hasHallOfFame = hallOfFame.length > 0;
   const teamById = new Map(teams.map((t) => [t.id, t]));
+  const gameById = new Map(games.map((g) => [g.id, g]));
   const totalPoolGoodyPoints = poolGoodiesWithTypes.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
+  const goodyResultByType = new Map(goodyResults.map((r) => [r.goody_type_id, r]));
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -82,21 +95,32 @@ export default function PoolTabs({
 
   const validTabs: TabKey[] = ["scoring", "scores", "picks", "goodies", "hall-of-fame"];
   const tabParam = searchParams.get("tab");
-  const activeTab: TabKey =
+  const urlTab: TabKey =
     tabParam && validTabs.includes(tabParam as TabKey) ? (tabParam as TabKey) : "scores";
+
+  const [activeTab, setActiveTabState] = useState<TabKey>(urlTab);
+  const [picksView, setPicksView] = useState<"table" | "bracket">("table");
+  const [, startTransition] = useTransition();
+
+  useEffect(() => {
+    setActiveTabState(urlTab);
+  }, [urlTab]);
 
   const setActiveTab = useCallback(
     (tab: TabKey) => {
-      const params = new URLSearchParams(searchParams.toString());
-      if (tab === "scores") {
-        params.delete("tab");
-      } else {
-        params.set("tab", tab);
-      }
-      const qs = params.toString();
-      router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      setActiveTabState(tab);
+      startTransition(() => {
+        const params = new URLSearchParams(searchParams.toString());
+        if (tab === "scores") {
+          params.delete("tab");
+        } else {
+          params.set("tab", tab);
+        }
+        const qs = params.toString();
+        router.replace(`${pathname}${qs ? `?${qs}` : ""}`, { scroll: false });
+      });
     },
-    [searchParams, router, pathname]
+    [searchParams, router, pathname, startTransition]
   );
 
   const tabs: { key: TabKey; label: string }[] = [
@@ -126,9 +150,16 @@ export default function PoolTabs({
       return String(value.nit_matchup);
     }
     if (value.team_id) {
-      return `Team ${String(value.team_id)}`;
+      const t = teamById.get(String(value.team_id));
+      return t ? `${t.name} (${t.seed})` : `Team ${String(value.team_id)}`;
     }
     if (value.game_id) {
+      const g = gameById.get(String(value.game_id));
+      if (g) {
+        const t1 = g.team1_id ? teamById.get(g.team1_id) : null;
+        const t2 = g.team2_id ? teamById.get(g.team2_id) : null;
+        if (t1 && t2) return `${t1.name} (${t1.seed}) vs ${t2.name} (${t2.seed})`;
+      }
       return `Game ${String(value.game_id)}`;
     }
 
@@ -144,15 +175,22 @@ export default function PoolTabs({
   function PossiblePointsTooltip({
     bracketPossible,
     goodies,
+    perGoody,
     children,
   }: {
     bracketPossible: number;
     goodies: PoolGoodyWithType[];
+    perGoody?: Record<string, GoodyScoreEntry>;
     children: ReactNode;
   }) {
     const isMobile = useIsMobile();
     const [open, setOpen] = useState(false);
-    const goodyTotal = goodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
+
+    const aliveGoodies = goodies.filter((pg) => {
+      const entry = perGoody?.[pg.goody_type_id];
+      return entry?.status === "alive" || entry?.status === "pending";
+    });
+    const goodyTotal = aliveGoodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
 
     return (
       <div
@@ -163,11 +201,12 @@ export default function PoolTabs({
       >
         {children}
         <div
-          className={`absolute z-50 right-0 bottom-full mb-1 w-64 rounded-md border px-3 py-2.5 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
+          className={`absolute z-50 right-0 bottom-full mb-1 w-64 rounded-md border px-3 py-2.5 text-[11px] shadow-lg backdrop-blur-sm border-accent/25 bg-stone-950/95 text-stone-200 ${
             open ? "opacity-100" : "pointer-events-none opacity-0"
           } transition`}
+          style={{ boxShadow: "0 0 12px rgba(194, 85, 10, 0.08)" }}
         >
-          <div className="font-semibold mb-2">Possible Points Remaining:</div>
+          <div className="font-semibold mb-2 text-accent">Possible Points Remaining:</div>
           <table className="w-full text-left">
             <tbody>
               <tr>
@@ -180,19 +219,27 @@ export default function PoolTabs({
               </tr>
             </tbody>
           </table>
-          {goodies.length > 0 && (
-            <div className="mt-1.5 pl-2 border-l border-card-border">
-              {goodies.map((pg) => (
-                <div key={pg.id} className="flex justify-between gap-2 py-0.5">
-                  <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
-                  <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
-                </div>
-              ))}
+          {aliveGoodies.length > 0 && (
+            <div className="mt-1.5 pl-2 border-l border-accent/30">
+              {aliveGoodies.map((pg) => {
+                const entry = perGoody?.[pg.goody_type_id];
+                return (
+                  <div key={pg.id} className="py-0.5">
+                    <div className="flex justify-between gap-2">
+                      <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
+                      <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
+                    </div>
+                    {entry?.aliveInfo && (
+                      <div className="text-[10px] text-stone-600 truncate">{entry.aliveInfo}</div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           )}
           <table className="w-full text-left mt-1.5">
             <tbody>
-              <tr className="border-t border-card-border">
+              <tr className="border-t border-accent/20">
                 <td className="pt-1.5 font-semibold text-stone-200">Total</td>
                 <td className="pt-1.5 text-right tabular-nums font-semibold text-stone-200">{bracketPossible + goodyTotal} pts</td>
               </tr>
@@ -294,6 +341,138 @@ export default function PoolTabs({
     );
   }
 
+  function GoodyProgressTooltip({
+    score,
+    children,
+  }: {
+    score: BracketScoreSummary;
+    children: ReactNode;
+  }) {
+    const isMobile = useIsMobile();
+    const [open, setOpen] = useState(false);
+    const [showAbove, setShowAbove] = useState(false);
+    const triggerRef = useRef<HTMLDivElement>(null);
+
+    function handleOpen() {
+      if (triggerRef.current) {
+        const rect = triggerRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        setShowAbove(spaceBelow < 280);
+      }
+      setOpen(true);
+    }
+
+    function getUserGoodyPickLabel(pg: PoolGoodyWithType): string {
+      const answer = goodyAnswers.find(
+        (a) => a.userId === score.userId && a.goodyTypeId === pg.goody_type_id
+      );
+      if (!answer?.value) return "—";
+      const val = answer.value as { team_id?: unknown; conference_key?: unknown; nit_matchup?: unknown; game_id?: unknown };
+      if (val.team_id) {
+        const t = teamById.get(String(val.team_id));
+        return t ? `(${t.seed}) ${t.name}` : `Team ${val.team_id}`;
+      }
+      if (val.game_id) {
+        const g = gameById.get(String(val.game_id));
+        if (g) {
+          const t1 = g.team1_id ? teamById.get(g.team1_id) : null;
+          const t2 = g.team2_id ? teamById.get(g.team2_id) : null;
+          if (t1 && t2) return `(${t1.seed}) ${t1.name} vs (${t2.seed}) ${t2.name}`;
+        }
+      }
+      return formatGoodyAnswerValue(pg, answer.value);
+    }
+
+    const correct: { pg: PoolGoodyWithType; entry: GoodyScoreEntry }[] = [];
+    const rest: { pg: PoolGoodyWithType; label: string }[] = [];
+
+    for (const pg of poolGoodiesWithTypes) {
+      const isBracketDerived = pg.goody_types?.input_type === "bracket_derived";
+      const entry = score.perGoody?.[pg.goody_type_id];
+
+      if (entry && (entry.status === "won" || entry.status === "stroke")) {
+        correct.push({ pg, entry });
+      } else if (isBracketDerived) {
+        rest.push({ pg, label: "Pending" });
+      } else {
+        rest.push({ pg, label: getUserGoodyPickLabel(pg) });
+      }
+    }
+
+    return (
+      <div
+        ref={triggerRef}
+        className="relative inline-flex"
+        onMouseEnter={() => {
+          if (!isMobile) handleOpen();
+        }}
+        onMouseLeave={() => {
+          if (!isMobile) setOpen(false);
+        }}
+        onClick={() => {
+          if (isMobile) {
+            if (open) setOpen(false);
+            else handleOpen();
+          }
+        }}
+      >
+        {children}
+
+        <div
+          className={`absolute z-50 right-0 w-72 rounded-md border px-3 py-2 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 text-stone-200 ${
+            showAbove ? "bottom-full mb-1" : "top-full mt-1"
+          } ${
+            open ? "opacity-100" : "pointer-events-none opacity-0"
+          } transition`}
+        >
+          <div className="font-semibold mb-2">Goodies</div>
+
+          <div className="max-h-52 overflow-y-auto scrollbar-custom-y">
+            {correct.length > 0 && (
+              <div className="mb-2">
+                <div className="font-semibold text-stone-100">Correct</div>
+                <div className="mt-1 space-y-1">
+                  {correct.map(({ pg, entry }) => (
+                    <div key={pg.id} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate text-emerald-300">
+                        {pg.goody_types?.name ?? "Goodie"}
+                      </span>
+                      <span className="tabular-nums shrink-0 text-emerald-200">
+                        +{entry.pointsAwarded} pts{entry.status === "stroke" ? " (stroke)" : ""}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {rest.length > 0 && (
+              <div>
+                <div className="font-semibold text-stone-100">Pending</div>
+                <div className="mt-1 space-y-1">
+                  {rest.map(({ pg, label }) => (
+                    <div key={pg.id} className="flex justify-between gap-3">
+                      <span className="min-w-0 truncate text-stone-400">
+                        {pg.goody_types?.name ?? "Goodie"}
+                      </span>
+                      <span className="text-stone-500 truncate max-w-[140px] text-right">
+                        {label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {poolGoodiesWithTypes.length === 0 && (
+              <div className="text-stone-500">No goodies configured.</div>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mt-6 grid grid-cols-1 md:grid-cols-[220px_1fr] gap-6">
       <aside>
@@ -345,11 +524,14 @@ export default function PoolTabs({
                         if (!member) return null;
                         const name =
                           formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
+                        const isCurrentUser = score.userId === currentUserId;
 
                         return (
                           <div
                             key={score.bracketId}
-                            className="px-4 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4"
+                            className={`px-4 py-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 ${
+                              isCurrentUser ? "bg-accent/[0.03] ring-1 ring-inset ring-card-border-hover" : ""
+                            }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
                               <span className="text-stone-500 font-mono text-sm w-5 shrink-0">
@@ -366,6 +548,11 @@ export default function PoolTabs({
                                   <span className="text-stone-200 text-base font-medium truncate">
                                     {name}
                                   </span>
+                                  {isCurrentUser && (
+                                    <span className="text-xs px-1.5 py-0.5 rounded bg-accent/20 text-accent shrink-0">
+                                      You
+                                    </span>
+                                  )}
                                   {member.user_id === pool.creator_id && (
                                     <span className="text-xs px-1.5 py-0.5 rounded bg-card-border text-muted-foreground shrink-0">
                                       Creator
@@ -417,20 +604,46 @@ export default function PoolTabs({
                               </div>
                             </div>
                             <div className="flex items-center gap-6 text-right shrink-0">
-                              <div>
-                                <span className="text-[11px] text-stone-500 block">Goodies</span>
-                                <span className="text-base text-stone-200 tabular-nums font-semibold">
-                                  {score.totalGoodyPoints ?? 0}
-                                </span>
-                                <span className="text-[11px] text-stone-600 block">(unscored)</span>
-                              </div>
+                              <GoodyProgressTooltip score={score}>
+                                <div className="cursor-help">
+                                  <span className="text-[11px] text-stone-500 block">Goodies</span>
+                                  <span className={`text-base tabular-nums font-semibold ${
+                                    (score.totalGoodyPoints ?? 0) > 0 ? "text-emerald-300" : "text-stone-200"
+                                  }`}>
+                                    {score.totalGoodyPoints ?? 0}
+                                  </span>
+                                  <span className="text-[11px] text-stone-600 block">
+                                    {(() => {
+                                      let won = 0;
+                                      let concluded = 0;
+                                      for (const pg of poolGoodiesWithTypes) {
+                                        if (pg.goody_types?.input_type !== "bracket_derived") continue;
+                                        const entry = score.perGoody?.[pg.goody_type_id];
+                                        if (!entry) continue;
+                                        if (
+                                          entry.status === "won" ||
+                                          entry.status === "stroke" ||
+                                          entry.status === "eliminated" ||
+                                          entry.status === "not_awarded"
+                                        ) {
+                                          concluded++;
+                                          if (entry.status === "won" || entry.status === "stroke")
+                                            won++;
+                                        }
+                                      }
+                                      return `${won}/${concluded}`;
+                                    })()}
+                                  </span>
+                                </div>
+                              </GoodyProgressTooltip>
                               <PossiblePointsTooltip
                                 bracketPossible={score.possibleBracketPoints}
                                 goodies={poolGoodiesWithTypes}
+                                perGoody={score.perGoody}
                               >
                                 <div className="cursor-help">
                                   <span className="text-stone-400 text-base tabular-nums">
-                                    {score.possibleBracketPoints + totalPoolGoodyPoints - (score.totalGoodyPoints ?? 0)}
+                                    {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
                                   </span>
                                   <span className="text-stone-600 text-sm ml-0.5">possible</span>
                                 </div>
@@ -447,17 +660,53 @@ export default function PoolTabs({
 
             {activeTab === "picks" && (
               <div className="px-3 py-3">
-                <PicksTable
-                  games={games}
-                  teams={teams}
-                  members={members}
-                  bracketPicks={bracketPicks}
-                  scores={scores}
-                  poolId={poolId}
-                  modeParam={modeParam}
-                  poolGoodiesWithTypes={poolGoodiesWithTypes}
-                  goodyAnswers={goodyAnswers}
-                />
+                <div className="flex items-center gap-1 mb-3">
+                  <button
+                    type="button"
+                    onClick={() => setPicksView("table")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      picksView === "table"
+                        ? "bg-accent text-white"
+                        : "bg-card border border-card-border text-stone-400 hover:text-stone-200 hover:border-card-border-hover"
+                    }`}
+                  >
+                    Table
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPicksView("bracket")}
+                    className={`px-3 py-1.5 rounded-md text-xs font-medium transition-colors ${
+                      picksView === "bracket"
+                        ? "bg-accent text-white"
+                        : "bg-card border border-card-border text-stone-400 hover:text-stone-200 hover:border-card-border-hover"
+                    }`}
+                  >
+                    Bracket
+                  </button>
+                </div>
+                {picksView === "table" ? (
+                  <PicksTable
+                    games={games}
+                    teams={teams}
+                    members={members}
+                    bracketPicks={bracketPicks}
+                    scores={scores}
+                    poolId={poolId}
+                    modeParam={modeParam}
+                    poolGoodiesWithTypes={poolGoodiesWithTypes}
+                    goodyAnswers={goodyAnswers}
+                    currentUserId={currentUserId}
+                  />
+                ) : (
+                  <PicksBracketView
+                    games={games}
+                    teams={teams}
+                    bracketPicks={bracketPicks}
+                    bracketStructure={bracketStructure}
+                    members={members}
+                    scores={scores}
+                  />
+                )}
               </div>
             )}
 
@@ -466,15 +715,38 @@ export default function PoolTabs({
                 {!hasGoodies ? (
                   <p>This pool doesn&apos;t have any Goodies configured.</p>
                 ) : (
-                  <>
-                    <p className="mb-3">
-                      Goodies scoring is not yet live — all Goodies currently show as unscored.
-                    </p>
-                    <div className="space-y-3">
-                      {poolGoodiesWithTypes.map((pg) => {
-                        const answersForGoody = goodyAnswers.filter(
-                          (a) => a.goodyTypeId === pg.goody_type_id
+                  <div className="space-y-3">
+                    {poolGoodiesWithTypes.map((pg) => {
+                      const goodyKey = pg.goody_types?.key ?? "";
+                      const isBracketDerived = goodyKey in LOWEST_SEED_GOODY_ROUNDS || goodyKey === "best_region_bracket";
+
+                      if (isBracketDerived) {
+                        const allEntries: { userId: string; entry: GoodyScoreEntry }[] = [];
+                        for (const s of scores) {
+                          const entry = s.perGoody?.[pg.goody_type_id];
+                          if (entry) allEntries.push({ userId: s.userId, entry });
+                        }
+
+                        const hasWinner = allEntries.some((e) => e.entry.status === "won");
+                        const hasStroke = allEntries.some((e) => e.entry.status === "stroke");
+                        const hasAlive = allEntries.some((e) => e.entry.status === "alive");
+                        const allPending = allEntries.every((e) => e.entry.status === "pending");
+                        const roundComplete = hasWinner || hasStroke || allEntries.every(
+                          (e) => e.entry.status === "won" || e.entry.status === "stroke" || e.entry.status === "not_awarded"
                         );
+
+                        let badgeClass = "border-stone-500/60 bg-stone-500/10 text-stone-400";
+                        let badgeText = "Pending";
+                        if (roundComplete && (hasWinner || hasStroke)) {
+                          badgeClass = "border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
+                          badgeText = hasStroke ? "Scored (stroke)" : "Scored";
+                        } else if (hasAlive && !allPending) {
+                          badgeClass = "border-amber-400/60 bg-amber-500/10 text-amber-200";
+                          badgeText = "In Progress";
+                        }
+
+                        const bracketUserIds = new Set(bracketPicks.map((bp) => bp.userId));
+                        const membersWithBrackets = members.filter((m) => bracketUserIds.has(m.user_id));
 
                         return (
                           <div
@@ -494,36 +766,65 @@ export default function PoolTabs({
                               </div>
                               <div className="text-right">
                                 <span className="block text-xs text-muted-foreground">
-                                  {pg.points} pts
+                                  {pg.points} pts{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
                                 </span>
-                                <span className="mt-0.5 inline-flex items-center rounded-full border border-amber-400/60 bg-amber-500/10 px-2 py-0.5 text-[10px] font-medium text-amber-200">
-                                  Unscored
+                                <span className={`mt-0.5 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                  {badgeText}
                                 </span>
                               </div>
                             </div>
 
                             <div className="mt-3 border-t border-card-border pt-2">
-                              {answersForGoody.length === 0 ? (
+                              {membersWithBrackets.length === 0 ? (
                                 <p className="text-xs text-muted-foreground">
-                                  No picks yet for this goodie.
+                                  No brackets submitted yet.
                                 </p>
                               ) : (
                                 <ul className="space-y-1.5">
-                                  {answersForGoody.map((answer) => {
-                                    const member = members.find(
-                                      (m) => m.user_id === answer.userId
-                                    );
-                                    if (!member) return null;
+                                  {membersWithBrackets.map((member) => {
+                                    const userEntry = allEntries.find((e) => e.userId === member.user_id);
+                                    const entry = userEntry?.entry;
+                                    const name = formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
 
-                                    const name =
-                                      formatUserDisplayName(
-                                        member.first_name,
-                                        member.last_name
-                                      ) || "Anonymous";
+                                    const userPicks = bracketPicks.find((bp) => bp.userId === member.user_id);
+                                    const derivedAnswer = userPicks
+                                      ? getBracketDerivedGoodyAnswer(userPicks.picks, games, teams, goodyKey)
+                                      : null;
+
+                                    let displayText = "—";
+                                    const isBestRegion = goodyKey === "best_region_bracket";
+                                    if (isBestRegion && entry?.bestRegion) {
+                                      displayText = `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/${entry.status === "won" ? 15 : entry.bestRegionPlayed ?? 0})`;
+                                    } else if (entry?.bestCorrectTeamId) {
+                                      const t = teamById.get(entry.bestCorrectTeamId);
+                                      if (t) displayText = `(${t.seed}) ${t.name}`;
+                                    } else if (entry?.bestAliveTeamId) {
+                                      const t = teamById.get(entry.bestAliveTeamId);
+                                      if (t) displayText = `(${t.seed}) ${t.name}`;
+                                    } else if (derivedAnswer) {
+                                      displayText = `(${derivedAnswer.seed}) ${derivedAnswer.teamName}`;
+                                    }
+
+                                    let statusColor = "text-stone-300";
+                                    let statusBadge: string | null = null;
+                                    if (entry?.status === "won") {
+                                      statusColor = "text-emerald-300";
+                                      statusBadge = `+${entry.pointsAwarded}`;
+                                    } else if (entry?.status === "stroke") {
+                                      statusColor = "text-emerald-300";
+                                      statusBadge = `+${entry.pointsAwarded} (stroke)`;
+                                    } else if (entry?.status === "eliminated") {
+                                      statusColor = "text-red-400/60 line-through";
+                                      statusBadge = "X";
+                                    } else if (entry?.status === "not_awarded") {
+                                      statusColor = "text-red-400/60";
+                                    } else if (entry?.status === "alive") {
+                                      statusColor = "text-stone-300";
+                                    }
 
                                     return (
                                       <li
-                                        key={`${answer.userId}-${answer.goodyTypeId}`}
+                                        key={member.user_id}
                                         className="flex items-center justify-between gap-2 text-xs"
                                       >
                                         <div className="flex items-center gap-2 min-w-0">
@@ -537,12 +838,20 @@ export default function PoolTabs({
                                             {name}
                                           </span>
                                         </div>
-                                        <span className="shrink-0 text-[11px] text-stone-300">
-                                          {formatGoodyAnswerValue(
-                                            pg,
-                                            answer.value
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <span className={`text-[11px] ${statusColor}`}>
+                                            {displayText}
+                                          </span>
+                                          {statusBadge && (
+                                            <span className={`text-[10px] font-medium ${
+                                              entry?.status === "eliminated" || entry?.status === "not_awarded"
+                                                ? "text-red-400"
+                                                : "text-emerald-400"
+                                            }`}>
+                                              {statusBadge}
+                                            </span>
                                           )}
-                                        </span>
+                                        </div>
                                       </li>
                                     );
                                   })}
@@ -551,9 +860,132 @@ export default function PoolTabs({
                             </div>
                           </div>
                         );
-                      })}
-                    </div>
-                  </>
+                      }
+
+                      const answersForGoody = goodyAnswers.filter(
+                        (a) => a.goodyTypeId === pg.goody_type_id
+                      );
+
+                      const allEntries: { userId: string; entry: GoodyScoreEntry }[] = [];
+                      for (const s of scores) {
+                        const entry = s.perGoody?.[pg.goody_type_id];
+                        if (entry) allEntries.push({ userId: s.userId, entry });
+                      }
+
+                      const hasResult = goodyResultByType.has(pg.goody_type_id);
+                      const hasWinner = allEntries.some((e) => e.entry.status === "won");
+                      const hasStroke = allEntries.some((e) => e.entry.status === "stroke");
+
+                      let badgeClass = "border-stone-500/60 bg-stone-500/10 text-stone-400";
+                      let badgeText = "Pending";
+                      if (hasResult && (hasWinner || hasStroke || allEntries.some((e) => e.entry.status === "not_awarded"))) {
+                        badgeClass = "border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
+                        badgeText = hasStroke ? "Scored (stroke)" : "Scored";
+                      } else if (hasResult) {
+                        badgeClass = "border-stone-500/60 bg-stone-500/10 text-stone-400";
+                        badgeText = "Pending";
+                      }
+
+                      return (
+                        <div
+                          key={pg.id}
+                          className="rounded-md border border-card-border bg-background/60 px-3 py-2"
+                        >
+                          <div className="flex items-center justify-between gap-2">
+                            <div className="flex flex-col">
+                              <span className="text-stone-200">
+                                {pg.goody_types?.name ?? "Goodie"}
+                              </span>
+                              {pg.goody_types?.description && (
+                                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                                  {pg.goody_types.description}
+                                </p>
+                              )}
+                            </div>
+                            <div className="text-right">
+                              <span className="block text-xs text-muted-foreground">
+                                {pg.points} pts{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
+                              </span>
+                              <span className={`mt-0.5 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
+                                {badgeText}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 border-t border-card-border pt-2">
+                            {answersForGoody.length === 0 ? (
+                              <p className="text-xs text-muted-foreground">
+                                No picks yet for this goodie.
+                              </p>
+                            ) : (
+                              <ul className="space-y-1.5">
+                                {answersForGoody.map((answer) => {
+                                  const member = members.find(
+                                    (m) => m.user_id === answer.userId
+                                  );
+                                  if (!member) return null;
+
+                                  const name =
+                                    formatUserDisplayName(
+                                      member.first_name,
+                                      member.last_name
+                                    ) || "Anonymous";
+
+                                  const entry = allEntries.find((e) => e.userId === answer.userId)?.entry;
+                                  const displayText = formatGoodyAnswerValue(pg, answer.value);
+
+                                  let statusColor = "text-stone-300";
+                                  let statusBadge: string | null = null;
+                                  if (entry?.status === "won") {
+                                    statusColor = "text-emerald-300";
+                                    statusBadge = `+${entry.pointsAwarded}`;
+                                  } else if (entry?.status === "stroke") {
+                                    statusColor = "text-emerald-300";
+                                    statusBadge = `+${entry.pointsAwarded} (stroke)`;
+                                  } else if (entry?.status === "not_awarded") {
+                                    statusColor = "text-red-400/60 line-through";
+                                  }
+
+                                  return (
+                                    <li
+                                      key={`${answer.userId}-${answer.goodyTypeId}`}
+                                      className="flex items-center justify-between gap-2 text-xs"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <UserAvatar
+                                          avatarUrl={member.avatar_url}
+                                          firstName={member.first_name}
+                                          lastName={member.last_name}
+                                          size="xs"
+                                        />
+                                        <span className="truncate text-stone-200">
+                                          {name}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center gap-2 shrink-0">
+                                        <span className={`text-[11px] ${statusColor}`}>
+                                          {displayText}
+                                        </span>
+                                        {statusBadge && (
+                                          <span className={`text-[10px] font-medium ${
+                                            entry?.status === "not_awarded"
+                                              ? "text-red-400"
+                                              : "text-emerald-400"
+                                          }`}>
+                                            {statusBadge}
+                                          </span>
+                                        )}
+                                      </div>
+                                    </li>
+                                  );
+                                })}
+                              </ul>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 )}
               </div>
             )}

@@ -13,6 +13,7 @@ import {
   DEFAULT_ROUND_POINTS,
   DEFAULT_UPSET_MULTIPLIERS,
 } from "./types";
+import { HIDDEN_GOODY_KEYS, goodyDisplayOrder } from "./goodies";
 
 export function generateInviteCode(): string {
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -373,10 +374,15 @@ export async function getPoolGoodiesWithTypes(
 
   if (!data) return [];
 
-  return data.map((row: PoolGoody & { goody_types: GoodyTypeRow | null }) => ({
-    ...row,
-    goody_types: row.goody_types ?? null,
-  }));
+  return data
+    .map((row: PoolGoody & { goody_types: GoodyTypeRow | null }) => ({
+      ...row,
+      goody_types: row.goody_types ?? null,
+    }))
+    .filter((pg) => !HIDDEN_GOODY_KEYS.includes(pg.goody_types?.key ?? ""))
+    .sort((a, b) =>
+      goodyDisplayOrder(a.goody_types?.key ?? "") - goodyDisplayOrder(b.goody_types?.key ?? "")
+    );
 }
 
 export async function joinPool(

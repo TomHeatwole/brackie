@@ -241,6 +241,26 @@ export async function updateTournamentLockDateAction(
   return { success: true, message: "Lock date updated." };
 }
 
+export async function updateTournamentConferenceTeamCountsAction(
+  tournamentId: string,
+  counts: Record<string, number>
+): Promise<AdminActionResult> {
+  if (!tournamentId) {
+    return { success: false, message: "Tournament is required." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("tournaments")
+    .update({ conference_team_counts: counts })
+    .eq("id", tournamentId);
+
+  if (error) return { success: false, message: error.message };
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  return { success: true, message: "Conference team counts updated." };
+}
+
 export async function deleteTournamentAction(
   tournamentId: string
 ): Promise<AdminActionResult> {
@@ -897,4 +917,114 @@ export async function deleteHallOfFameEntryAction(
   revalidatePath("/admin");
   revalidatePath(`/pools/${poolId}`);
   return { success: true, message: "Entry deleted." };
+}
+
+// ── Goody Results ──
+
+export interface GoodyResultForAdmin {
+  id: string;
+  tournament_id: string;
+  goody_type_id: string;
+  value: Record<string, unknown>;
+  goody_type_key: string;
+  goody_type_name: string;
+  goody_type_input_type: string;
+  goody_type_config: Record<string, unknown> | null;
+}
+
+export async function getGoodyResultsForAdminAction(
+  tournamentId: string
+): Promise<{ results: GoodyResultForAdmin[]; goodyTypes: { id: string; key: string; name: string; input_type: string; config: Record<string, unknown> | null }[]; error?: string }> {
+  const supabase = await createClient();
+
+  const { data: goodyTypes, error: gtErr } = await supabase
+    .from("goody_types")
+    .select("id, key, name, input_type, config")
+    .eq("input_type", "user_input")
+    .order("name");
+
+  if (gtErr) {
+    return { results: [], goodyTypes: [], error: gtErr.message };
+  }
+
+  const { data: results, error: resErr } = await supabase
+    .from("goody_results")
+    .select("id, tournament_id, goody_type_id, value")
+    .eq("tournament_id", tournamentId);
+
+  if (resErr) {
+    return { results: [], goodyTypes: goodyTypes ?? [], error: resErr.message };
+  }
+
+  const gtById = new Map((goodyTypes ?? []).map((gt) => [gt.id, gt]));
+
+  const mapped: GoodyResultForAdmin[] = (results ?? [])
+    .filter((r) => gtById.has(r.goody_type_id))
+    .map((r) => {
+      const gt = gtById.get(r.goody_type_id)!;
+      return {
+        id: r.id,
+        tournament_id: r.tournament_id,
+        goody_type_id: r.goody_type_id,
+        value: r.value as Record<string, unknown>,
+        goody_type_key: gt.key,
+        goody_type_name: gt.name,
+        goody_type_input_type: gt.input_type,
+        goody_type_config: gt.config as Record<string, unknown> | null,
+      };
+    });
+
+  return { results: mapped, goodyTypes: goodyTypes ?? [] };
+}
+
+export async function upsertGoodyResultAction(
+  tournamentId: string,
+  goodyTypeId: string,
+  value: Record<string, unknown>
+): Promise<AdminActionResult> {
+  if (!tournamentId || !goodyTypeId) {
+    return { success: false, message: "Tournament and goody type are required." };
+  }
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("goody_results")
+    .select("id")
+    .eq("tournament_id", tournamentId)
+    .eq("goody_type_id", goodyTypeId)
+    .maybeSingle();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("goody_results")
+      .update({ value })
+      .eq("id", existing.id);
+    if (error) return { success: false, message: error.message };
+  } else {
+    const { error } = await supabase
+      .from("goody_results")
+      .insert({ tournament_id: tournamentId, goody_type_id: goodyTypeId, value });
+    if (error) return { success: false, message: error.message };
+  }
+
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  return { success: true, message: "Goody result saved." };
+}
+
+export async function deleteGoodyResultAction(
+  resultId: string
+): Promise<AdminActionResult> {
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("goody_results")
+    .delete()
+    .eq("id", resultId);
+
+  if (error) return { success: false, message: error.message };
+
+  revalidatePath("/admin");
+  revalidatePath("/pools");
+  return { success: true, message: "Goody result deleted." };
 }

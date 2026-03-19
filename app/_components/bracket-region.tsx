@@ -2,6 +2,7 @@
 
 import { Team, TournamentGame } from "@/lib/types";
 import BracketMatchup from "./bracket-matchup";
+import type { PickStatus } from "./bracket-matchup";
 
 interface Props {
   region: string;
@@ -11,6 +12,8 @@ interface Props {
   onPick: (gameId: string, teamId: string) => void;
   direction: "ltr" | "rtl";
   readOnly: boolean;
+  renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
+  pickStatuses?: Map<string, PickStatus>;
 }
 
 function getTeamById(teams: Team[], id: string | null): Team | null {
@@ -33,6 +36,8 @@ export default function BracketRegion({
   onPick,
   direction,
   readOnly,
+  renderMatchup,
+  pickStatuses,
 }: Props) {
   const gamesByRound = new Map<number, TournamentGame[]>();
   for (const game of games) {
@@ -70,13 +75,16 @@ export default function BracketRegion({
           const [team1, team2] = resolveTeams(game);
           return (
             <div key={game.id} className="flex items-center justify-center" style={{ height: sh }}>
-              <BracketMatchup
-                team1={team1}
-                team2={team2}
-                pickedTeamId={picks[game.id] ?? null}
-                onPick={(teamId) => onPick(game.id, teamId)}
-                readOnly={readOnly}
-              />
+              {renderMatchup ? renderMatchup(game, team1, team2) : (
+                <BracketMatchup
+                  team1={team1}
+                  team2={team2}
+                  pickedTeamId={picks[game.id] ?? null}
+                  onPick={(teamId) => onPick(game.id, teamId)}
+                  readOnly={readOnly}
+                  pickStatus={pickStatuses?.get(game.id)}
+                />
+              )}
             </div>
           );
         })}

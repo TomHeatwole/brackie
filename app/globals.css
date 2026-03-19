@@ -12,6 +12,7 @@
   --muted-foreground: #a8a29e;
   --danger: #ef4444;
   --success: #4ade80;
+  --card-highlight: color-mix(in srgb, var(--accent) 3%, var(--card));
 }
 
 @theme inline {

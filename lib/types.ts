@@ -14,6 +14,8 @@ export interface Tournament {
   region_bottom_left?: string;
   /** Region name in bottom-right quadrant */
   region_bottom_right?: string;
+  /** How many teams each elite conference has in the tournament, e.g. {"ACC": 7, "SEC": 8} */
+  conference_team_counts?: Record<string, number> | null;
 }
 
 /** Quadrant layout and Final Four matchups derived from tournament bracket structure. */

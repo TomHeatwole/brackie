@@ -22,11 +22,16 @@ import {
   getHallOfFameForAdminAction,
   upsertHallOfFameEntryAction,
   deleteHallOfFameEntryAction,
+  getGoodyResultsForAdminAction,
+  upsertGoodyResultAction,
+  deleteGoodyResultAction,
+  updateTournamentConferenceTeamCountsAction,
   AdminActionResult,
   GameWithTeamNames,
   TeamConfigEntry,
   PoolWithMembersForAdmin,
   PoolForAdmin,
+  GoodyResultForAdmin,
 } from "../actions";
 import type { HallOfFameEntry } from "@/lib/types";
 
@@ -99,13 +104,14 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
 
 // ── Admin Dashboard (toolbar + tab panels) ──
 
-type AdminTab = "manage" | "games" | "teams" | "pools" | "hall-of-fame" | "create" | "query";
+type AdminTab = "manage" | "games" | "teams" | "pools" | "goody-results" | "hall-of-fame" | "create" | "query";
 
 const ADMIN_TABS: { id: AdminTab; label: string; needsTournament: boolean }[] = [
   { id: "manage", label: "Manage", needsTournament: true },
   { id: "games", label: "Games", needsTournament: true },
   { id: "teams", label: "Teams", needsTournament: true },
   { id: "pools", label: "Pools", needsTournament: true },
+  { id: "goody-results", label: "Goody Results", needsTournament: true },
   { id: "hall-of-fame", label: "Hall of Fame", needsTournament: false },
   { id: "create", label: "Create", needsTournament: false },
   { id: "query", label: "DB Query", needsTournament: false },
@@ -216,6 +222,7 @@ export function AdminDashboard({
       {activeTab === "games" && <GameResultsPanel tournamentId={tournamentId} />}
       {activeTab === "teams" && <TeamsPanel tournamentId={tournamentId} />}
       {activeTab === "pools" && <PoolsPanel tournamentId={tournamentId} />}
+      {activeTab === "goody-results" && <GoodyResultsPanel tournamentId={tournamentId} />}
       {activeTab === "hall-of-fame" && <HallOfFamePanel />}
       {activeTab === "create" && <CreateTournamentPanel />}
       {activeTab === "query" && <RawTablePanel />}
@@ -273,6 +280,8 @@ function CreateTournamentPanel() {
 
 // ── Tournament Manager (no dropdown; receives tournamentId from parent) ──
 
+const DEFAULT_CONFERENCES = ["ACC", "SEC", "Big Ten", "Big Twelve", "Big East"];
+
 function TournamentManagerPanel({
   tournamentId,
   selected,
@@ -286,11 +295,25 @@ function TournamentManagerPanel({
   const [duplicateState, duplicateAction, duplicatePending] = useActionState(duplicateTournamentAction, emptyResult);
   const [deleteMsg, setDeleteMsg] = useState<AdminActionResult | null>(null);
   const [clearMsg, setClearMsg] = useState<AdminActionResult | null>(null);
+  const [confCounts, setConfCounts] = useState<Record<string, number>>(() => {
+    const saved = selected?.conference_team_counts;
+    if (saved && typeof saved === "object") return saved as Record<string, number>;
+    return Object.fromEntries(DEFAULT_CONFERENCES.map((c) => [c, 0]));
+  });
+  const [confMsg, setConfMsg] = useState<AdminActionResult | null>(null);
+  const [confSaving, setConfSaving] = useState(false);
 
   useEffect(() => {
     setDeleteMsg(null);
     setClearMsg(null);
-  }, [tournamentId]);
+    setConfMsg(null);
+    const saved = selected?.conference_team_counts;
+    if (saved && typeof saved === "object") {
+      setConfCounts(saved as Record<string, number>);
+    } else {
+      setConfCounts(Object.fromEntries(DEFAULT_CONFERENCES.map((c) => [c, 0])));
+    }
+  }, [tournamentId, selected]);
 
   if (!tournamentId) {
     return (
@@ -344,6 +367,44 @@ function TournamentManagerPanel({
           </Btn>
         </form>
         <StatusBadge result={duplicateState} />
+
+        {/* Conference team counts */}
+        <div className="border-t border-card-border pt-3 mt-1">
+          <Label>Conference team counts</Label>
+          <p className="text-xs text-stone-500 mb-2">How many teams each elite conference has in this tournament. Used for First Conference Out scoring.</p>
+          <div className="grid grid-cols-2 gap-2">
+            {DEFAULT_CONFERENCES.map((conf) => (
+              <div key={conf} className="flex items-center gap-2">
+                <span className="text-xs text-stone-400 w-20 shrink-0">{conf}</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={confCounts[conf] ?? 0}
+                  onChange={(e) =>
+                    setConfCounts((prev) => ({ ...prev, [conf]: parseInt(e.target.value, 10) || 0 }))
+                  }
+                  className="w-20"
+                />
+              </div>
+            ))}
+          </div>
+          <div className="mt-2">
+            <Btn
+              type="button"
+              pending={confSaving}
+              onClick={async () => {
+                setConfSaving(true);
+                setConfMsg(null);
+                const result = await updateTournamentConferenceTeamCountsAction(tournamentId, confCounts);
+                setConfMsg(result);
+                setConfSaving(false);
+              }}
+            >
+              Save Counts
+            </Btn>
+          </div>
+          {confMsg && <StatusBadge result={confMsg} />}
+        </div>
 
         {/* Clear data */}
         <div className="flex gap-2">
@@ -797,6 +858,505 @@ function PoolsPanel({ tournamentId }: { tournamentId: string }) {
           ))}
         </div>
       )}
+    </Card>
+  );
+}
+
+// ── Goody Results (tiered) ──
+
+interface TieredValue {
+  winner: string[];
+  loser_tiers: string[][];
+}
+
+function parseTieredValue(raw: Record<string, unknown> | undefined): TieredValue {
+  if (!raw) return { winner: [], loser_tiers: [] };
+  let winner: string[];
+  if (Array.isArray(raw.winner)) {
+    winner = (raw.winner as unknown[]).map(String);
+  } else if (typeof raw.winner === "string") {
+    winner = [raw.winner];
+  } else {
+    winner = [];
+  }
+  return {
+    winner,
+    loser_tiers: Array.isArray(raw.loser_tiers)
+      ? (raw.loser_tiers as unknown[]).map((t) =>
+          Array.isArray(t) ? (t as unknown[]).map(String) : []
+        )
+      : [],
+  };
+}
+
+function buildAssignmentsFromTiered(
+  tiered: TieredValue,
+  allOptions: string[]
+): { assignments: Map<string, string>; tierCount: number } {
+  const assignments = new Map<string, string>();
+  for (const opt of allOptions) assignments.set(opt, "tbd");
+
+  for (const w of tiered.winner) assignments.set(w, "winner");
+
+  let maxTier = 0;
+  for (let i = 0; i < tiered.loser_tiers.length; i++) {
+    const tierKey = `tier-${i + 1}`;
+    maxTier = i + 1;
+    for (const opt of tiered.loser_tiers[i]) {
+      if (assignments.has(opt)) assignments.set(opt, tierKey);
+    }
+  }
+
+  return { assignments, tierCount: Math.max(maxTier, 3) };
+}
+
+function buildTieredValueFromAssignments(
+  assignments: Map<string, string>,
+  tierCount: number
+): TieredValue {
+  const winner: string[] = [];
+  const tierBuckets: string[][] = [];
+  for (let i = 0; i < tierCount; i++) tierBuckets.push([]);
+
+  for (const [opt, tier] of assignments) {
+    if (tier === "winner") {
+      winner.push(opt);
+    } else if (tier.startsWith("tier-")) {
+      const idx = parseInt(tier.split("-")[1], 10) - 1;
+      if (idx >= 0 && idx < tierCount) tierBuckets[idx].push(opt);
+    }
+  }
+
+  const loser_tiers = tierBuckets.filter((b) => b.length > 0);
+
+  return { winner, loser_tiers };
+}
+
+const TIER_COLORS: Record<string, string> = {
+  winner: "bg-green-900/60 text-green-300 border-green-700/50",
+  "tier-1": "bg-amber-900/40 text-amber-300 border-amber-700/40",
+  "tier-2": "bg-orange-900/30 text-orange-300 border-orange-700/40",
+  "tier-3": "bg-red-900/25 text-red-300 border-red-800/30",
+};
+
+function tierColor(tier: string): string {
+  return TIER_COLORS[tier] ?? "bg-stone-800/40 text-stone-400 border-stone-700/30";
+}
+
+function tierLabel(tier: string): string {
+  if (tier === "winner") return "Winner";
+  if (tier === "tbd") return "TBD";
+  if (tier.startsWith("tier-")) return `Loser Tier ${tier.split("-")[1]}`;
+  return tier;
+}
+
+function DraggableChip({
+  opt,
+  label,
+  tierKey,
+  onRemove,
+}: {
+  opt: string;
+  label: string;
+  tierKey: string;
+  onRemove?: () => void;
+}) {
+  return (
+    <span
+      draggable
+      onDragStart={(e) => {
+        e.dataTransfer.setData("text/plain", opt);
+        e.dataTransfer.setData("application/x-source-tier", tierKey);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="inline-flex items-center gap-1 rounded-md bg-stone-800/80 border border-stone-700/60 px-2 py-1 text-[11px] text-stone-300 cursor-grab active:cursor-grabbing hover:bg-stone-700/80 hover:border-stone-600/60 transition-colors select-none"
+    >
+      {label}
+      {onRemove && (
+        <button
+          type="button"
+          onClick={(e) => { e.stopPropagation(); onRemove(); }}
+          className="ml-0.5 text-stone-500 hover:text-stone-300 text-[10px] leading-none"
+          title="Remove from tier"
+        >
+          &times;
+        </button>
+      )}
+    </span>
+  );
+}
+
+function TierDropZone({
+  tierKey,
+  label,
+  colorClass,
+  items,
+  optionLabels,
+  onDrop,
+  onRemoveItem,
+  minHeight,
+}: {
+  tierKey: string;
+  label: string;
+  colorClass: string;
+  items: string[];
+  optionLabels: Map<string, string>;
+  onDrop: (opt: string) => void;
+  onRemoveItem: (opt: string) => void;
+  minHeight?: string;
+}) {
+  const [dragOver, setDragOver] = useState(false);
+
+  return (
+    <div
+      onDragOver={(e) => { e.preventDefault(); e.dataTransfer.dropEffect = "move"; setDragOver(true); }}
+      onDragEnter={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={(e) => {
+        const rect = e.currentTarget.getBoundingClientRect();
+        const { clientX: x, clientY: y } = e;
+        if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
+          setDragOver(false);
+        }
+      }}
+      onDrop={(e) => {
+        e.preventDefault();
+        setDragOver(false);
+        const opt = e.dataTransfer.getData("text/plain");
+        if (opt) onDrop(opt);
+      }}
+      className={`rounded-md border-2 border-dashed transition-colors ${
+        dragOver ? "border-accent/60 bg-accent/5" : "border-stone-700/40 bg-stone-900/30"
+      }`}
+      style={{ minHeight: minHeight ?? "52px" }}
+    >
+      <div className={`px-2.5 py-1.5 rounded-t-[5px] border-b border-stone-700/30 ${colorClass}`}>
+        <span className="text-[10px] font-semibold uppercase tracking-wider">{label}</span>
+      </div>
+      <div className="px-2.5 py-2 flex flex-wrap gap-1.5">
+        {items.length === 0 ? (
+          <span className="text-[10px] text-stone-600 italic">Drag items here</span>
+        ) : (
+          items.map((opt) => (
+            <DraggableChip
+              key={opt}
+              opt={opt}
+              label={optionLabels.get(opt) ?? opt}
+              tierKey={tierKey}
+              onRemove={() => onRemoveItem(opt)}
+            />
+          ))
+        )}
+      </div>
+    </div>
+  );
+}
+
+function TieredGoodySection({
+  title,
+  goodyTypeId,
+  options,
+  optionLabels,
+  existingResult,
+  tournamentId,
+  onSaved,
+  onMsg,
+}: {
+  title: string;
+  goodyTypeId: string;
+  options: string[];
+  optionLabels: Map<string, string>;
+  existingResult: GoodyResultForAdmin | undefined;
+  tournamentId: string;
+  onSaved: () => void;
+  onMsg: (msg: AdminActionResult) => void;
+}) {
+  const existing = parseTieredValue(existingResult?.value);
+  const init = buildAssignmentsFromTiered(existing, options);
+
+  const [assignments, setAssignments] = useState<Map<string, string>>(init.assignments);
+  const [tierCount, setTierCount] = useState(init.tierCount);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    const parsed = parseTieredValue(existingResult?.value);
+    const rebuilt = buildAssignmentsFromTiered(parsed, options);
+    setAssignments(rebuilt.assignments);
+    setTierCount(rebuilt.tierCount);
+  }, [existingResult, options.join(",")]);
+
+  function moveToTier(opt: string, targetTier: string) {
+    setAssignments((prev) => {
+      const next = new Map(prev);
+      next.set(opt, targetTier);
+      return next;
+    });
+  }
+
+  function removeFromTier(opt: string) {
+    setAssignments((prev) => {
+      const next = new Map(prev);
+      next.set(opt, "tbd");
+      return next;
+    });
+  }
+
+  function addTier() {
+    setTierCount((c) => c + 1);
+  }
+
+  function removeTier() {
+    if (tierCount <= 1) return;
+    const removedKey = `tier-${tierCount}`;
+    setAssignments((prev) => {
+      const next = new Map(prev);
+      for (const [k, v] of next) {
+        if (v === removedKey) next.set(k, "tbd");
+      }
+      return next;
+    });
+    setTierCount((c) => c - 1);
+  }
+
+  async function handleSave() {
+    setSaving(true);
+    const val = buildTieredValueFromAssignments(assignments, tierCount);
+    const result = await upsertGoodyResultAction(
+      tournamentId,
+      goodyTypeId,
+      val as unknown as Record<string, unknown>
+    );
+    onMsg(result);
+    setSaving(false);
+    if (result.success) onSaved();
+  }
+
+  async function handleClear() {
+    if (!existingResult) return;
+    setSaving(true);
+    const result = await deleteGoodyResultAction(existingResult.id);
+    onMsg(result);
+    setSaving(false);
+    if (result.success) {
+      setAssignments(new Map(options.map((o) => [o, "tbd"])));
+      onSaved();
+    }
+  }
+
+  const grouped = new Map<string, string[]>();
+  for (const [opt, tier] of assignments) {
+    const list = grouped.get(tier) ?? [];
+    list.push(opt);
+    grouped.set(tier, list);
+  }
+
+  const hasSaved = !!existingResult;
+
+  return (
+    <div className="rounded-lg border border-card-border bg-background p-4">
+      <div className="flex items-center justify-between mb-4">
+        <span className="text-sm font-semibold text-stone-200">{title}</span>
+        {hasSaved && <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-green-900/40 text-green-400 border border-green-700/40">Saved</span>}
+      </div>
+
+      <div className="space-y-2">
+        <TierDropZone
+          tierKey="winner"
+          label="Winner"
+          colorClass="bg-green-900/50 text-green-300"
+          items={grouped.get("winner") ?? []}
+          optionLabels={optionLabels}
+          onDrop={(opt) => moveToTier(opt, "winner")}
+          onRemoveItem={removeFromTier}
+        />
+
+        {Array.from({ length: tierCount }, (_, i) => {
+          const key = `tier-${i + 1}`;
+          const tierColors = [
+            "bg-amber-900/40 text-amber-300",
+            "bg-orange-900/30 text-orange-300",
+            "bg-red-900/25 text-red-300",
+          ];
+          return (
+            <div key={key} className="relative">
+              <TierDropZone
+                tierKey={key}
+                label={`Loser Tier ${i + 1}${i === 0 ? " (closest)" : ""}`}
+                colorClass={tierColors[Math.min(i, tierColors.length - 1)]}
+                items={grouped.get(key) ?? []}
+                optionLabels={optionLabels}
+                onDrop={(opt) => moveToTier(opt, key)}
+                onRemoveItem={removeFromTier}
+              />
+              {i === tierCount - 1 && tierCount > 1 && (grouped.get(key) ?? []).length === 0 && (
+                <button
+                  type="button"
+                  onClick={removeTier}
+                  className="absolute top-1.5 right-2 text-[10px] text-stone-500 hover:text-red-400 transition-colors"
+                  title="Remove this tier"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
+          );
+        })}
+
+        <button
+          type="button"
+          onClick={addTier}
+          className="w-full rounded-md border border-dashed border-stone-700/50 py-2 text-[11px] font-medium text-stone-500 hover:text-stone-300 hover:border-stone-600/60 transition-colors"
+        >
+          + Add Loser Tier
+        </button>
+
+        <TierDropZone
+          tierKey="tbd"
+          label="Unassigned"
+          colorClass="bg-stone-800/40 text-stone-400"
+          items={grouped.get("tbd") ?? []}
+          optionLabels={optionLabels}
+          onDrop={(opt) => moveToTier(opt, "tbd")}
+          onRemoveItem={() => {}}
+          minHeight="60px"
+        />
+      </div>
+
+      <div className="flex items-center justify-end gap-2 mt-4 border-t border-card-border pt-3">
+        {hasSaved && (
+          <Btn type="button" variant="danger" onClick={handleClear} pending={saving}>
+            Clear
+          </Btn>
+        )}
+        <Btn type="button" onClick={handleSave} pending={saving}>
+          Save
+        </Btn>
+      </div>
+    </div>
+  );
+}
+
+function GoodyResultsPanel({ tournamentId }: { tournamentId: string }) {
+  const [results, setResults] = useState<GoodyResultForAdmin[]>([]);
+  const [goodyTypes, setGoodyTypes] = useState<{ id: string; key: string; name: string; input_type: string; config: Record<string, unknown> | null }[]>([]);
+  const [games, setGames] = useState<GameWithTeamNames[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<AdminActionResult | null>(null);
+
+  function refresh() {
+    getGoodyResultsForAdminAction(tournamentId).then((res) => {
+      setResults(res.results);
+      setGoodyTypes(res.goodyTypes);
+    });
+  }
+
+  useEffect(() => {
+    if (!tournamentId) return;
+    setLoading(true);
+    Promise.all([
+      getGoodyResultsForAdminAction(tournamentId),
+      getTournamentGamesForAdminAction(tournamentId),
+    ]).then(([goodyRes, gamesRes]) => {
+      setResults(goodyRes.results);
+      setGoodyTypes(goodyRes.goodyTypes);
+      setGames(gamesRes.games);
+      setLoading(false);
+    });
+  }, [tournamentId]);
+
+  if (!tournamentId) {
+    return (
+      <Card title="Goody Results">
+        <p className="text-stone-500 text-sm">Select a tournament above.</p>
+      </Card>
+    );
+  }
+
+  if (loading) {
+    return (
+      <Card title="Goody Results">
+        <p className="text-stone-500 text-sm">Loading goody results...</p>
+      </Card>
+    );
+  }
+
+  const firstRoundGames = games
+    .filter((g) => g.round === 1 && g.team1_name && g.team2_name)
+    .sort((a, b) => {
+      const rc = (a.region ?? "").localeCompare(b.region ?? "");
+      if (rc !== 0) return rc;
+      return a.position - b.position;
+    });
+
+  const nitGt = goodyTypes.find((g) => g.key === "nit_champion");
+  const blowoutGt = goodyTypes.find((g) => g.key === "biggest_first_round_blowout");
+  const conferenceGt = goodyTypes.find((g) => g.key === "first_conference_out");
+
+  const nitOptions = (nitGt?.config?.nit_options as string[] | undefined) ?? [];
+  const conferenceOptions = (conferenceGt?.config?.conference_options as string[] | undefined) ?? [];
+  const blowoutOptions = firstRoundGames.map((g) => g.id);
+  const blowoutLabels = new Map(
+    firstRoundGames.map((g) => [
+      g.id,
+      `${g.region ? `[${g.region}] ` : ""}${g.team1_name} vs ${g.team2_name}`,
+    ])
+  );
+
+  const resultByKey = new Map(results.map((r) => [r.goody_type_key, r]));
+
+  return (
+    <Card title="Goody Results">
+      <p className="text-stone-500 text-xs mb-3">
+        Organize options into tiers for each goody. Winner is the correct answer; loser tiers
+        support the stroke rule (tier 1 = closest to winning). TBD items are not yet resolved.
+      </p>
+      {msg && <StatusBadge result={msg} />}
+
+      <div className="space-y-4 mt-3">
+        {nitGt && (
+          <TieredGoodySection
+            title="NIT Champion"
+            goodyTypeId={nitGt.id}
+            options={nitOptions}
+            optionLabels={new Map(nitOptions.map((o) => [o, o]))}
+            existingResult={resultByKey.get("nit_champion")}
+            tournamentId={tournamentId}
+            onSaved={refresh}
+            onMsg={setMsg}
+          />
+        )}
+
+        {blowoutGt && (
+          <TieredGoodySection
+            title="Biggest First Round Blowout"
+            goodyTypeId={blowoutGt.id}
+            options={blowoutOptions}
+            optionLabels={blowoutLabels}
+            existingResult={resultByKey.get("biggest_first_round_blowout")}
+            tournamentId={tournamentId}
+            onSaved={refresh}
+            onMsg={setMsg}
+          />
+        )}
+
+        {conferenceGt && (
+          <TieredGoodySection
+            title="First Conference Out"
+            goodyTypeId={conferenceGt.id}
+            options={conferenceOptions}
+            optionLabels={new Map(conferenceOptions.map((o) => [o, o]))}
+            existingResult={resultByKey.get("first_conference_out")}
+            tournamentId={tournamentId}
+            onSaved={refresh}
+            onMsg={setMsg}
+          />
+        )}
+
+        {!nitGt && !blowoutGt && !conferenceGt && (
+          <p className="text-stone-500 text-sm">
+            No user-input goody types found. Make sure goody_types are seeded.
+          </p>
+        )}
+      </div>
     </Card>
   );
 }

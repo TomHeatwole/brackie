@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Team, TournamentGame, ROUND_NAMES, BracketStructure, getBracketStructure } from "@/lib/types";
+import type { PickStatus } from "./bracket-matchup";
 import TeamIcon from "./team-icon";
 
 interface Props {
@@ -12,6 +13,8 @@ interface Props {
   picks: Record<string, string>;
   onPick: (gameId: string, teamId: string) => void;
   readOnly: boolean;
+  renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
+  pickStatuses?: Map<string, PickStatus>;
 }
 
 type TabType = string | "Final Four";
@@ -21,18 +24,93 @@ function getTeamById(teams: Team[], id: string | null): Team | null {
   return teams.find((t) => t.id === id) ?? null;
 }
 
+function MobileStatusIcon({ status }: { status: "correct" | "wrong" | "dead" }) {
+  if (status === "correct") {
+    return (
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+        <polyline points="20 6 9 17 4 12" />
+      </svg>
+    );
+  }
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0" style={{ opacity: status === "dead" ? 0.6 : 1 }}>
+      <line x1="18" y1="6" x2="6" y2="18" />
+      <line x1="6" y1="6" x2="18" y2="18" />
+    </svg>
+  );
+}
+
+function getMobilePickedStyles(status: PickStatus | null | undefined): {
+  bgColor: string;
+  borderColor: string;
+  textColor: string;
+  seedColor: string;
+  shadow: string;
+  strikethrough: boolean;
+  icon: React.ReactNode;
+} {
+  switch (status) {
+    case "correct":
+      return {
+        bgColor: "rgba(16, 185, 129, 0.18)",
+        borderColor: "rgba(16, 185, 129, 0.35)",
+        textColor: "rgb(167, 243, 208)",
+        seedColor: "rgba(167, 243, 208, 0.6)",
+        shadow: "none",
+        strikethrough: false,
+        icon: <MobileStatusIcon status="correct" />,
+      };
+    case "wrong":
+      return {
+        bgColor: "rgba(239, 68, 68, 0.12)",
+        borderColor: "rgba(239, 68, 68, 0.25)",
+        textColor: "rgba(252, 165, 165, 0.7)",
+        seedColor: "rgba(252, 165, 165, 0.4)",
+        shadow: "none",
+        strikethrough: true,
+        icon: <MobileStatusIcon status="wrong" />,
+      };
+    case "dead":
+      return {
+        bgColor: "rgba(239, 68, 68, 0.06)",
+        borderColor: "rgba(239, 68, 68, 0.15)",
+        textColor: "rgba(252, 165, 165, 0.45)",
+        seedColor: "rgba(252, 165, 165, 0.25)",
+        shadow: "none",
+        strikethrough: true,
+        icon: <MobileStatusIcon status="dead" />,
+      };
+    default:
+      return {
+        bgColor: "var(--accent)",
+        borderColor: "var(--accent)",
+        textColor: "#fff",
+        seedColor: "rgba(255,255,255,0.7)",
+        shadow: "0 0 12px rgba(194, 85, 10, 0.2)",
+        strikethrough: false,
+        icon: (
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+        ),
+      };
+  }
+}
+
 function MobileMatchup({
   team1,
   team2,
   pickedTeamId,
   onPick,
   readOnly,
+  pickStatus,
 }: {
   team1: Team | null;
   team2: Team | null;
   pickedTeamId: string | null;
   onPick: (teamId: string) => void;
   readOnly: boolean;
+  pickStatus?: PickStatus | null;
 }) {
   function TeamRow({ team, isPicked }: { team: Team | null; isPicked: boolean }) {
     if (!team) {
@@ -46,6 +124,17 @@ function MobileMatchup({
     }
 
     const canClick = !readOnly && !!team;
+    const styles = isPicked
+      ? getMobilePickedStyles(pickStatus)
+      : {
+          bgColor: "var(--card)",
+          borderColor: "var(--card-border)",
+          textColor: "var(--foreground)",
+          seedColor: "var(--muted)",
+          shadow: "none",
+          strikethrough: false,
+          icon: null,
+        };
 
     return (
       <button
@@ -56,25 +145,23 @@ function MobileMatchup({
           canClick ? "active:scale-[0.98]" : ""
         }`}
         style={{
-          backgroundColor: isPicked ? "var(--accent)" : "var(--card)",
-          border: `1px solid ${isPicked ? "var(--accent)" : "var(--card-border)"}`,
-          color: isPicked ? "#fff" : "var(--foreground)",
-          boxShadow: isPicked ? "0 0 12px rgba(194, 85, 10, 0.2)" : "none",
+          backgroundColor: styles.bgColor,
+          border: `1px solid ${styles.borderColor}`,
+          color: styles.textColor,
+          boxShadow: styles.shadow,
         }}
       >
         <TeamIcon team={team} size="sm" className="shrink-0" />
         <span
           className="text-sm w-6 text-right font-mono font-semibold tabular-nums"
-          style={{ color: isPicked ? "rgba(255,255,255,0.7)" : "var(--muted)" }}
+          style={{ color: styles.seedColor }}
         >
           {team.seed}
         </span>
-        <span className="font-medium text-base flex-1 truncate">{team.name}</span>
-        {isPicked && (
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 opacity-70">
-            <polyline points="20 6 9 17 4 12" />
-          </svg>
-        )}
+        <span className={`font-medium text-base flex-1 truncate ${styles.strikethrough ? "line-through" : ""}`}>
+          {team.name}
+        </span>
+        {isPicked && styles.icon}
       </button>
     );
   }
@@ -87,7 +174,7 @@ function MobileMatchup({
   );
 }
 
-export default function BracketMobile({ teams, games, bracketStructure, picks, onPick, readOnly }: Props) {
+export default function BracketMobile({ teams, games, bracketStructure, picks, onPick, readOnly, renderMatchup, pickStatuses }: Props) {
   const structure = bracketStructure ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
   const [activeTab, setActiveTab] = useState<TabType>(regionsInOrder[0]);
@@ -205,7 +292,9 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
       <div className="flex flex-col gap-3">
         {roundGames.map((game) => {
           const [t1, t2] = resolveTeams(game);
-          return (
+          return renderMatchup ? (
+            <div key={game.id}>{renderMatchup(game, t1, t2)}</div>
+          ) : (
             <MobileMatchup
               key={game.id}
               team1={t1}
@@ -213,6 +302,7 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
               pickedTeamId={picks[game.id] ?? null}
               onPick={(teamId) => onPick(game.id, teamId)}
               readOnly={readOnly}
+              pickStatus={pickStatuses?.get(game.id)}
             />
           );
         })}
@@ -230,14 +320,52 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
         const winnerId = picks[champGame.id];
         const winner = winnerId ? getTeamById(teams, winnerId) : null;
         if (!winner) return null;
+
+        const champStatus = pickStatuses?.get(champGame.id);
+        let champBg = "var(--accent)";
+        let champText = "#fff";
+        let champShadow = "0 4px 14px rgba(194, 85, 10, 0.2)";
+        let champLabelColor = "var(--accent)";
+        let champStrike = false;
+
+        if (champStatus === "correct") {
+          champBg = "rgb(16, 185, 129)";
+          champShadow = "0 4px 14px rgba(16, 185, 129, 0.3)";
+          champLabelColor = "rgb(16, 185, 129)";
+        } else if (champStatus === "wrong") {
+          champBg = "rgba(239, 68, 68, 0.2)";
+          champText = "rgba(252, 165, 165, 0.7)";
+          champShadow = "none";
+          champLabelColor = "rgba(252, 165, 165, 0.5)";
+          champStrike = true;
+        } else if (champStatus === "dead") {
+          champBg = "rgba(239, 68, 68, 0.1)";
+          champText = "rgba(252, 165, 165, 0.45)";
+          champShadow = "none";
+          champLabelColor = "rgba(252, 165, 165, 0.5)";
+          champStrike = true;
+        }
+
         return (
           <div className="text-center mt-2">
-            <div className="text-[12px] text-accent uppercase tracking-widest mb-1.5 font-semibold">
+            <div
+              className="text-[12px] uppercase tracking-widest mb-1.5 font-semibold"
+              style={{ color: champLabelColor }}
+            >
               Champion
             </div>
-            <div className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-bold bg-accent text-white shadow-lg shadow-accent/20">
+            <div
+              className="inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-base font-bold"
+              style={{
+                backgroundColor: champBg,
+                color: champText,
+                boxShadow: champShadow,
+              }}
+            >
               <TeamIcon team={winner} size="sm" />
-              <span>({winner.seed}) {winner.name}</span>
+              <span className={champStrike ? "line-through" : ""}>
+                ({winner.seed}) {winner.name}
+              </span>
             </div>
           </div>
         );

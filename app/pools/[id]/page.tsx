@@ -10,9 +10,11 @@ import {
   getPoolBracketGoodyAnswers,
   getPoolHallOfFame,
 } from "@/lib/pools";
+import { getGoodyResults } from "@/lib/goodies";
 import { getUserBrackets } from "@/lib/brackets";
 import { getTournament, resolveEffectiveTournamentId, parseTournamentOverride } from "@/lib/tournament";
-import { buildPoolScoringContext, scoreBracketsForPool } from "@/lib/scoring";
+import { buildPoolScoringContext, scoreBracketsForPool, scoreUserInputGoodies } from "@/lib/scoring";
+import { getBracketStructure } from "@/lib/types";
 import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
@@ -203,10 +205,11 @@ export default async function PoolDetailPage({
     .eq("user_id", user.id)
     .maybeSingle();
 
-  const [poolGoodiesWithTypes, tournament, hallOfFame] = await Promise.all([
+  const [poolGoodiesWithTypes, tournament, hallOfFame, goodyResults] = await Promise.all([
     getPoolGoodiesWithTypes(supabase, poolId),
     getTournament(supabase, effectiveTournamentId, testMode),
     getPoolHallOfFame(supabase, poolId),
+    getGoodyResults(supabase, effectiveTournamentId),
   ]);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"
@@ -247,9 +250,28 @@ export default async function PoolDetailPage({
     ) ?? [];
 
   const scoringContext = isActive
-    ? await buildPoolScoringContext(supabase, pool, { testMode })
+    ? await buildPoolScoringContext(supabase, pool, { testMode, poolGoodies: poolGoodiesWithTypes })
     : null;
   const poolScores = scoringContext ? scoreBracketsForPool(scoringContext) : [];
+
+  if (poolScores.length > 0 && goodyResults.length > 0) {
+    const userInputScores = scoreUserInputGoodies(poolGoodiesWithTypes, goodyResults, allGoodyAnswers);
+    for (const score of poolScores) {
+      const userGoodies = userInputScores.get(score.userId);
+      if (userGoodies) {
+        for (const [goodyTypeId, entry] of userGoodies) {
+          score.perGoody![goodyTypeId] = entry;
+          score.totalGoodyPoints += entry.pointsAwarded;
+          if (entry.status === "alive" || entry.status === "pending") {
+            const pg = poolGoodiesWithTypes.find((p) => p.goody_type_id === goodyTypeId);
+            if (pg) score.possibleGoodyPoints += pg.points;
+          }
+        }
+        score.totalPoints = score.totalBracketPoints + score.totalGoodyPoints;
+        score.possiblePoints = score.possibleBracketPoints + score.possibleGoodyPoints;
+      }
+    }
+  }
   const activeTeams = scoringContext?.teams ?? [];
   const activeGames = scoringContext?.games ?? [];
   const bracketPicks = (scoringContext?.brackets ?? []).map((b) => ({
@@ -313,10 +335,13 @@ export default async function PoolDetailPage({
               modeParam={modeParam}
               scores={poolScores}
               goodyAnswers={allGoodyAnswers}
+              goodyResults={goodyResults}
               teams={activeTeams}
               games={activeGames}
               bracketPicks={bracketPicks}
               hallOfFame={hallOfFame}
+              currentUserId={user.id}
+              bracketStructure={tournament ? getBracketStructure(tournament) : undefined}
             />
           ) : (
             <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />

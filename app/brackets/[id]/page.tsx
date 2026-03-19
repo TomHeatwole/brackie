@@ -51,6 +51,7 @@ export default async function BracketDetailPage({
 
   const tournament = await getTournament(supabase, effectiveTournamentId, testMode);
   const isTournamentUpcoming = tournament?.status === "upcoming";
+  const isTournamentActive = tournament?.status === "active" || tournament?.status === "completed";
   const isLockedForEditing = tournament ? isTournamentLocked(tournament) : false;
 
   // Non-owner viewing while the tournament is upcoming: show countdown instead of bracket
@@ -131,6 +132,7 @@ export default async function BracketDetailPage({
             poolName={pool?.name}
             modeParam={modeSuffix}
             hasSelectableGoodies={hasSelectableGoodiesForPool}
+            tournamentActive={isTournamentActive}
           />
         </div>
       </main>

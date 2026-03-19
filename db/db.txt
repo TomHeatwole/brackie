@@ -15,6 +15,7 @@ create table public.tournaments (
   region_top_right character varying not null default 'West',
   region_bottom_left character varying not null default 'South',
   region_bottom_right character varying not null default 'Midwest',
+  conference_team_counts jsonb null,
   constraint tournaments_pkey primary key (id)
 ) TABLESPACE pg_default;
 

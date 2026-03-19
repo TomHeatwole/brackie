@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS, BracketStructure, getBracketStructure } from "@/lib/types";
 import { getDownstreamGameIds } from "@/lib/bracket-utils";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
+import type { PickStatus } from "./bracket-matchup";
 import BracketRegion from "./bracket-region";
 import BracketFinalFour from "./bracket-final-four";
 import BracketMobile from "./bracket-mobile";
@@ -35,6 +36,9 @@ interface Props {
   onSave?: (picks: Record<string, string>) => void;
   saving?: boolean;
   saveLabel?: string;
+  renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
+  /** When true, shows game result indicators and hides editing UI */
+  tournamentActive?: boolean;
 }
 
 function loadDraftPicks(bracketId: string, games: TournamentGame[], fallback: Record<string, string>): Record<string, string> {
@@ -57,6 +61,80 @@ function loadDraftPicks(bracketId: string, games: TournamentGame[], fallback: Re
   }
 }
 
+function computePickStatuses(
+  games: TournamentGame[],
+  picks: Record<string, string>,
+  finalFourMatchups: [string, string][]
+): Map<string, PickStatus> {
+  const byRoundRegionPos = new Map<string, TournamentGame>();
+  const byRoundPos = new Map<string, TournamentGame>();
+  const gamesByRound = new Map<number, TournamentGame[]>();
+
+  for (const g of games) {
+    const list = gamesByRound.get(g.round) ?? [];
+    list.push(g);
+    gamesByRound.set(g.round, list);
+    if (g.round >= 1 && g.round <= 4) {
+      byRoundRegionPos.set(`${g.round}|${g.region}|${g.position}`, g);
+    } else {
+      byRoundPos.set(`${g.round}|${g.position}`, g);
+    }
+  }
+
+  const eliminated = new Set<string>();
+  const statuses = new Map<string, PickStatus>();
+
+  for (let round = 1; round <= 6; round++) {
+    const roundGames = gamesByRound.get(round) ?? [];
+
+    for (const game of roundGames) {
+      const pick = picks[game.id];
+      if (!pick) continue;
+
+      if (eliminated.has(pick)) {
+        statuses.set(game.id, "dead");
+      } else if (game.winner_id) {
+        statuses.set(game.id, pick === game.winner_id ? "correct" : "wrong");
+      } else {
+        statuses.set(game.id, "pending");
+      }
+    }
+
+    for (const game of roundGames) {
+      if (!game.winner_id) continue;
+
+      let p1: string | null = null;
+      let p2: string | null = null;
+
+      if (round === 1) {
+        p1 = game.team1_id;
+        p2 = game.team2_id;
+      } else if (round <= 4) {
+        const f1 = byRoundRegionPos.get(`${round - 1}|${game.region}|${game.position * 2}`);
+        const f2 = byRoundRegionPos.get(`${round - 1}|${game.region}|${game.position * 2 + 1}`);
+        p1 = f1?.winner_id ?? null;
+        p2 = f2?.winner_id ?? null;
+      } else if (round === 5) {
+        const matchup = finalFourMatchups[game.position];
+        if (matchup) {
+          const e8A = games.find((g) => g.round === 4 && g.region === matchup[0]);
+          const e8B = games.find((g) => g.round === 4 && g.region === matchup[1]);
+          p1 = e8A?.winner_id ?? null;
+          p2 = e8B?.winner_id ?? null;
+        }
+      } else if (round === 6) {
+        p1 = byRoundPos.get("5|0")?.winner_id ?? null;
+        p2 = byRoundPos.get("5|1")?.winner_id ?? null;
+      }
+
+      if (p1 && p1 !== game.winner_id) eliminated.add(p1);
+      if (p2 && p2 !== game.winner_id) eliminated.add(p2);
+    }
+  }
+
+  return statuses;
+}
+
 export default function BracketTree({
   teams,
   games,
@@ -67,6 +145,8 @@ export default function BracketTree({
   onSave,
   saving = false,
   saveLabel,
+  renderMatchup,
+  tournamentActive = false,
 }: Props) {
   const isMobile = useIsMobile();
   const [picks, setPicks] = useState<Record<string, string>>(() =>
@@ -74,6 +154,11 @@ export default function BracketTree({
   );
   const structure = bracketStructureProp ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
+
+  const pickStatuses = useMemo(
+    () => (tournamentActive ? computePickStatuses(games, picks, finalFourMatchups) : undefined),
+    [tournamentActive, games, picks, finalFourMatchups]
+  );
 
   // Persist draft to localStorage when editing and bracketId is set
   useEffect(() => {
@@ -182,8 +267,9 @@ export default function BracketTree({
   }, [randomFillBracket]);
 
   const pickCount = Object.keys(picks).length;
+  const showEditingUI = !tournamentActive;
 
-  const statusBar = (
+  const statusBar = showEditingUI ? (
     <div className="flex items-center justify-center px-2">
       <div className="text-muted-foreground text-base">
         <span className="font-mono">{pickCount}</span>/63 picks
@@ -194,7 +280,7 @@ export default function BracketTree({
         )}
       </div>
     </div>
-  );
+  ) : null;
 
   if (isMobile) {
     return (
@@ -206,8 +292,10 @@ export default function BracketTree({
           picks={picks}
           onPick={handlePick}
           readOnly={readOnly}
+          renderMatchup={renderMatchup}
+          pickStatuses={pickStatuses}
         />
-        {pickCount === 63 && onSave && !readOnly && (
+        {showEditingUI && pickCount === 63 && onSave && !readOnly && (
           <div className="flex justify-center">
             <button
               onClick={() => onSave(picks)}
@@ -218,7 +306,7 @@ export default function BracketTree({
             </button>
           </div>
         )}
-        {statusBar}
+        {!renderMatchup && statusBar}
       </div>
     );
   }
@@ -234,7 +322,7 @@ export default function BracketTree({
   return (
     <div className="flex flex-col gap-4">
       {/* Bracket */}
-      <div className="overflow-x-auto pb-4">
+      <div className="overflow-x-auto pb-4 scrollbar-custom-x">
         <div className="flex flex-col gap-4 w-full min-w-fit">
           {/* Top half: leftTop + rightTop */}
           <div className="flex justify-between">
@@ -250,6 +338,8 @@ export default function BracketTree({
                 onPick={handlePick}
                 direction="ltr"
                 readOnly={readOnly}
+                renderMatchup={renderMatchup}
+                pickStatuses={pickStatuses}
               />
             </div>
 
@@ -265,6 +355,8 @@ export default function BracketTree({
                 onPick={handlePick}
                 direction="rtl"
                 readOnly={readOnly}
+                renderMatchup={renderMatchup}
+                pickStatuses={pickStatuses}
               />
             </div>
           </div>
@@ -279,8 +371,10 @@ export default function BracketTree({
               picks={picks}
               onPick={handlePick}
               readOnly={readOnly}
+              renderMatchup={renderMatchup}
+              pickStatuses={pickStatuses}
             />
-            {pickCount === 63 && onSave && !readOnly && (
+            {showEditingUI && pickCount === 63 && onSave && !readOnly && (
               <button
                 onClick={() => onSave(picks)}
                 disabled={saving}
@@ -305,6 +399,8 @@ export default function BracketTree({
                 onPick={handlePick}
                 direction="ltr"
                 readOnly={readOnly}
+                renderMatchup={renderMatchup}
+                pickStatuses={pickStatuses}
               />
             </div>
 
@@ -320,6 +416,8 @@ export default function BracketTree({
                 onPick={handlePick}
                 direction="rtl"
                 readOnly={readOnly}
+                renderMatchup={renderMatchup}
+                pickStatuses={pickStatuses}
               />
             </div>
           </div>
@@ -327,7 +425,7 @@ export default function BracketTree({
       </div>
 
       {/* Footer */}
-      {statusBar}
+      {!renderMatchup && statusBar}
     </div>
   );
 }

@@ -19,6 +19,7 @@ interface Props {
   poolName?: string;
   modeParam?: string;
   hasSelectableGoodies?: boolean;
+  tournamentActive?: boolean;
 }
 
 export default function BracketEditor({
@@ -33,11 +34,14 @@ export default function BracketEditor({
   poolName,
   modeParam = "",
   hasSelectableGoodies = false,
+  tournamentActive = false,
 }: Props) {
   const [saving, setSaving] = useState(false);
   const [saveStatus, setSaveStatus] = useState<string | null>(null);
   const router = useRouter();
   const startNavigation = useStartNavigation();
+
+  const isLocked = locked || tournamentActive;
 
   async function handleSave(picks: Record<string, string>) {
     setSaving(true);
@@ -66,7 +70,6 @@ export default function BracketEditor({
             router.push("/brackets");
           }, 1000);
         }
-        // Keep "Saving…" until redirect; don't setSaving(false)
       } else {
         setSaving(false);
         setSaveStatus(result.error ?? "Failed to save");
@@ -89,12 +92,12 @@ export default function BracketEditor({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 px-2 gap-2">
         <h1 className="text-xl sm:text-2xl font-semibold text-stone-100 truncate">{bracketName}</h1>
         <div className="flex items-center gap-3 shrink-0">
-          {locked && (
+          {isLocked && (
             <span className="text-sm px-3 py-1.5 rounded-md bg-red-500/10 text-red-400 border border-red-500/20">
               Locked
             </span>
           )}
-          {saveStatus && (
+          {!tournamentActive && saveStatus && (
             <span
               className="text-base font-medium"
               style={{ color: saveStatus === "Saved!" || saveStatus === "Submitted!" ? "#4ade80" : "#f87171" }}
@@ -110,10 +113,11 @@ export default function BracketEditor({
         bracketStructure={bracketStructure}
         initialPicks={initialPicks}
         bracketId={bracketId}
-        readOnly={locked}
-        onSave={locked ? undefined : handleSave}
+        readOnly={isLocked}
+        onSave={isLocked || tournamentActive ? undefined : handleSave}
         saving={saving}
         saveLabel={saveLabel}
+        tournamentActive={tournamentActive}
       />
     </div>
   );

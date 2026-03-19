@@ -23,6 +23,7 @@ create table if not exists public.tournaments (
   region_top_right character varying not null default 'West',
   region_bottom_left character varying not null default 'South',
   region_bottom_right character varying not null default 'Midwest',
+  conference_team_counts jsonb null,
   constraint tournaments_pkey primary key (id)
 ) TABLESPACE pg_default;
 
@@ -234,6 +235,7 @@ alter table public.tournaments add column if not exists region_top_left characte
 alter table public.tournaments add column if not exists region_top_right character varying not null default 'West';
 alter table public.tournaments add column if not exists region_bottom_left character varying not null default 'South';
 alter table public.tournaments add column if not exists region_bottom_right character varying not null default 'Midwest';
+alter table public.tournaments add column if not exists conference_team_counts jsonb null;
 
 -- user_info
 alter table public.user_info add column if not exists id uuid not null;

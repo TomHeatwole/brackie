@@ -2,7 +2,8 @@
 
 import { useState, useMemo } from "react";
 import type { TournamentGame, Team, PoolMemberWithInfo } from "@/lib/types";
-import type { BracketScoreSummary, RoundGameStatus } from "@/lib/scoring";
+import type { BracketScoreSummary, RoundGameStatus, GoodyScoreEntry, GoodyStatus } from "@/lib/scoring";
+import { LOWEST_SEED_GOODY_ROUNDS, getBracketDerivedGoodyAnswer } from "@/lib/scoring";
 import type { PoolGoodyWithType } from "@/lib/pools";
 import TeamIcon from "@/app/_components/team-icon";
 import UserAvatar from "@/app/_components/user-avatar";
@@ -28,6 +29,7 @@ interface PicksTableProps {
     goodyTypeId: string;
     value: Record<string, unknown> | null;
   }[];
+  currentUserId?: string;
 }
 
 const ROUND_OPTIONS = [1, 2, 3, 4, 5] as const;
@@ -57,6 +59,21 @@ function getPickStatusClasses(status: PickStatus): string {
   }
 }
 
+function getGoodyStatusClasses(status: GoodyStatus): string {
+  switch (status) {
+    case "won":
+      return "bg-emerald-900/40";
+    case "stroke":
+      return "bg-emerald-900/40";
+    case "eliminated":
+    case "not_awarded":
+      return "bg-red-900/20";
+    case "alive":
+    case "pending":
+      return "";
+  }
+}
+
 export default function PicksTable({
   games,
   teams,
@@ -67,6 +84,7 @@ export default function PicksTable({
   modeParam,
   poolGoodiesWithTypes = [],
   goodyAnswers = [],
+  currentUserId,
 }: PicksTableProps) {
   const [selectedRound, setSelectedRound] = useState(1);
   const [activeView, setActiveView] = useState<"round" | "goodies">("round");
@@ -403,10 +421,20 @@ export default function PicksTable({
               {membersWithBrackets.map((member) => {
                 const name =
                   formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
+                const isCurrentUser = member.user_id === currentUserId;
 
                 return (
-                  <tr key={member.user_id} className="border-b border-card-border last:border-b-0">
-                    <td className="sticky left-0 z-10 bg-card px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px]">
+                  <tr
+                    key={member.user_id}
+                    className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}
+                  >
+                    <td
+                      className={`sticky left-0 z-10 px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
+                      style={isCurrentUser ? {
+                        backgroundColor: "var(--card-highlight)",
+                        boxShadow: "inset 1px 0 0 0 var(--card-border-hover), inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)",
+                      } : undefined}
+                    >
                       <div className="flex flex-col items-start gap-1">
                         <div className="flex items-center gap-2 whitespace-nowrap">
                           <UserAvatar
@@ -415,9 +443,14 @@ export default function PicksTable({
                             lastName={member.last_name}
                             size="xs"
                           />
-                          <span className="text-stone-200 text-sm font-medium truncate max-w-[130px]">
+                          <span className={`text-sm font-medium truncate max-w-[130px] ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
                             {name}
                           </span>
+                          {isCurrentUser && (
+                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent shrink-0">
+                              You
+                            </span>
+                          )}
                         </div>
                         {member.bracket_id && (
                           <a
@@ -429,13 +462,20 @@ export default function PicksTable({
                         )}
                       </div>
                     </td>
-                    {filteredGames.map((game) => {
+                    {filteredGames.map((game, gameIdx) => {
                       const status = getPickStatus(member.user_id, game.id);
                       const pickedTeamId = picksByUserAndGame.get(member.user_id)?.get(game.id) ?? null;
                       const picked = getTeamLabel(pickedTeamId);
                       const statusClasses = getPickStatusClasses(status);
                       const isRegionBoundary = regionBoundaryGameIds.has(game.id);
                       const pts = status === "correct" ? getPointsAwarded(member.user_id, game.id) : 0;
+                      const isLastGame = gameIdx === filteredGames.length - 1;
+
+                      const highlightShadow = isCurrentUser
+                        ? isLastGame
+                          ? "inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover), inset -1px 0 0 0 var(--card-border-hover)"
+                          : "inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)"
+                        : undefined;
 
                       return (
                         <td
@@ -443,7 +483,7 @@ export default function PicksTable({
                           className={`px-2 py-2.5 text-center ${statusClasses} ${
                             isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""
                           }`}
-                          style={{ minWidth: 140 }}
+                          style={{ minWidth: 140, ...(highlightShadow ? { boxShadow: highlightShadow } : {}) }}
                         >
                           {status === "no-pick" ? (
                             <span className="text-stone-600">&mdash;</span>
@@ -494,6 +534,9 @@ export default function PicksTable({
                           <span className="text-stone-300 text-[11px] font-semibold">
                             {pg.goody_types?.name ?? "Goodie"}
                           </span>
+                          <span className="text-[10px] text-accent font-medium">
+                            ({pg.points} pts)
+                          </span>
                         </div>
                       </th>
                     ))}
@@ -504,9 +547,19 @@ export default function PicksTable({
                     const name =
                       formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
                     const userMap = goodyByUser.get(member.user_id) ?? new Map();
+                    const isCurrentUser = member.user_id === currentUserId;
                     return (
-                      <tr key={member.user_id} className="border-b border-card-border last:border-b-0">
-                        <td className="sticky left-0 z-10 bg-card px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px]">
+                      <tr
+                        key={member.user_id}
+                        className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}
+                      >
+                        <td
+                          className={`sticky left-0 z-10 px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px] ${isCurrentUser ? "" : "bg-card"}`}
+                          style={isCurrentUser ? {
+                            backgroundColor: "var(--card-highlight)",
+                            boxShadow: "inset 1px 0 0 0 var(--card-border-hover), inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)",
+                          } : undefined}
+                        >
                           <div className="flex flex-col items-start gap-1">
                             <div className="flex items-center gap-2 whitespace-nowrap">
                               <UserAvatar
@@ -515,9 +568,14 @@ export default function PicksTable({
                                 lastName={member.last_name}
                                 size="xs"
                               />
-                              <span className="text-stone-200 text-sm font-medium truncate max-w-[130px]">
+                              <span className={`text-sm font-medium truncate max-w-[130px] ${isCurrentUser ? "text-accent" : "text-stone-200"}`}>
                                 {name}
                               </span>
+                              {isCurrentUser && (
+                                <span className="text-[10px] px-1.5 py-0.5 rounded bg-accent/20 text-accent shrink-0">
+                                  You
+                                </span>
+                              )}
                             </div>
                             {member.bracket_id && (
                               <a
@@ -529,17 +587,119 @@ export default function PicksTable({
                             )}
                           </div>
                         </td>
-                        {poolGoodiesWithTypes.map((pg) => {
+                        {poolGoodiesWithTypes.map((pg, pgIdx) => {
+                          const goodyKey = pg.goody_types?.key ?? "";
+                          const isBracketDerived = goodyKey in LOWEST_SEED_GOODY_ROUNDS || goodyKey === "best_region_bracket";
+                          const isLastGoody = pgIdx === poolGoodiesWithTypes.length - 1;
+                          const goodyHighlightShadow = isCurrentUser
+                            ? isLastGoody
+                              ? "inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover), inset -1px 0 0 0 var(--card-border-hover)"
+                              : "inset 0 1px 0 0 var(--card-border-hover), inset 0 -1px 0 0 var(--card-border-hover)"
+                            : undefined;
+                          const goodyScore = scores.find((s) => s.userId === member.user_id);
+                          const entry: GoodyScoreEntry | undefined = goodyScore?.perGoody?.[pg.goody_type_id];
+                          const goodyPts = entry?.pointsAwarded ?? 0;
+
+                          if (isBracketDerived) {
+                            const isWon = entry && (entry.status === "won" || entry.status === "stroke");
+                            const isOut = entry && (entry.status === "eliminated" || entry.status === "not_awarded");
+                            const statusClasses = entry ? getGoodyStatusClasses(entry.status) : "";
+
+                            let displayText: string;
+                            let displayTeam: Team | null = null;
+
+                            if (goodyKey === "best_region_bracket" && entry) {
+                              if (isWon && entry.bestRegion) {
+                                displayText = `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/15)`;
+                              } else if (isOut) {
+                                displayText = entry.bestRegion
+                                  ? `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/${entry.bestRegionPlayed ?? 0})`
+                                  : "N/A";
+                              } else if (entry.bestRegion) {
+                                displayText = `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/${entry.bestRegionPlayed ?? 0})`;
+                              } else {
+                                displayText = "Pending";
+                              }
+                            } else if (isWon && entry) {
+                              const tId = entry.bestCorrectTeamId;
+                              if (tId) {
+                                const t = teamById.get(tId);
+                                if (t) { displayText = `(${t.seed}) ${t.name}`; displayTeam = t; }
+                                else { displayText = "Won"; }
+                              } else { displayText = "Won"; }
+                            } else if (isOut) {
+                              displayText = "N/A";
+                            } else {
+                              displayText = "Pending";
+                            }
+
+                            return (
+                              <td
+                                key={pg.id}
+                                className={`px-2 py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
+                                style={goodyHighlightShadow ? { boxShadow: goodyHighlightShadow } : undefined}
+                              >
+                                <div className="flex flex-col items-center gap-0.5">
+                                  {isWon ? (
+                                    <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                                      {displayTeam && <TeamIcon team={displayTeam} size="xs" />}
+                                      <span className="text-emerald-300 text-xs block truncate max-w-[180px]">{displayText}</span>
+                                    </div>
+                                  ) : isOut ? (
+                                    <span className="text-red-400/60 text-[11px]">{displayText}</span>
+                                  ) : entry?.bestRegion ? (
+                                    <span className="text-stone-400 text-[11px]">{displayText}</span>
+                                  ) : (
+                                    <span className="text-stone-500 text-[11px]">{displayText}</span>
+                                  )}
+                                  {goodyPts > 0 && (
+                                    <span className="text-[10px] font-medium">
+                                      <span className="text-emerald-400">+{goodyPts}</span>
+                                      {entry?.isStroke && <span className="text-amber-400/80"> (stroke)</span>}
+                                    </span>
+                                  )}
+                                  {entry?.isStroke && goodyPts === 0 && (
+                                    <span className="text-[9px] text-amber-400/80 font-medium">(stroke)</span>
+                                  )}
+                                </div>
+                              </td>
+                            );
+                          }
+
                           const raw = userMap.get(pg.goody_type_id) ?? null;
                           const display = formatGoodyAnswerValue(raw);
+                          const isWon = entry?.status === "won" || entry?.status === "stroke";
+                          const isOut = entry?.status === "eliminated" || entry?.status === "not_awarded";
+                          const isPending = !entry || entry.status === "pending" || entry.status === "alive";
+                          const statusClasses = entry ? getGoodyStatusClasses(entry.status) : "";
+
                           return (
                             <td
                               key={pg.id}
-                              className="px-2 py-2.5 text-center border-l-0 border-b border-card-border"
+                              className={`px-2 py-2.5 text-center border-l-0 border-b border-card-border ${statusClasses}`}
+                              style={goodyHighlightShadow ? { boxShadow: goodyHighlightShadow } : undefined}
+                              title={display !== "—" ? display : undefined}
                             >
-                              <span className="block truncate max-w-[220px] text-stone-300">
-                                {display}
-                              </span>
+                              <div className="flex flex-col items-center gap-0.5">
+                                {isWon ? (
+                                  <>
+                                    <span className="text-emerald-300 text-xs block truncate max-w-[220px]">{display}</span>
+                                    {goodyPts > 0 && (
+                                      <span className="text-[10px] font-medium">
+                                        <span className="text-emerald-400">+{goodyPts}</span>
+                                        {entry?.isStroke && <span className="text-amber-400/80"> (stroke)</span>}
+                                      </span>
+                                    )}
+                                    {entry?.isStroke && goodyPts === 0 && (
+                                      <span className="text-[9px] text-amber-400/80 font-medium">(stroke)</span>
+                                    )}
+                                  </>
+                                ) : isOut ? (
+                                  <span className="text-red-400/60 text-xs line-through">{display}</span>
+                                ) : (
+                                  <span className="text-stone-300 text-xs block truncate max-w-[220px]">{display}</span>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
