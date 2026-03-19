@@ -15,10 +15,11 @@ export async function getUserBrackets(
   if (!brackets || brackets.length === 0) return [];
 
   const bracketIds = brackets.map((b: Bracket) => b.id);
-  const { data: picks } = await supabase
-    .from("bracket_picks")
-    .select("*")
-    .in("bracket_id", bracketIds);
+  const [{ data: picks1 }, { data: picks2 }] = await Promise.all([
+    supabase.from("bracket_picks").select("*").in("bracket_id", bracketIds).range(0, 999),
+    supabase.from("bracket_picks").select("*").in("bracket_id", bracketIds).range(1000, 1999),
+  ]);
+  const picks = [...(picks1 ?? []), ...(picks2 ?? [])];
 
   const picksByBracket = new Map<string, BracketPick[]>();
   for (const pick of picks ?? []) {

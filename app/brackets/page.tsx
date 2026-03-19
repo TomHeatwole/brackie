@@ -24,8 +24,10 @@ export default async function BracketsPage({
 
   const activeTournament = await getActiveTournament(supabase, testMode);
   const tournamentId = activeTournament?.id ?? null;
+  // DEBUG: ?status=ACTIVE overrides tournament status for testing
+  const statusOverride = params?.status === "ACTIVE";
   const isActiveOrCompleted =
-    activeTournament?.status === "active" || activeTournament?.status === "completed";
+    statusOverride || activeTournament?.status === "active" || activeTournament?.status === "completed";
 
   const brackets = await getUserBrackets(supabase, user.id);
 

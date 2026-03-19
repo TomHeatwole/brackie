@@ -112,10 +112,11 @@ export async function buildPoolScoringContext(
     return { pool, games, teams, brackets: [], finalFourMatchups: getBracketStructure(tournament).finalFourMatchups, poolGoodies: options.poolGoodies ?? [] };
   }
 
-  const { data: picks } = await supabase
-    .from("bracket_picks")
-    .select("*")
-    .in("bracket_id", bracketIds);
+  const [{ data: picks1 }, { data: picks2 }] = await Promise.all([
+    supabase.from("bracket_picks").select("*").in("bracket_id", bracketIds).range(0, 999),
+    supabase.from("bracket_picks").select("*").in("bracket_id", bracketIds).range(1000, 1999),
+  ]);
+  const picks = [...(picks1 ?? []), ...(picks2 ?? [])];
 
   const picksByBracket = new Map<string, { game_id: string; picked_team_id: string }[]>();
   for (const p of picks ?? []) {

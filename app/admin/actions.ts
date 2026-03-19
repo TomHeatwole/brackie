@@ -750,17 +750,18 @@ export async function getPoolsWithMembersForAdminAction(
   }
 
   const poolIds = pools.map((p) => p.id);
-  const { data: members } = await supabase
-    .from("pool_members")
-    .select("pool_id, user_id, joined_at")
-    .in("pool_id", poolIds)
-    .order("joined_at");
+  const [{ data: members1 }, { data: members2 }] = await Promise.all([
+    supabase.from("pool_members").select("pool_id, user_id, joined_at").in("pool_id", poolIds).order("joined_at").range(0, 999),
+    supabase.from("pool_members").select("pool_id, user_id, joined_at").in("pool_id", poolIds).order("joined_at").range(1000, 1999),
+  ]);
+  const members = [...(members1 ?? []), ...(members2 ?? [])];
 
   const userIds = [...new Set((members ?? []).map((m) => m.user_id))];
-  const { data: userInfos } = await supabase
-    .from("user_info")
-    .select("id, first_name, last_name, username")
-    .in("id", userIds);
+  const [{ data: uInfos1 }, { data: uInfos2 }] = await Promise.all([
+    supabase.from("user_info").select("id, first_name, last_name, username").in("id", userIds).range(0, 999),
+    supabase.from("user_info").select("id, first_name, last_name, username").in("id", userIds).range(1000, 1999),
+  ]);
+  const userInfos = [...(uInfos1 ?? []), ...(uInfos2 ?? [])];
 
   const userMap = new Map<string, { first_name: string | null; last_name: string | null; username: string | null }>();
   for (const u of userInfos ?? []) {

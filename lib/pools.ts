@@ -45,10 +45,11 @@ export async function getUserPools(
 
   if (!pools || pools.length === 0) return [];
 
-  const { data: allMembers } = await supabase
-    .from("pool_members")
-    .select("pool_id")
-    .in("pool_id", poolIds);
+  const [{ data: members1 }, { data: members2 }] = await Promise.all([
+    supabase.from("pool_members").select("pool_id").in("pool_id", poolIds).range(0, 999),
+    supabase.from("pool_members").select("pool_id").in("pool_id", poolIds).range(1000, 1999),
+  ]);
+  const allMembers = [...(members1 ?? []), ...(members2 ?? [])];
 
   const memberCounts = new Map<string, number>();
   for (const m of allMembers ?? []) {
@@ -125,10 +126,11 @@ export async function getPoolMembers(
 
   const userIds = members.map((m: { user_id: string }) => m.user_id);
 
-  const { data: userInfos } = await supabase
-    .from("user_info")
-    .select("id, username, first_name, last_name, avatar_url")
-    .in("id", userIds);
+  const [{ data: userInfos1 }, { data: userInfos2 }] = await Promise.all([
+    supabase.from("user_info").select("id, username, first_name, last_name, avatar_url").in("id", userIds).range(0, 999),
+    supabase.from("user_info").select("id, username, first_name, last_name, avatar_url").in("id", userIds).range(1000, 1999),
+  ]);
+  const userInfos = [...(userInfos1 ?? []), ...(userInfos2 ?? [])];
 
   const { data: poolBrackets } = await supabase
     .from("pool_brackets")

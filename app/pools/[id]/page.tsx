@@ -215,7 +215,9 @@ export default async function PoolDetailPage({
   const goodyPicksComplete =
     userInputGoodies.length > 0 && goodyAnswers.length >= userInputGoodies.length;
 
-  const isActive = tournament?.status === "active" || tournament?.status === "completed";
+  // DEBUG: ?status=ACTIVE overrides tournament status for testing
+  const statusOverride = sp?.status === "ACTIVE";
+  const isActive = statusOverride || tournament?.status === "active" || tournament?.status === "completed";
   const isMember = members.some((m) => m.user_id === user.id);
   const isCreator = pool.creator_id === user.id;
 

@@ -39,8 +39,10 @@ export default async function BracketDetailPage({
   const isOwner = bracket.user_id === user.id;
 
   const tournament = await getTournament(supabase, bracket.tournament_id, testMode);
-  const isTournamentUpcoming = tournament?.status === "upcoming";
-  const isTournamentActive = tournament?.status === "active" || tournament?.status === "completed";
+  // DEBUG: ?status=ACTIVE overrides tournament status for testing
+  const statusOverride = sp?.status === "ACTIVE";
+  const isTournamentUpcoming = !statusOverride && tournament?.status === "upcoming";
+  const isTournamentActive = statusOverride || tournament?.status === "active" || tournament?.status === "completed";
   const isLockedForEditing = tournament ? isTournamentLocked(tournament) : false;
 
   // Non-owner viewing while the tournament is upcoming: show countdown instead of bracket

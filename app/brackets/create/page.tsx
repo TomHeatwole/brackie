@@ -24,10 +24,12 @@ export default async function CreateBracketPage({
 
   const activeTournament = await getActiveTournament(supabase, testMode);
 
+  // DEBUG: ?status=ACTIVE overrides tournament status for testing
+  const statusOverride = params?.status === "ACTIVE";
   const isActiveOrCompleted =
-    activeTournament?.status === "active" || activeTournament?.status === "completed";
+    statusOverride || activeTournament?.status === "active" || activeTournament?.status === "completed";
 
-  if (!testMode && isActiveOrCompleted) {
+  if (!testMode && !statusOverride && isActiveOrCompleted) {
     redirect(`/brackets${modeSuffix}`);
   }
 
