@@ -8,8 +8,6 @@ import {
   getGames,
   isTournamentLocked,
   getTournament,
-  resolveEffectiveTournamentId,
-  parseTournamentOverride,
 } from "@/lib/tournament";
 import { getBracketStructure } from "@/lib/types";
 import { getPool, getPoolGoodiesWithTypes } from "@/lib/pools";
@@ -38,18 +36,9 @@ export default async function BracketDetailPage({
   const bracket = await getBracket(supabase, bracketId);
   if (!bracket) notFound();
 
-  const overrideId = parseTournamentOverride(sp);
-  const effectiveTournamentId =
-    overrideId ??
-    (await resolveEffectiveTournamentId(supabase, {
-      searchParams: sp,
-      fallbackTournamentId: bracket.tournament_id,
-    })) ??
-    bracket.tournament_id;
-
   const isOwner = bracket.user_id === user.id;
 
-  const tournament = await getTournament(supabase, effectiveTournamentId, testMode);
+  const tournament = await getTournament(supabase, bracket.tournament_id, testMode);
   const isTournamentUpcoming = tournament?.status === "upcoming";
   const isTournamentActive = tournament?.status === "active" || tournament?.status === "completed";
   const isLockedForEditing = tournament ? isTournamentLocked(tournament) : false;
@@ -89,8 +78,8 @@ export default async function BracketDetailPage({
     );
   }
 
-  const teams = await getTeams(supabase, effectiveTournamentId, testMode);
-  const games = await getGames(supabase, effectiveTournamentId, testMode);
+  const teams = await getTeams(supabase, bracket.tournament_id, testMode);
+  const games = await getGames(supabase, bracket.tournament_id, testMode);
 
   const pool = poolId ? await getPool(supabase, poolId) : null;
   const hasSelectableGoodiesForPool =

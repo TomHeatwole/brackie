@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/utils/supabase/server";
 import { createPool, setPoolGoodies, ScoringSettings, SetPoolGoodyInput } from "@/lib/pools";
-import { getEffectiveTournament } from "@/lib/tournament";
+import { getActiveTournament } from "@/lib/tournament";
 import {
   RoundPoints,
   UpsetMultipliers,
@@ -71,10 +71,6 @@ export async function createPoolAction(
   const imageUrl = (formData.get("image_url") as string | null)?.trim() ?? "";
   const mode = formData.get("mode") as string | null;
   const testMode = mode === "test";
-  const overrideTournamentId =
-    (formData.get("tournament_id") as string | null) ??
-    (formData.get("tournament_ID") as string | null) ??
-    null;
 
   if (!name) {
     return { fieldErrors: { name: "Pool name is required." } };
@@ -89,10 +85,7 @@ export async function createPoolAction(
     return { error: "You must be logged in." };
   }
 
-  const { tournament } = await getEffectiveTournament(supabase, {
-    testMode,
-    overrideTournamentId,
-  });
+  const tournament = await getActiveTournament(supabase, testMode);
   if (!tournament) {
     return { error: "No active tournament found." };
   }

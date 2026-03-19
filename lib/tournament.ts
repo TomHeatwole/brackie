@@ -14,97 +14,21 @@ export async function getActiveTournament(
     return TEST_TOURNAMENT;
   }
 
+  const { data: config } = await supabase
+    .from("site_config")
+    .select("active_tournament_id")
+    .eq("id", 1)
+    .single();
+
+  if (!config?.active_tournament_id) return null;
+
   const { data } = await supabase
     .from("tournaments")
     .select("*")
-    .in("status", ["upcoming", "active"])
-    .order("year", { ascending: false })
-    .limit(1)
+    .eq("id", config.active_tournament_id)
     .single();
 
   return data;
-}
-
-export function parseTournamentOverride(
-  searchParams: Record<string, string | string[] | undefined>
-): string | null {
-  const rawUpper = searchParams?.tournament_ID;
-  const rawLower = searchParams?.tournament_id;
-  const chosen =
-    (Array.isArray(rawUpper) ? rawUpper[0] : rawUpper) ??
-    (Array.isArray(rawLower) ? rawLower[0] : rawLower);
-  const value = chosen ?? null;
-  if (!value) return null;
-
-  // Basic UUID v4-ish format check; keep loose to avoid blocking valid IDs.
-  const uuidRegex = /^[0-9a-fA-F-]{20,}$/;
-  return uuidRegex.test(value) ? value : null;
-}
-
-export async function resolveEffectiveTournamentId(
-  supabase: SupabaseClient,
-  options: {
-    searchParams: Record<string, string | string[] | undefined>;
-    fallbackTournamentId?: string | null;
-    allowTestMode?: boolean;
-  }
-): Promise<string | null> {
-  const { searchParams, fallbackTournamentId, allowTestMode = false } = options;
-
-  if (allowTestMode && isTestMode(searchParams)) {
-    return TEST_TOURNAMENT.id;
-  }
-
-  const overrideId = parseTournamentOverride(searchParams);
-  if (overrideId) {
-    const { data } = await supabase
-      .from("tournaments")
-      .select("id")
-      .eq("id", overrideId)
-      .single();
-
-    if (data?.id) {
-      return data.id as string;
-    }
-  }
-
-  if (fallbackTournamentId) {
-    return fallbackTournamentId;
-  }
-
-  const active = await getActiveTournament(supabase, false);
-  return active?.id ?? null;
-}
-
-export async function getEffectiveTournament(
-  supabase: SupabaseClient,
-  options: {
-    testMode: boolean;
-    overrideTournamentId?: string | null;
-  }
-): Promise<{ tournament: Tournament | null; overrideSource: "query" | "active" | "test" }> {
-  const { testMode, overrideTournamentId } = options;
-
-  if (testMode) {
-    return { tournament: TEST_TOURNAMENT, overrideSource: "test" };
-  }
-
-  const overrideId = overrideTournamentId ?? null;
-
-  if (overrideId) {
-    const { data } = await supabase
-      .from("tournaments")
-      .select("*")
-      .eq("id", overrideId)
-      .single();
-
-    if (data) {
-      return { tournament: data, overrideSource: "query" };
-    }
-  }
-
-  const active = await getActiveTournament(supabase, false);
-  return { tournament: active, overrideSource: "active" };
 }
 
 export async function getTournament(

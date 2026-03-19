@@ -173,19 +173,13 @@ export function AdminDashboard({
       : tournaments[0]?.id ?? ""
   );
 
+  // If a tournament is deleted and the current selection disappears, fall back.
+  const selectionValid = tournaments.some((t) => t.id === tournamentId);
   useEffect(() => {
-    if (!tournaments.length) {
-      setTournamentId("");
-      return;
-    }
-    if (initialTournamentId && tournaments.find((t) => t.id === initialTournamentId)) {
-      setTournamentId(initialTournamentId);
-      return;
-    }
-    if (!tournaments.find((t) => t.id === tournamentId)) {
+    if (tournaments.length && !selectionValid) {
       setTournamentId(tournaments[0].id);
     }
-  }, [tournaments, initialTournamentId, tournamentId]);
+  }, [tournaments, selectionValid]);
 
   const selected = tournaments.find((t) => t.id === tournamentId);
   const tabNeedsTournament = ADMIN_TABS.find((t) => t.id === activeTab)?.needsTournament ?? false;

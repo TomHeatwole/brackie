@@ -5,7 +5,7 @@ import { Tournament } from "@/lib/types";
 import Navbar from "../_components/navbar";
 import { AdminDashboard } from "./_components/admin-panels";
 import { buildQuerySuffix } from "@/lib/query";
-import { parseTournamentOverride } from "@/lib/tournament";
+import { getActiveTournament } from "@/lib/tournament";
 
 export default async function AdminPage({
   searchParams,
@@ -21,17 +21,16 @@ export default async function AdminPage({
 
   const params = await searchParams;
   const querySuffix = buildQuerySuffix(params);
-  const overrideId = parseTournamentOverride(params);
 
-  const { data: tournaments } = await supabase
-    .from("tournaments")
-    .select("*")
-    .order("year", { ascending: false });
+  const [{ data: tournaments }, activeTournament] = await Promise.all([
+    supabase.from("tournaments").select("*").order("year", { ascending: false }),
+    getActiveTournament(supabase, false),
+  ]);
 
   const tournamentsList = (tournaments as Tournament[]) ?? [];
   const initialTournamentId =
-    overrideId && tournamentsList.find((t) => t.id === overrideId)
-      ? overrideId
+    activeTournament?.id && tournamentsList.find((t) => t.id === activeTournament.id)
+      ? activeTournament.id
       : tournamentsList[0]?.id ?? "";
 
   return (

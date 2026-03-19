@@ -87,6 +87,12 @@ pool_hall_of_fame
 - UPDATE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_hall_of_fame.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 - DELETE: EXISTS (SELECT 1 FROM public.pools WHERE pools.id = pool_hall_of_fame.pool_id AND pools.creator_id = ( SELECT auth.uid() AS uid)) OR EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
 
+site_config
+- SELECT: true
+- INSERT: (none — singleton row seeded by migration)
+- UPDATE: EXISTS (SELECT 1 FROM public.user_info WHERE user_info.id = ( SELECT auth.uid()) AND user_info.is_site_admin = true)
+- DELETE: (none — singleton row)
+
 pending_login_redirect
 - SELECT: (auth.jwt()->>'email') = email
 - INSERT: true

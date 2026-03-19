@@ -220,6 +220,20 @@ create table if not exists public.pending_login_redirect (
   constraint pending_login_redirect_pkey primary key (email)
 ) TABLESPACE pg_default;
 
+-- site_config (singleton; references tournaments)
+create table if not exists public.site_config (
+  id integer not null default 1,
+  active_tournament_id uuid null,
+  constraint site_config_pkey primary key (id),
+  constraint site_config_singleton check (id = 1),
+  constraint site_config_active_tournament_id_fkey foreign key (active_tournament_id) references public.tournaments (id) on update cascade on delete set null
+) TABLESPACE pg_default;
+
+-- Seed the singleton row
+insert into public.site_config (id, active_tournament_id)
+values (1, null)
+on conflict (id) do nothing;
+
 -- =============================================================================
 -- PART 2: ADD MISSING COLUMNS (existing tables get new columns; no-op if present)
 -- =============================================================================
@@ -350,6 +364,10 @@ alter table public.pool_hall_of_fame add column if not exists created_at timesta
 alter table public.pending_login_redirect add column if not exists email text not null;
 alter table public.pending_login_redirect add column if not exists next_path text not null default '';
 alter table public.pending_login_redirect add column if not exists expires_at timestamp with time zone not null default now();
+
+-- site_config
+alter table public.site_config add column if not exists id integer not null default 1;
+alter table public.site_config add column if not exists active_tournament_id uuid null;
 
 -- =============================================================================
 -- PART 3: ADD MISSING CONSTRAINTS (no-op if constraint already exists)

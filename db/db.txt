@@ -241,3 +241,15 @@ create table public.pending_login_redirect (
   expires_at timestamp with time zone not null,
   constraint pending_login_redirect_pkey primary key (email)
 ) TABLESPACE pg_default;
+
+-- =============================================================================
+-- site_config (singleton; references tournaments)
+-- Global configuration. Exactly one row (id=1 enforced by CHECK).
+-- =============================================================================
+create table public.site_config (
+  id integer not null default 1,
+  active_tournament_id uuid null,
+  constraint site_config_pkey primary key (id),
+  constraint site_config_singleton check (id = 1),
+  constraint site_config_active_tournament_id_fkey foreign key (active_tournament_id) references public.tournaments (id) on update cascade on delete set null
+) TABLESPACE pg_default;

@@ -11,20 +11,15 @@ const initialState: CreatePoolFormState = {};
 export default function CreatePoolForm({
   testMode,
   goodyTypes,
-  tournamentIdOverride,
 }: {
   testMode: boolean;
   goodyTypes: GoodyType[];
-  tournamentIdOverride?: string;
 }) {
   const [state, action, isPending] = useActionState(createPoolAction, initialState);
 
   return (
     <form action={action} noValidate className="flex flex-col gap-6 w-full max-w-sm">
       {testMode && <input type="hidden" name="mode" value="test" />}
-      {tournamentIdOverride && (
-        <input type="hidden" name="tournament_id" value={tournamentIdOverride} />
-      )}
 
       <div>
         <label htmlFor="pool-name" className="block text-xs font-medium mb-1.5 text-muted-foreground">

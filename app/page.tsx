@@ -9,7 +9,7 @@ import Navbar from "./_components/navbar";
 import PoolIcon from "./_components/pool-icon";
 import TeamIcon from "./_components/team-icon";
 import { buildQuerySuffix } from "@/lib/query";
-import { getTournament, resolveEffectiveTournamentId } from "@/lib/tournament";
+import { getActiveTournament } from "@/lib/tournament";
 
 export default async function Home({
   searchParams,
@@ -26,29 +26,24 @@ export default async function Home({
   const params = await searchParams;
   const userInfo = await getUserInfo(supabase, user.id);
   const querySuffix = buildQuerySuffix(params);
+  const testMode = params?.mode === "test";
+
+  const activeTournament = await getActiveTournament(supabase, testMode);
+  const tournamentId = activeTournament?.id ?? null;
+  const isActiveOrCompleted =
+    activeTournament?.status === "active" || activeTournament?.status === "completed";
 
   const brackets = await getUserBrackets(supabase, user.id);
   const pools = await getUserPools(supabase, user.id);
 
-  const effectiveTournamentId = await resolveEffectiveTournamentId(supabase, {
-    searchParams: params,
-  });
-
-  const activeTournament =
-    effectiveTournamentId != null
-      ? await getTournament(supabase, effectiveTournamentId, params?.mode === "test")
-      : null;
-  const isActiveOrCompleted =
-    activeTournament?.status === "active" || activeTournament?.status === "completed";
-
   const filteredBrackets =
-    effectiveTournamentId != null
-      ? brackets.filter((b) => b.tournament_id === effectiveTournamentId)
+    tournamentId != null
+      ? brackets.filter((b) => b.tournament_id === tournamentId)
       : brackets;
 
   const filteredPools =
-    effectiveTournamentId != null
-      ? pools.filter((p) => p.tournament_id === effectiveTournamentId)
+    tournamentId != null
+      ? pools.filter((p) => p.tournament_id === tournamentId)
       : pools;
 
   return (

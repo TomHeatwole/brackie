@@ -1,3 +1,8 @@
+export interface SiteConfig {
+  id: number;
+  active_tournament_id: string | null;
+}
+
 export type TournamentStatus = "upcoming" | "active" | "completed";
 
 export interface Tournament {

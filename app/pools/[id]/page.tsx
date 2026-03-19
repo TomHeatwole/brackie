@@ -12,7 +12,7 @@ import {
 } from "@/lib/pools";
 import { getGoodyResults } from "@/lib/goodies";
 import { getUserBrackets } from "@/lib/brackets";
-import { getTournament, resolveEffectiveTournamentId, parseTournamentOverride } from "@/lib/tournament";
+import { getTournament } from "@/lib/tournament";
 import { buildPoolScoringContext, scoreBracketsForPool, scoreUserInputGoodies } from "@/lib/scoring";
 import { getBracketStructure } from "@/lib/types";
 import { formatUserDisplayName } from "@/utils/display-name";
@@ -179,19 +179,10 @@ export default async function PoolDetailPage({
 
   const userInfo = await getUserInfo(supabase, user.id);
 
-  const overrideId = parseTournamentOverride(sp);
-  const effectiveTournamentId =
-    overrideId ??
-    (await resolveEffectiveTournamentId(supabase, {
-      searchParams: sp,
-      fallbackTournamentId: pool.tournament_id,
-    })) ??
-    pool.tournament_id;
-
   const members = await getPoolMembers(supabase, poolId);
   const allUserBrackets = await getUserBrackets(supabase, user.id);
   const userBrackets = allUserBrackets.filter(
-    (b) => b.tournament_id === effectiveTournamentId
+    (b) => b.tournament_id === pool.tournament_id
   );
 
   const currentUserPoolBracket = members.find(
@@ -207,9 +198,9 @@ export default async function PoolDetailPage({
 
   const [poolGoodiesWithTypes, tournament, hallOfFame, goodyResults] = await Promise.all([
     getPoolGoodiesWithTypes(supabase, poolId),
-    getTournament(supabase, effectiveTournamentId, testMode),
+    getTournament(supabase, pool.tournament_id, testMode),
     getPoolHallOfFame(supabase, poolId),
-    getGoodyResults(supabase, effectiveTournamentId),
+    getGoodyResults(supabase, pool.tournament_id),
   ]);
   const userInputGoodies = poolGoodiesWithTypes.filter(
     (pg) => pg.goody_types?.input_type === "user_input"

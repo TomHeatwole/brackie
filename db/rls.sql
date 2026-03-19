@@ -381,6 +381,19 @@ create policy "pool_hall_of_fame_delete" on public.pool_hall_of_fame for delete 
 );
 
 -- -----------------------------------------------------------------------------
+-- site_config (everyone reads; admin-only update; no insert/delete — singleton)
+-- -----------------------------------------------------------------------------
+alter table public.site_config enable row level security;
+
+drop policy if exists "site_config_select" on public.site_config;
+create policy "site_config_select" on public.site_config for select using (true);
+
+drop policy if exists "site_config_update" on public.site_config;
+create policy "site_config_update" on public.site_config for update using (
+  exists (select 1 from public.user_info where user_info.id = auth.uid() and user_info.is_site_admin = true)
+);
+
+-- -----------------------------------------------------------------------------
 -- pending_login_redirect (select/delete by email in JWT; insert anyone; no update)
 -- Case-insensitive email match so JWT email (original case) matches stored lowercase.
 -- -----------------------------------------------------------------------------
