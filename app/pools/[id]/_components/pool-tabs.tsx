@@ -92,7 +92,6 @@ export default function PoolTabs({
   const searchParams = useSearchParams();
   const router = useRouter();
   const pathname = usePathname();
-  const showPossiblePicks = searchParams.get("show_possible_picks") === "true";
 
   const validTabs: TabKey[] = ["scoring", "scores", "picks", "goodies", "hall-of-fame"];
   const tabParam = searchParams.get("tab");
@@ -491,7 +490,7 @@ export default function PoolTabs({
                             </th>
                           ))}
                           {hasGoodies && <th className="px-1 py-1 text-center font-medium text-emerald-500/70 border-b border-card-border whitespace-nowrap">G</th>}
-                          {showPossiblePicks && <th className="px-1 py-1 text-center font-medium text-stone-600 border-b border-card-border whitespace-nowrap">Poss</th>}
+                          <th className="px-1 py-1 text-center font-medium text-stone-600 border-b border-card-border whitespace-nowrap">Poss</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -523,14 +522,12 @@ export default function PoolTabs({
                                   {score.totalGoodyPoints ?? 0}
                                 </td>
                               )}
-                              {showPossiblePicks && (
-                                <td
-                                  className="px-1 py-1 text-center tabular-nums text-stone-500 cursor-pointer"
-                                  onClick={() => setMobileScorePopup({ type: 'possible', bracketId: score.bracketId })}
-                                >
-                                  {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
-                                </td>
-                              )}
+                              <td
+                                className="px-1 py-1 text-center tabular-nums text-stone-500 cursor-pointer"
+                                onClick={() => setMobileScorePopup({ type: 'possible', bracketId: score.bracketId })}
+                              >
+                                {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
+                              </td>
                             </tr>
                           );
                         })}
@@ -753,20 +750,18 @@ export default function PoolTabs({
                                   </span>
                                 </div>
                               </GoodyProgressTooltip>
-                              {showPossiblePicks && (
-                                <PossiblePointsTooltip
-                                  bracketPossible={score.possibleBracketPoints}
-                                  goodies={poolGoodiesWithTypes}
-                                  perGoody={score.perGoody}
-                                >
-                                  <div className="cursor-help">
-                                    <span className="text-stone-400 text-base tabular-nums">
-                                      {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
-                                    </span>
-                                    <span className="text-stone-600 text-sm ml-0.5">possible</span>
-                                  </div>
-                                </PossiblePointsTooltip>
-                              )}
+                              <PossiblePointsTooltip
+                                bracketPossible={score.possibleBracketPoints}
+                                goodies={poolGoodiesWithTypes}
+                                perGoody={score.perGoody}
+                              >
+                                <div className="cursor-help">
+                                  <span className="text-stone-400 text-base tabular-nums">
+                                    {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
+                                  </span>
+                                  <span className="text-stone-600 text-sm ml-0.5">possible</span>
+                                </div>
+                              </PossiblePointsTooltip>
                             </div>
                           </div>
                         );
