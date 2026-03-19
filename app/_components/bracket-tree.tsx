@@ -2,6 +2,7 @@
 
 import { useState, useCallback, useEffect } from "react";
 import { Team, TournamentGame, REGIONS, FINAL_FOUR_MATCHUPS, BracketStructure, getBracketStructure } from "@/lib/types";
+import { getDownstreamGameIds } from "@/lib/bracket-utils";
 import { useIsMobile } from "@/lib/hooks/use-is-mobile";
 import BracketRegion from "./bracket-region";
 import BracketFinalFour from "./bracket-final-four";
@@ -34,68 +35,6 @@ interface Props {
   onSave?: (picks: Record<string, string>) => void;
   saving?: boolean;
   saveLabel?: string;
-}
-
-function buildGameMap(games: TournamentGame[]): Map<string, TournamentGame> {
-  const map = new Map<string, TournamentGame>();
-  for (const g of games) map.set(g.id, g);
-  return map;
-}
-
-function getDownstreamGameIds(
-  gameId: string,
-  gameMap: Map<string, TournamentGame>,
-  allGames: TournamentGame[],
-  finalFourMatchups: [string, string][]
-): string[] {
-  const game = gameMap.get(gameId);
-  if (!game) return [];
-
-  const downstream: string[] = [];
-  const nextGame = findNextGame(game, allGames, finalFourMatchups);
-  if (nextGame) {
-    downstream.push(nextGame.id);
-    downstream.push(...getDownstreamGameIds(nextGame.id, gameMap, allGames, finalFourMatchups));
-  }
-  return downstream;
-}
-
-function findNextGame(
-  game: TournamentGame,
-  allGames: TournamentGame[],
-  finalFourMatchups: [string, string][]
-): TournamentGame | null {
-  if (game.round === 6) return null;
-
-  if (game.round < 4 && game.region) {
-    const nextRound = game.round + 1;
-    const nextPos = Math.floor(game.position / 2);
-    return (
-      allGames.find(
-        (g) =>
-          g.round === nextRound &&
-          g.region === game.region &&
-          g.position === nextPos
-      ) ?? null
-    );
-  }
-
-  if (game.round === 4 && game.region) {
-    const ffIdx = finalFourMatchups.findIndex(
-      ([a, b]) => a === game.region || b === game.region
-    );
-    if (ffIdx >= 0) {
-      return (
-        allGames.find((g) => g.round === 5 && g.position === ffIdx) ?? null
-      );
-    }
-  }
-
-  if (game.round === 5) {
-    return allGames.find((g) => g.round === 6) ?? null;
-  }
-
-  return null;
 }
 
 function loadDraftPicks(bracketId: string, games: TournamentGame[], fallback: Record<string, string>): Record<string, string> {
@@ -133,7 +72,6 @@ export default function BracketTree({
   const [picks, setPicks] = useState<Record<string, string>>(() =>
     bracketId && !readOnly ? loadDraftPicks(bracketId, games, initialPicks) : initialPicks
   );
-  const gameMap = buildGameMap(games);
   const structure = bracketStructureProp ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
 
@@ -160,7 +98,7 @@ export default function BracketTree({
         next[gameId] = teamId;
 
         if (oldPick && oldPick !== teamId) {
-          const downstreamIds = getDownstreamGameIds(gameId, gameMap, games, finalFourMatchups);
+          const downstreamIds = getDownstreamGameIds(gameId, games, finalFourMatchups);
           for (const dsId of downstreamIds) {
             if (next[dsId] === oldPick) {
               delete next[dsId];
@@ -171,7 +109,7 @@ export default function BracketTree({
         return next;
       });
     },
-    [readOnly, gameMap, games]
+    [readOnly, games, finalFourMatchups]
   );
 
   const randomFillBracket = useCallback(() => {

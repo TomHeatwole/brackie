@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/utils/supabase/server";
 import { getUserInfo } from "@/utils/user-info";
 import { removePoolMember } from "@/lib/pools";
-import { REGIONS, SEED_MATCHUPS, FINAL_FOUR_MATCHUPS, Region, HallOfFameEntry } from "@/lib/types";
+import { REGIONS, SEED_MATCHUPS, FINAL_FOUR_MATCHUPS, Region, HallOfFameEntry, TournamentGame, getBracketStructure } from "@/lib/types";
+import { findNextGame, isTeam1Slot } from "@/lib/bracket-utils";
 
 const DEFAULT_TEAM_NAMES: Record<Region, string[]> = {
   East: [
@@ -495,16 +496,104 @@ export async function setGameWinnerAction(
   winnerId: string | null
 ): Promise<AdminActionResult> {
   const supabase = await createClient();
+
+  const { data: currentGame, error: fetchErr } = await supabase
+    .from("tournament_games")
+    .select("id, tournament_id, round, position, region, team1_id, team2_id, winner_id")
+    .eq("id", gameId)
+    .single();
+
+  if (fetchErr || !currentGame) {
+    return { success: false, message: fetchErr?.message ?? "Game not found." };
+  }
+
+  const oldWinnerId = currentGame.winner_id;
+
   const { error } = await supabase
     .from("tournament_games")
     .update({ winner_id: winnerId })
     .eq("id", gameId);
 
   if (error) return { success: false, message: error.message };
+
+  // Propagate winner to downstream games
+  if (currentGame.round < 6) {
+    const [{ data: allGamesRaw }, { data: tournament }] = await Promise.all([
+      supabase
+        .from("tournament_games")
+        .select("id, tournament_id, round, position, region, team1_id, team2_id, winner_id")
+        .eq("tournament_id", currentGame.tournament_id),
+      supabase
+        .from("tournaments")
+        .select("id, name, year, lock_date, status, region_top_left, region_top_right, region_bottom_left, region_bottom_right")
+        .eq("id", currentGame.tournament_id)
+        .single(),
+    ]);
+
+    const allGames = (allGamesRaw ?? []) as TournamentGame[];
+    const ffMatchups = getBracketStructure(tournament).finalFourMatchups;
+    const game = currentGame as TournamentGame;
+    const nextGame = findNextGame(game, allGames, ffMatchups);
+
+    if (nextGame) {
+      const slot = isTeam1Slot(nextGame, game, ffMatchups) ? "team1_id" : "team2_id";
+
+      if (oldWinnerId && oldWinnerId !== winnerId) {
+        await cascadeClearTeam(supabase, nextGame, slot, oldWinnerId, allGames, ffMatchups);
+      }
+
+      if (winnerId !== null) {
+        await supabase
+          .from("tournament_games")
+          .update({ [slot]: winnerId })
+          .eq("id", nextGame.id);
+      } else if (oldWinnerId) {
+        await supabase
+          .from("tournament_games")
+          .update({ [slot]: null })
+          .eq("id", nextGame.id);
+      }
+    }
+  }
+
   revalidatePath("/admin");
   revalidatePath("/pools");
   revalidatePath("/brackets");
   return { success: true, message: "Game result updated." };
+}
+
+/**
+ * Cascade-clear a team from downstream games. When a team is removed
+ * from a slot, if it was also the winner of that game, we must clear
+ * the winner and continue cascading through subsequent rounds.
+ */
+async function cascadeClearTeam(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  game: TournamentGame,
+  slotField: "team1_id" | "team2_id",
+  teamId: string,
+  allGames: TournamentGame[],
+  ffMatchups: [string, string][]
+): Promise<void> {
+  const update: Record<string, string | null> = { [slotField]: null };
+
+  const needsCascade = game.winner_id === teamId;
+  if (needsCascade) {
+    update.winner_id = null;
+  }
+
+  await supabase
+    .from("tournament_games")
+    .update(update)
+    .eq("id", game.id);
+
+  if (needsCascade && game.round < 6) {
+    const nextGame = findNextGame(game, allGames, ffMatchups);
+    if (nextGame) {
+      const nextSlot = isTeam1Slot(nextGame, game, ffMatchups) ? "team1_id" : "team2_id";
+      await cascadeClearTeam(supabase, nextGame, nextSlot, teamId, allGames, ffMatchups);
+    }
+  }
 }
 
 // ── Team edit (name, icon) ──

@@ -8,6 +8,8 @@ import {
   Region,
 } from "./types";
 
+export { findNextGame, isTeam1Slot, getDownstreamGameIds } from "./bracket-utils";
+
 const TEST_TOURNAMENT_ID = "test-tournament-2026";
 
 const TEAM_NAMES: Record<Region, string[]> = {
@@ -286,16 +288,3 @@ export function getNextGameId(game: TournamentGame): string | null {
   return null;
 }
 
-export function isTeam1Slot(game: TournamentGame, feederGame: TournamentGame): boolean {
-  if (feederGame.round < 4 && feederGame.region) {
-    return feederGame.position % 2 === 0;
-  }
-  if (feederGame.round === 4 && feederGame.region && game.round === 5) {
-    const matchup = FINAL_FOUR_MATCHUPS[game.position];
-    return feederGame.region === matchup[0];
-  }
-  if (feederGame.round === 5 && game.round === 6) {
-    return feederGame.position === 0;
-  }
-  return true;
-}

@@ -2,7 +2,6 @@
 
 import { useState, useMemo } from "react";
 import type { TournamentGame, Team, PoolMemberWithInfo } from "@/lib/types";
-import { ROUND_NAMES } from "@/lib/types";
 import type { BracketScoreSummary, RoundGameStatus } from "@/lib/scoring";
 import TeamIcon from "@/app/_components/team-icon";
 import UserAvatar from "@/app/_components/user-avatar";
@@ -20,17 +19,18 @@ interface PicksTableProps {
   members: PoolMemberWithInfo[];
   bracketPicks: BracketPickEntry[];
   scores: BracketScoreSummary[];
+  poolId: string;
+  modeParam?: string;
 }
 
-const ROUND_OPTIONS = [1, 2, 3, 4, 5, 6] as const;
+const ROUND_OPTIONS = [1, 2, 3, 4, 5] as const;
 
 const ROUND_SHORT_LABELS: Record<number, string> = {
-  1: "R64",
-  2: "R32",
-  3: "S16",
-  4: "E8",
-  5: "F4",
-  6: "Champ",
+  1: "Round of 64",
+  2: "Round of 32",
+  3: "Sweet 16",
+  4: "Elite 8",
+  5: "Final Four",
 };
 
 type PickStatus = RoundGameStatus | "alive" | "no-pick";
@@ -56,6 +56,8 @@ export default function PicksTable({
   members,
   bracketPicks,
   scores,
+  poolId,
+  modeParam,
 }: PicksTableProps) {
   const [selectedRound, setSelectedRound] = useState(1);
   const [enabledRegions, setEnabledRegions] = useState<Set<string>>(() => {
@@ -83,13 +85,25 @@ export default function PicksTable({
   const showRegionFilters = selectedRound <= 4;
 
   const filteredGames = useMemo(() => {
+    const roundsToShow = selectedRound === 5 ? new Set([5, 6]) : new Set([selectedRound]);
+
     return games
-      .filter((g) => g.round === selectedRound)
+      .filter((g) => roundsToShow.has(g.round))
       .filter((g) => {
         if (selectedRound > 4) return true;
         return g.region != null && enabledRegions.has(g.region);
       })
       .sort((a, b) => {
+        if (selectedRound === 5) {
+          // For "Final Four", show:
+          // - Round 5 game 0
+          // - Round 5 game 1
+          // - Round 6 (Championship)
+          const roundCmp = a.round - b.round;
+          if (roundCmp !== 0) return roundCmp;
+          return a.position - b.position;
+        }
+
         const regionCmp = (a.region ?? "").localeCompare(b.region ?? "");
         if (regionCmp !== 0) return regionCmp;
         return a.position - b.position;
@@ -109,12 +123,12 @@ export default function PicksTable({
   }, [bracketPicks]);
 
   const evaluatedByUserAndGame = useMemo(() => {
-    const map = new Map<string, Map<string, RoundGameStatus>>();
+    const map = new Map<string, Map<string, { status: RoundGameStatus; pointsAwarded: number }>>();
     for (const score of scores) {
-      const gameMap = new Map<string, RoundGameStatus>();
+      const gameMap = new Map<string, { status: RoundGameStatus; pointsAwarded: number }>();
       for (const [, roundScore] of Object.entries(score.perRound)) {
         for (const eg of roundScore.evaluatedGames) {
-          gameMap.set(eg.gameId, eg.status);
+          gameMap.set(eg.gameId, { status: eg.status, pointsAwarded: eg.pointsAwarded });
         }
       }
       map.set(score.userId, gameMap);
@@ -132,10 +146,14 @@ export default function PicksTable({
     if (!userPicks || !userPicks.has(gameId)) return "no-pick";
 
     const evaluated = evaluatedByUserAndGame.get(userId);
-    const status = evaluated?.get(gameId);
-    if (status) return status;
+    const entry = evaluated?.get(gameId);
+    if (entry) return entry.status;
 
     return "alive";
+  }
+
+  function getPointsAwarded(userId: string, gameId: string): number {
+    return evaluatedByUserAndGame.get(userId)?.get(gameId)?.pointsAwarded ?? 0;
   }
 
   function toggleRegion(region: string) {
@@ -196,7 +214,6 @@ export default function PicksTable({
             {ROUND_SHORT_LABELS[r]}
           </button>
         ))}
-        <span className="ml-2 text-xs text-stone-500">{ROUND_NAMES[selectedRound]}</span>
       </div>
 
       {/* Region filters */}
@@ -221,13 +238,13 @@ export default function PicksTable({
       {filteredGames.length === 0 ? (
         <p className="text-sm text-muted-foreground">No games match the selected filters.</p>
       ) : (
-        <div className="overflow-x-auto rounded-md border border-card-border">
-          <table className="w-max min-w-full text-xs border-collapse">
+        <div className="scrollbar-custom-x overflow-x-auto rounded-md border border-card-border">
+          <table className="min-w-full text-sm border-collapse">
             <thead>
               {/* Region grouping header */}
               {showRegionFilters && (
                 <tr>
-                  <th className="sticky left-0 z-10 bg-stone-950 border-b border-r border-card-border" />
+                  <th className="sticky left-0 z-10 bg-stone-900 border-b border-r border-card-border" />
                   {(() => {
                     const spans: { region: string; count: number }[] = [];
                     let prev: string | null = null;
@@ -244,7 +261,7 @@ export default function PicksTable({
                       <th
                         key={s.region}
                         colSpan={s.count}
-                        className="px-2 py-1.5 text-center text-[11px] font-semibold text-stone-400 bg-stone-950 border-b border-card-border"
+                        className="px-2 py-2 text-center text-[11px] font-semibold text-stone-400 bg-stone-900 border-b border-card-border"
                       >
                         {s.region}
                       </th>
@@ -254,10 +271,10 @@ export default function PicksTable({
               )}
               {/* Game matchup header */}
               <tr>
-                <th className="sticky left-0 z-10 bg-stone-950 px-3 py-2 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap min-w-[140px]">
+                <th className="sticky left-0 z-10 bg-stone-900 px-3 py-3 text-left text-stone-400 font-medium border-b border-r border-card-border whitespace-nowrap w-[190px] min-w-[190px]">
                   Player
                 </th>
-                {filteredGames.map((game) => {
+                {filteredGames.map((game, idx) => {
                   const t1 = getTeamLabel(game.team1_id);
                   const t2 = getTeamLabel(game.team2_id);
                   const isRegionBoundary = regionBoundaryGameIds.has(game.id);
@@ -265,21 +282,22 @@ export default function PicksTable({
                   return (
                     <th
                       key={game.id}
-                      className={`px-2 py-2 text-center font-normal border-b border-card-border bg-stone-950 whitespace-nowrap ${
-                        isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""
-                      }`}
+                      className={`px-2 py-3 text-center font-normal border-b border-card-border bg-stone-900 whitespace-nowrap ${
+                        idx > 0 ? "border-l border-card-border" : ""
+                      } ${isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""}`}
+                      style={{ minWidth: 140 }}
                     >
                       <div className="flex flex-col items-center gap-0.5">
                         <span className="flex items-center gap-1">
                           {t1.team && <TeamIcon team={t1.team} size="xs" />}
-                          <span className="text-stone-300">
+                          <span className="text-stone-300 truncate max-w-[160px]">
                             {t1.team ? `(${t1.team.seed}) ${t1.label}` : t1.label}
                           </span>
                         </span>
                         <span className="text-stone-600 text-[10px]">vs</span>
                         <span className="flex items-center gap-1">
                           {t2.team && <TeamIcon team={t2.team} size="xs" />}
-                          <span className="text-stone-300">
+                          <span className="text-stone-300 truncate max-w-[160px]">
                             {t2.team ? `(${t2.team.seed}) ${t2.label}` : t2.label}
                           </span>
                         </span>
@@ -296,17 +314,27 @@ export default function PicksTable({
 
                 return (
                   <tr key={member.user_id} className="border-b border-card-border last:border-b-0">
-                    <td className="sticky left-0 z-10 bg-stone-950 px-3 py-2 border-r border-card-border">
-                      <div className="flex items-center gap-2 whitespace-nowrap">
-                        <UserAvatar
-                          avatarUrl={member.avatar_url}
-                          firstName={member.first_name}
-                          lastName={member.last_name}
-                          size="xs"
-                        />
-                        <span className="text-stone-200 text-xs font-medium truncate max-w-[120px]">
-                          {name}
-                        </span>
+                    <td className="sticky left-0 z-10 bg-card px-3 py-2.5 border-r border-card-border w-[190px] min-w-[190px]">
+                      <div className="flex flex-col items-start gap-1">
+                        <div className="flex items-center gap-2 whitespace-nowrap">
+                          <UserAvatar
+                            avatarUrl={member.avatar_url}
+                            firstName={member.first_name}
+                            lastName={member.last_name}
+                            size="xs"
+                          />
+                          <span className="text-stone-200 text-sm font-medium truncate max-w-[130px]">
+                            {name}
+                          </span>
+                        </div>
+                        {member.bracket_id && (
+                          <a
+                            href={`/brackets/${member.bracket_id}${modeParam ? modeParam + "&" : "?"}pool=${poolId}`}
+                            className="text-xs text-accent hover:underline ml-7"
+                          >
+                            {member.bracket_name ?? "Bracket submitted"}
+                          </a>
+                        )}
                       </div>
                     </td>
                     {filteredGames.map((game) => {
@@ -315,24 +343,31 @@ export default function PicksTable({
                       const picked = getTeamLabel(pickedTeamId);
                       const statusClasses = getPickStatusClasses(status);
                       const isRegionBoundary = regionBoundaryGameIds.has(game.id);
+                      const pts = status === "correct" ? getPointsAwarded(member.user_id, game.id) : 0;
 
                       return (
                         <td
                           key={game.id}
-                          className={`px-2 py-2 text-center ${statusClasses} ${
+                          className={`px-2 py-2.5 text-center ${statusClasses} ${
                             isRegionBoundary ? "border-l-2 border-l-card-border-hover" : ""
                           }`}
+                          style={{ minWidth: 140 }}
                         >
                           {status === "no-pick" ? (
                             <span className="text-stone-600">&mdash;</span>
                           ) : (
-                            <div className="flex items-center justify-center gap-1 whitespace-nowrap">
-                              {picked.team && <TeamIcon team={picked.team} size="xs" />}
-                              <span>
-                                {picked.team
-                                  ? `(${picked.team.seed}) ${picked.label}`
-                                  : picked.label}
-                              </span>
+                            <div className="flex flex-col items-center gap-0.5">
+                              <div className="flex items-center justify-center gap-1 whitespace-nowrap">
+                                {picked.team && <TeamIcon team={picked.team} size="xs" />}
+                                <span className="truncate max-w-[160px]">
+                                  {picked.team
+                                    ? `(${picked.team.seed}) ${picked.label}`
+                                    : picked.label}
+                                </span>
+                              </div>
+                              {pts > 0 && (
+                                <span className="text-[10px] text-emerald-400 font-medium">+{pts}</span>
+                              )}
                             </div>
                           )}
                         </td>

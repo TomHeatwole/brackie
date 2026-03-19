@@ -235,9 +235,9 @@ export default async function PoolDetailPage({
       (row: {
         goody_type_id: string;
         value: Record<string, unknown> | null;
-        pool_brackets: { user_id: string; pool_id: string };
+        pool_brackets: { user_id: string; pool_id: string }[];
       }) => ({
-        userId: row.pool_brackets.user_id,
+        userId: row.pool_brackets[0].user_id,
         goodyTypeId: row.goody_type_id,
         value: row.value ?? null,
       })
@@ -323,27 +323,26 @@ export default async function PoolDetailPage({
                   <div className="px-4 py-3 bg-card flex items-center justify-between">
                     <h2 className="text-sm font-medium text-stone-300">Hall of Fame</h2>
                   </div>
-                  <div className="overflow-x-auto bg-background">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-card-border">
-                          <th className="text-left px-3 py-2 text-stone-400 font-medium">Year</th>
-                          <th className="text-left px-3 py-2 text-amber-400 font-medium">1st</th>
-                          <th className="text-left px-3 py-2 text-stone-400 font-medium">2nd</th>
-                          <th className="text-left px-3 py-2 text-stone-500 font-medium">3rd</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {hallOfFame.map((entry) => (
-                          <tr key={entry.id} className="border-b border-card-border/50 last:border-b-0">
-                            <td className="px-3 py-2 text-stone-100 font-semibold tabular-nums">{entry.year}</td>
-                            <td className="px-3 py-2 text-stone-100">{entry.first_place}</td>
-                            <td className="px-3 py-2 text-stone-300">{entry.second_place}</td>
-                            <td className="px-3 py-2 text-stone-400">{entry.third_place ?? "—"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                  <div className="divide-y divide-card-border/50 bg-background">
+                    {hallOfFame.map((entry) => (
+                      <div key={entry.id} className="grid grid-cols-[3rem_1fr_1fr_1fr] items-center gap-x-3 px-4 py-3">
+                        <span className="text-base font-semibold text-stone-100 tabular-nums">
+                          {entry.year}
+                        </span>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0">🏆</span>
+                          <span className="text-stone-100 font-medium truncate">{entry.first_place}</span>
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0">🥈</span>
+                          <span className="text-stone-300 truncate">{entry.second_place}</span>
+                        </div>
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="shrink-0">🥉</span>
+                          <span className="text-stone-400 truncate">{entry.third_place ?? "—"}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               )}
