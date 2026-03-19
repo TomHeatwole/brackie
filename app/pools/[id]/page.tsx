@@ -292,7 +292,7 @@ export default async function PoolDetailPage({
                 const userAnswer = allGoodyAnswers.find(a => a.userId === score.userId && a.goodyTypeId === goodyTypeId);
                 const conferenceKey = userAnswer?.value ? (userAnswer.value as Record<string, unknown>).conference_key : null;
                 const teamCount = conferenceKey && tournament?.conference_team_counts?.[String(conferenceKey)];
-                possiblePts = teamCount ? multiplier * teamCount : 0;
+                possiblePts = teamCount ? multiplier * Number(teamCount) : 0;
               } else {
                 possiblePts = pg.points;
               }

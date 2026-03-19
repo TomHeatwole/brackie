@@ -322,11 +322,15 @@ function PortalTooltip({
     left = Math.max(4, Math.min(left, window.innerWidth - tooltipW - 4));
 
     const spaceAbove = rect.top;
-    if (spaceAbove > 120) {
-      setPos({ top: rect.top - margin, left, placement: "above" });
-    } else {
-      setPos({ top: rect.bottom + margin, left, placement: "below" });
-    }
+    const next: typeof pos = spaceAbove > 120
+      ? { top: rect.top - margin, left, placement: "above" }
+      : { top: rect.bottom + margin, left, placement: "below" };
+
+    setPos((prev) =>
+      prev && prev.top === next.top && prev.left === next.left && prev.placement === next.placement
+        ? prev
+        : next
+    );
   }, [anchorRef]);
 
   useEffect(() => {
