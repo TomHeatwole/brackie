@@ -103,6 +103,7 @@ export default function PoolTabs({
   const [expandedGoodies, setExpandedGoodies] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const isMobile = useIsMobile();
+  const [mobileScorePopup, setMobileScorePopup] = useState<{type: 'goody' | 'possible', bracketId: string} | null>(null);
 
   useEffect(() => {
     setActiveTabState(urlTab);
@@ -476,6 +477,7 @@ export default function PoolTabs({
                     Scores will appear here once brackets have been submitted and games are completed.
                   </p>
                 ) : isMobile ? (
+                  <>
                   <div className="overflow-x-auto rounded-md border border-card-border">
                     <table className="w-full border-collapse text-[9px]">
                       <thead>
@@ -513,17 +515,116 @@ export default function PoolTabs({
                                 <td key={r} className="px-1 py-1 text-center tabular-nums text-stone-300">{score.perRound[r]?.totalPoints ?? 0}</td>
                               ))}
                               {hasGoodies && (
-                                <td className={`px-1 py-1 text-center tabular-nums font-medium ${(score.totalGoodyPoints ?? 0) > 0 ? "text-emerald-300" : "text-stone-400"}`}>
+                                <td
+                                  className={`px-1 py-1 text-center tabular-nums font-medium cursor-pointer ${(score.totalGoodyPoints ?? 0) > 0 ? "text-emerald-300" : "text-stone-400"}`}
+                                  onClick={() => setMobileScorePopup({ type: 'goody', bracketId: score.bracketId })}
+                                >
                                   {score.totalGoodyPoints ?? 0}
                                 </td>
                               )}
-                              <td className="px-1 py-1 text-center tabular-nums text-stone-500">{score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}</td>
+                              <td
+                                className="px-1 py-1 text-center tabular-nums text-stone-500 cursor-pointer"
+                                onClick={() => setMobileScorePopup({ type: 'possible', bracketId: score.bracketId })}
+                              >
+                                {score.possibleBracketPoints + (score.possibleGoodyPoints ?? 0)}
+                              </td>
                             </tr>
                           );
                         })}
                       </tbody>
                     </table>
                   </div>
+                  {mobileScorePopup && (() => {
+                    const popupScore = scores.find(s => s.bracketId === mobileScorePopup.bracketId);
+                    if (!popupScore) return null;
+                    const popupMember = members.find(m => m.user_id === popupScore.userId);
+                    const popupName = popupMember
+                      ? formatUserDisplayName(popupMember.first_name, popupMember.last_name) || "Anonymous"
+                      : "Unknown";
+
+                    if (mobileScorePopup.type === 'goody') {
+                      const correct: { name: string; pts: number; stroke: boolean }[] = [];
+                      const missed: string[] = [];
+                      for (const pg of poolGoodiesWithTypes) {
+                        const entry = popupScore.perGoody?.[pg.goody_type_id];
+                        const goodyName = pg.goody_types?.name ?? "Goodie";
+                        if (entry && (entry.status === "won" || entry.status === "stroke")) {
+                          correct.push({ name: goodyName, pts: entry.pointsAwarded, stroke: entry.status === "stroke" });
+                        } else if (entry && (entry.status === "eliminated" || entry.status === "not_awarded")) {
+                          missed.push(goodyName);
+                        }
+                      }
+                      return (
+                        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
+                          <div className="absolute inset-0 bg-black/40" />
+                          <div className="relative w-full max-w-sm rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
+                            <div className="font-semibold text-accent mb-3">{popupName} — Goodies</div>
+                            {correct.length > 0 && (
+                              <div className="mb-2">
+                                <div className="font-semibold text-stone-300 text-[11px] mb-1">Correct</div>
+                                {correct.map(c => (
+                                  <div key={c.name} className="flex justify-between py-0.5">
+                                    <span className="text-emerald-300">{c.name}</span>
+                                    <span className="text-emerald-200 tabular-nums">+{c.pts}{c.stroke ? " (stroke)" : ""}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            {missed.length > 0 && (
+                              <div>
+                                <div className="font-semibold text-stone-300 text-[11px] mb-1">Missed</div>
+                                {missed.map(n => (
+                                  <div key={n} className="text-red-400/80 py-0.5">{n}</div>
+                                ))}
+                              </div>
+                            )}
+                            {correct.length === 0 && missed.length === 0 && (
+                              <div className="text-stone-500">No goodies concluded yet.</div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+
+                    const aliveGoodies = poolGoodiesWithTypes.filter(pg => {
+                      const entry = popupScore.perGoody?.[pg.goody_type_id];
+                      return entry?.status === "alive" || entry?.status === "pending";
+                    });
+                    const goodyPossible = aliveGoodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
+                    return (
+                      <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
+                        <div className="absolute inset-0 bg-black/40" />
+                        <div className="relative w-full max-w-sm rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
+                          <div className="font-semibold text-accent mb-3">{popupName} — Possible Points</div>
+                          <div className="space-y-1">
+                            <div className="flex justify-between">
+                              <span className="text-stone-400">Bracket</span>
+                              <span className="text-stone-200 tabular-nums">{popupScore.possibleBracketPoints} pts</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-stone-400">Goodies</span>
+                              <span className="text-stone-200 tabular-nums">{goodyPossible} pts</span>
+                            </div>
+                            {aliveGoodies.length > 0 && (
+                              <div className="ml-3 border-l border-accent/30 pl-2 mt-1">
+                                {aliveGoodies.map(pg => (
+                                  <div key={pg.id} className="flex justify-between py-0.5">
+                                    <span className="text-stone-500">{pg.goody_types?.name ?? "Goodie"}</span>
+                                    <span className="text-stone-400 tabular-nums">{pg.points} pts</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                            <div className="flex justify-between border-t border-accent/20 pt-1.5 mt-1.5">
+                              <span className="font-semibold text-stone-200">Total</span>
+                              <span className="font-semibold text-stone-200 tabular-nums">{popupScore.possibleBracketPoints + goodyPossible} pts</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                  </>
                 ) : (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between px-1">

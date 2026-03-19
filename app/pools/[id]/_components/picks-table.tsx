@@ -500,7 +500,7 @@ export default function PicksTable({
                                   : picked.label}
                               </span>
                             </div>
-                              {pts > 0 && (
+                              {!isMobile && pts > 0 && (
                                 <span className="text-[10px] text-emerald-400 font-medium">+{pts}</span>
                               )}
                             </div>
@@ -534,10 +534,10 @@ export default function PicksTable({
                         }`}
                       >
                         <div className="flex flex-col items-center gap-0.5">
-                          <span className="text-stone-300 text-[11px] font-semibold">
+                          <span className={`text-stone-300 font-semibold ${isMobile ? '' : 'text-[11px]'}`}>
                             {pg.goody_types?.name ?? "Goodie"}
                           </span>
-                          <span className="text-[10px] text-accent font-medium">
+                          <span className={`text-accent font-medium ${isMobile ? '' : 'text-[10px]'}`}>
                             ({pg.points} pts)
                           </span>
                         </div>
@@ -646,22 +646,22 @@ export default function PicksTable({
                                   {isWon ? (
                                     <div className="flex items-center justify-center gap-1 whitespace-nowrap">
                                       {!isMobile && displayTeam && <TeamIcon team={displayTeam} size="xs" />}
-                                      <span className="text-emerald-300 text-xs block truncate max-w-[180px]">{displayText}</span>
+                                      <span className={`text-emerald-300 block truncate ${isMobile ? 'max-w-[55px]' : 'text-xs max-w-[180px]'}`}>{displayText}</span>
                                     </div>
                                   ) : isOut ? (
-                                    <span className="text-red-400/60 text-[11px]">{displayText}</span>
+                                    <span className={`text-red-400/60 ${isMobile ? '' : 'text-[11px]'}`}>{displayText}</span>
                                   ) : entry?.bestRegion ? (
-                                    <span className="text-stone-400 text-[11px]">{displayText}</span>
+                                    <span className={`text-stone-400 ${isMobile ? '' : 'text-[11px]'}`}>{displayText}</span>
                                   ) : (
-                                    <span className="text-stone-500 text-[11px]">{displayText}</span>
+                                    <span className={`text-stone-500 ${isMobile ? '' : 'text-[11px]'}`}>{displayText}</span>
                                   )}
-                                  {goodyPts > 0 && (
+                                  {!isMobile && goodyPts > 0 && (
                                     <span className="text-[10px] font-medium">
                                       <span className="text-emerald-400">+{goodyPts}</span>
                                       {entry?.isStroke && <span className="text-amber-400/80"> (stroke)</span>}
                                     </span>
                                   )}
-                                  {entry?.isStroke && goodyPts === 0 && (
+                                  {!isMobile && entry?.isStroke && goodyPts === 0 && (
                                     <span className="text-[9px] text-amber-400/80 font-medium">(stroke)</span>
                                   )}
                                 </div>
@@ -686,21 +686,21 @@ export default function PicksTable({
                               <div className="flex flex-col items-center gap-0.5">
                                 {isWon ? (
                                   <>
-                                    <span className="text-emerald-300 text-xs block truncate max-w-[220px]">{display}</span>
-                                    {goodyPts > 0 && (
+                                    <span className={`text-emerald-300 block truncate ${isMobile ? 'max-w-[55px]' : 'text-xs max-w-[220px]'}`}>{display}</span>
+                                    {!isMobile && goodyPts > 0 && (
                                       <span className="text-[10px] font-medium">
                                         <span className="text-emerald-400">+{goodyPts}</span>
                                         {entry?.isStroke && <span className="text-amber-400/80"> (stroke)</span>}
                                       </span>
                                     )}
-                                    {entry?.isStroke && goodyPts === 0 && (
+                                    {!isMobile && entry?.isStroke && goodyPts === 0 && (
                                       <span className="text-[9px] text-amber-400/80 font-medium">(stroke)</span>
                                     )}
                                   </>
                                 ) : isOut ? (
-                                  <span className="text-red-400/60 text-xs line-through">{display}</span>
+                                  <span className={`text-red-400/60 line-through ${isMobile ? '' : 'text-xs'}`}>{display}</span>
                                 ) : (
-                                  <span className="text-stone-300 text-xs block truncate max-w-[220px]">{display}</span>
+                                  <span className={`text-stone-300 block truncate ${isMobile ? 'max-w-[55px]' : 'text-xs max-w-[220px]'}`}>{display}</span>
                                 )}
                               </div>
                             </td>
