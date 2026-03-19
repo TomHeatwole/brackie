@@ -254,8 +254,10 @@ export default async function PoolDetailPage({
     : null;
   const poolScores = scoringContext ? scoreBracketsForPool(scoringContext) : [];
 
-  if (poolScores.length > 0 && goodyResults.length > 0) {
-    const userInputScores = scoreUserInputGoodies(poolGoodiesWithTypes, goodyResults, allGoodyAnswers);
+  if (poolScores.length > 0) {
+    const userInputScores = scoreUserInputGoodies(
+      poolGoodiesWithTypes, goodyResults, allGoodyAnswers, scoringContext ?? undefined,
+    );
     for (const score of poolScores) {
       const userGoodies = userInputScores.get(score.userId);
       if (userGoodies) {
@@ -264,7 +266,13 @@ export default async function PoolDetailPage({
           score.totalGoodyPoints += entry.pointsAwarded;
           if (entry.status === "alive" || entry.status === "pending") {
             const pg = poolGoodiesWithTypes.find((p) => p.goody_type_id === goodyTypeId);
-            if (pg) score.possibleGoodyPoints += pg.points;
+            if (pg) {
+              if (pg.scoring_mode === "bracket_upset_points" && pg.goody_types?.key === "dark_horse_champion") {
+                score.possibleGoodyPoints += (pool.round_points?.["6"] ?? 130);
+              } else {
+                score.possibleGoodyPoints += pg.points;
+              }
+            }
           }
         }
         score.totalPoints = score.totalBracketPoints + score.totalGoodyPoints;

@@ -896,6 +896,112 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
 
 // ── User-input goody scoring ──
 
+/**
+ * Score the Dark Horse National Champion goody using tournament game data
+ * rather than admin-set goody_results.
+ *
+ * Rules:
+ * 1. If the team is a 1 or 2 seed AND anyone in the pool picked it as their
+ *    bracket champion → auto-incorrect.
+ * 2. If the team has been eliminated from the tournament → auto-incorrect.
+ * 3. If the team won the championship → stroke rule is always in effect;
+ *    all users who picked it split the points.
+ * 4. Points: fixed (pg.points) or bracket_upset_points mode (championship
+ *    base + upset bonus).
+ */
+function scoreDarkHorseChampion(
+  pg: PoolGoodyWithType,
+  answersForGoody: { userId: string; goodyTypeId: string; value: Record<string, unknown> | null }[],
+  ctx: PoolScoringContext,
+  ensureUserMap: (userId: string) => Map<string, GoodyScoreEntry>,
+): void {
+  const goodyTypeId = pg.goody_type_id;
+  const { pool, games, teams, brackets } = ctx;
+  const teamSeedsById = buildTeamSeedMap(teams);
+
+  const eliminatedTeams = new Set<string>();
+  for (const g of games) {
+    if (g.winner_id != null) {
+      if (g.team1_id && g.team1_id !== g.winner_id) eliminatedTeams.add(g.team1_id);
+      if (g.team2_id && g.team2_id !== g.winner_id) eliminatedTeams.add(g.team2_id);
+    }
+  }
+
+  const champGame = games.find((g) => g.round === 6);
+  const champWinnerId = champGame?.winner_id ?? null;
+
+  const bracketChampionTeams = new Set<string>();
+  if (champGame) {
+    for (const b of brackets) {
+      for (const pick of b.picks) {
+        if (pick.game_id === champGame.id) {
+          bracketChampionTeams.add(pick.picked_team_id);
+        }
+      }
+    }
+  }
+
+  let points: number;
+  if (pg.scoring_mode === "bracket_upset_points") {
+    const base = getRoundPointsFor(pool, 6);
+    let upsetBonus = 0;
+    if (champWinnerId && champGame && pool.upset_points_enabled) {
+      const res = isUpset(champWinnerId, champGame, teamSeedsById);
+      if (res.isUpset && res.seedDifferential > 0) {
+        upsetBonus = getUpsetMultiplierFor(pool, 6) * res.seedDifferential;
+      }
+    }
+    points = base + upsetBonus;
+  } else {
+    points = pg.points;
+  }
+
+  const winnerUserIds: string[] = [];
+
+  for (const answer of answersForGoody) {
+    const teamId = extractUserInputAnswer("dark_horse_champion", answer.value);
+    if (!teamId) {
+      ensureUserMap(answer.userId).set(goodyTypeId, { pointsAwarded: 0, status: "pending" });
+      continue;
+    }
+
+    const seed = teamSeedsById.get(teamId);
+
+    if (seed != null && seed <= 2 && bracketChampionTeams.has(teamId)) {
+      ensureUserMap(answer.userId).set(goodyTypeId, { pointsAwarded: 0, status: "eliminated" });
+      continue;
+    }
+
+    if (eliminatedTeams.has(teamId)) {
+      ensureUserMap(answer.userId).set(goodyTypeId, { pointsAwarded: 0, status: "eliminated" });
+      continue;
+    }
+
+    if (champWinnerId && teamId === champWinnerId) {
+      winnerUserIds.push(answer.userId);
+      continue;
+    }
+
+    if (!champWinnerId) {
+      ensureUserMap(answer.userId).set(goodyTypeId, { pointsAwarded: 0, status: "alive" });
+    } else {
+      ensureUserMap(answer.userId).set(goodyTypeId, { pointsAwarded: 0, status: "eliminated" });
+    }
+  }
+
+  if (winnerUserIds.length > 0) {
+    const isStrokeApplied = winnerUserIds.length > 1;
+    const pts = isStrokeApplied ? Math.ceil(points / winnerUserIds.length) : points;
+    for (const uid of winnerUserIds) {
+      ensureUserMap(uid).set(goodyTypeId, {
+        pointsAwarded: pts,
+        status: isStrokeApplied ? "stroke" : "won",
+        isStroke: isStrokeApplied || undefined,
+      });
+    }
+  }
+}
+
 export function extractUserInputAnswer(
   goodyKey: string,
   answerValue: Record<string, unknown> | null
@@ -946,6 +1052,7 @@ export function scoreUserInputGoodies(
   poolGoodies: PoolGoodyWithType[],
   goodyResults: GoodyResultRow[],
   allGoodyAnswers: { userId: string; goodyTypeId: string; value: Record<string, unknown> | null }[],
+  scoringCtx?: PoolScoringContext,
 ): Map<string, Map<string, GoodyScoreEntry>> {
   const resultsByGoodyType = new Map<string, GoodyResultRow>();
   for (const r of goodyResults) {
@@ -973,6 +1080,11 @@ export function scoreUserInputGoodies(
     const result = resultsByGoodyType.get(goodyTypeId);
     const tiered = result ? parseTieredResult(result.value) : null;
     const answersForGoody = allGoodyAnswers.filter((a) => a.goodyTypeId === goodyTypeId);
+
+    if (goodyKey === "dark_horse_champion" && scoringCtx) {
+      scoreDarkHorseChampion(pg, answersForGoody, scoringCtx, ensureUserMap);
+      continue;
+    }
 
     if (!tiered || tiered.winner.length === 0) {
       for (const answer of answersForGoody) {

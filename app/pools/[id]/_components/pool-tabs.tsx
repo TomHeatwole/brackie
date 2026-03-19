@@ -100,6 +100,7 @@ export default function PoolTabs({
 
   const [activeTab, setActiveTabState] = useState<TabKey>(urlTab);
   const [picksView, setPicksView] = useState<"table" | "bracket">("table");
+  const [expandedGoodies, setExpandedGoodies] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -206,7 +207,7 @@ export default function PoolTabs({
           } transition`}
           style={{ boxShadow: "0 0 12px rgba(194, 85, 10, 0.08)" }}
         >
-          <div className="font-semibold mb-2 text-accent">Possible Points Remaining:</div>
+          <div className="font-semibold mb-2 text-accent text-left">Possible Points Remaining</div>
           <table className="w-full text-left">
             <tbody>
               <tr>
@@ -221,20 +222,12 @@ export default function PoolTabs({
           </table>
           {aliveGoodies.length > 0 && (
             <div className="mt-1.5 pl-2 border-l border-accent/30">
-              {aliveGoodies.map((pg) => {
-                const entry = perGoody?.[pg.goody_type_id];
-                return (
-                  <div key={pg.id} className="py-0.5">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
-                      <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
-                    </div>
-                    {entry?.aliveInfo && (
-                      <div className="text-[10px] text-stone-600 truncate">{entry.aliveInfo}</div>
-                    )}
-                  </div>
-                );
-              })}
+              {aliveGoodies.map((pg) => (
+                <div key={pg.id} className="py-0.5 flex justify-between gap-2">
+                  <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
+                  <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
+                </div>
+              ))}
             </div>
           )}
           <table className="w-full text-left mt-1.5">
@@ -362,40 +355,16 @@ export default function PoolTabs({
       setOpen(true);
     }
 
-    function getUserGoodyPickLabel(pg: PoolGoodyWithType): string {
-      const answer = goodyAnswers.find(
-        (a) => a.userId === score.userId && a.goodyTypeId === pg.goody_type_id
-      );
-      if (!answer?.value) return "—";
-      const val = answer.value as { team_id?: unknown; conference_key?: unknown; nit_matchup?: unknown; game_id?: unknown };
-      if (val.team_id) {
-        const t = teamById.get(String(val.team_id));
-        return t ? `(${t.seed}) ${t.name}` : `Team ${val.team_id}`;
-      }
-      if (val.game_id) {
-        const g = gameById.get(String(val.game_id));
-        if (g) {
-          const t1 = g.team1_id ? teamById.get(g.team1_id) : null;
-          const t2 = g.team2_id ? teamById.get(g.team2_id) : null;
-          if (t1 && t2) return `(${t1.seed}) ${t1.name} vs (${t2.seed}) ${t2.name}`;
-        }
-      }
-      return formatGoodyAnswerValue(pg, answer.value);
-    }
-
     const correct: { pg: PoolGoodyWithType; entry: GoodyScoreEntry }[] = [];
-    const rest: { pg: PoolGoodyWithType; label: string }[] = [];
+    const missed: { pg: PoolGoodyWithType }[] = [];
 
     for (const pg of poolGoodiesWithTypes) {
-      const isBracketDerived = pg.goody_types?.input_type === "bracket_derived";
       const entry = score.perGoody?.[pg.goody_type_id];
 
       if (entry && (entry.status === "won" || entry.status === "stroke")) {
         correct.push({ pg, entry });
-      } else if (isBracketDerived) {
-        rest.push({ pg, label: "Pending" });
-      } else {
-        rest.push({ pg, label: getUserGoodyPickLabel(pg) });
+      } else if (entry && (entry.status === "eliminated" || entry.status === "not_awarded")) {
+        missed.push({ pg });
       }
     }
 
@@ -427,7 +396,7 @@ export default function PoolTabs({
         >
           <div className="font-semibold mb-2">Goodies</div>
 
-          <div className="max-h-52 overflow-y-auto scrollbar-custom-y">
+          <div>
             {correct.length > 0 && (
               <div className="mb-2">
                 <div className="font-semibold text-stone-100">Correct</div>
@@ -446,18 +415,13 @@ export default function PoolTabs({
               </div>
             )}
 
-            {rest.length > 0 && (
+            {missed.length > 0 && (
               <div>
-                <div className="font-semibold text-stone-100">Pending</div>
+                <div className="font-semibold text-stone-100">Missed</div>
                 <div className="mt-1 space-y-1">
-                  {rest.map(({ pg, label }) => (
-                    <div key={pg.id} className="flex justify-between gap-3">
-                      <span className="min-w-0 truncate text-stone-400">
-                        {pg.goody_types?.name ?? "Goodie"}
-                      </span>
-                      <span className="text-stone-500 truncate max-w-[140px] text-right">
-                        {label}
-                      </span>
+                  {missed.map(({ pg }) => (
+                    <div key={pg.id} className="text-red-400/80 truncate">
+                      {pg.goody_types?.name ?? "Goodie"}
                     </div>
                   ))}
                 </div>
@@ -617,7 +581,6 @@ export default function PoolTabs({
                                       let won = 0;
                                       let concluded = 0;
                                       for (const pg of poolGoodiesWithTypes) {
-                                        if (pg.goody_types?.input_type !== "bracket_derived") continue;
                                         const entry = score.perGoody?.[pg.goody_type_id];
                                         if (!entry) continue;
                                         if (
@@ -748,6 +711,51 @@ export default function PoolTabs({
                         const bracketUserIds = new Set(bracketPicks.map((bp) => bp.userId));
                         const membersWithBrackets = members.filter((m) => bracketUserIds.has(m.user_id));
 
+                        const isLowestSeed = goodyKey in LOWEST_SEED_GOODY_ROUNDS;
+                        const isBestRegion = goodyKey === "best_region_bracket";
+                        const isInProgress = hasAlive && !allPending && !roundComplete;
+                        const isResolved = roundComplete && (hasWinner || hasStroke);
+                        const isExpanded = expandedGoodies.has(pg.id);
+
+                        const sortedMembers = [...membersWithBrackets];
+                        if (!roundComplete && !allPending) {
+                          if (isBestRegion) {
+                            sortedMembers.sort((a, b) => {
+                              const entryA = allEntries.find((e) => e.userId === a.user_id)?.entry;
+                              const entryB = allEntries.find((e) => e.userId === b.user_id)?.entry;
+                              const correctA = entryA?.bestRegionCorrect ?? 0;
+                              const correctB = entryB?.bestRegionCorrect ?? 0;
+                              if (correctA !== correctB) return correctB - correctA;
+                              return (entryA?.bestRegionPlayed ?? 0) - (entryB?.bestRegionPlayed ?? 0);
+                            });
+                          } else {
+                            sortedMembers.sort((a, b) => {
+                              const statusA = allEntries.find((e) => e.userId === a.user_id)?.entry?.status;
+                              const statusB = allEntries.find((e) => e.userId === b.user_id)?.entry?.status;
+                              const orderA = statusA === "alive" || statusA === "pending" ? 0 : 1;
+                              const orderB = statusB === "alive" || statusB === "pending" ? 0 : 1;
+                              return orderA - orderB;
+                            });
+                          }
+                        }
+
+                        const winners = isResolved
+                          ? sortedMembers.filter((m) => {
+                              const entry = allEntries.find((e) => e.userId === m.user_id)?.entry;
+                              return entry?.status === "won" || entry?.status === "stroke";
+                            })
+                          : sortedMembers;
+                        const nonWinners = isResolved
+                          ? sortedMembers.filter((m) => {
+                              const entry = allEntries.find((e) => e.userId === m.user_id)?.entry;
+                              return entry?.status !== "won" && entry?.status !== "stroke";
+                            })
+                          : [];
+                        const visibleMembers = isResolved
+                          ? (isExpanded ? [...winners, ...nonWinners] : winners)
+                          : sortedMembers;
+                        const hiddenCount = isResolved ? sortedMembers.length - winners.length : 0;
+
                         return (
                           <div
                             key={pg.id}
@@ -780,82 +788,120 @@ export default function PoolTabs({
                                   No brackets submitted yet.
                                 </p>
                               ) : (
-                                <ul className="space-y-1.5">
-                                  {membersWithBrackets.map((member) => {
-                                    const userEntry = allEntries.find((e) => e.userId === member.user_id);
-                                    const entry = userEntry?.entry;
-                                    const name = formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
+                                <>
+                                  <ul className="space-y-1.5">
+                                    {visibleMembers.map((member) => {
+                                      const userEntry = allEntries.find((e) => e.userId === member.user_id);
+                                      const entry = userEntry?.entry;
+                                      const name = formatUserDisplayName(member.first_name, member.last_name) || "Anonymous";
 
-                                    const userPicks = bracketPicks.find((bp) => bp.userId === member.user_id);
-                                    const derivedAnswer = userPicks
-                                      ? getBracketDerivedGoodyAnswer(userPicks.picks, games, teams, goodyKey)
-                                      : null;
+                                      let displayText = "—";
+                                      if (isLowestSeed && !isResolved) {
+                                        if (entry?.bestCorrectTeamId) {
+                                          const t = teamById.get(entry.bestCorrectTeamId);
+                                          if (t) displayText = `(${t.seed}) ${t.name}`;
+                                        } else if (entry?.status === "alive") {
+                                          displayText = "Alive";
+                                        } else if (entry?.status === "eliminated") {
+                                          displayText = "Eliminated";
+                                        } else {
+                                          displayText = "Pending";
+                                        }
+                                      } else if (isBestRegion && entry?.bestRegion) {
+                                        displayText = `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/${entry.status === "won" ? 15 : entry.bestRegionPlayed ?? 0})`;
+                                      } else if (entry?.bestCorrectTeamId) {
+                                        const t = teamById.get(entry.bestCorrectTeamId);
+                                        if (t) displayText = `(${t.seed}) ${t.name}`;
+                                      } else if (entry?.bestAliveTeamId) {
+                                        const t = teamById.get(entry.bestAliveTeamId);
+                                        if (t) displayText = `(${t.seed}) ${t.name}`;
+                                      } else if (!isLowestSeed) {
+                                        const userPicks = bracketPicks.find((bp) => bp.userId === member.user_id);
+                                        const derivedAnswer = userPicks
+                                          ? getBracketDerivedGoodyAnswer(userPicks.picks, games, teams, goodyKey)
+                                          : null;
+                                        if (derivedAnswer) {
+                                          displayText = `(${derivedAnswer.seed}) ${derivedAnswer.teamName}`;
+                                        }
+                                      }
 
-                                    let displayText = "—";
-                                    const isBestRegion = goodyKey === "best_region_bracket";
-                                    if (isBestRegion && entry?.bestRegion) {
-                                      displayText = `${entry.bestRegion} (${entry.bestRegionCorrect ?? 0}/${entry.status === "won" ? 15 : entry.bestRegionPlayed ?? 0})`;
-                                    } else if (entry?.bestCorrectTeamId) {
-                                      const t = teamById.get(entry.bestCorrectTeamId);
-                                      if (t) displayText = `(${t.seed}) ${t.name}`;
-                                    } else if (entry?.bestAliveTeamId) {
-                                      const t = teamById.get(entry.bestAliveTeamId);
-                                      if (t) displayText = `(${t.seed}) ${t.name}`;
-                                    } else if (derivedAnswer) {
-                                      displayText = `(${derivedAnswer.seed}) ${derivedAnswer.teamName}`;
-                                    }
+                                      let statusColor = "text-stone-300";
+                                      let statusBadge: string | null = null;
+                                      if (entry?.status === "won") {
+                                        statusColor = "text-emerald-300";
+                                        statusBadge = `+${entry.pointsAwarded}`;
+                                      } else if (entry?.status === "stroke") {
+                                        statusColor = "text-emerald-300";
+                                        statusBadge = `+${entry.pointsAwarded} (stroke)`;
+                                      } else if (entry?.status === "eliminated") {
+                                        statusColor = "text-red-400/60 line-through";
+                                        statusBadge = "X";
+                                      } else if (entry?.status === "not_awarded") {
+                                        statusColor = "text-red-400/60";
+                                      } else if (entry?.status === "alive") {
+                                        statusColor = "text-stone-300";
+                                      }
 
-                                    let statusColor = "text-stone-300";
-                                    let statusBadge: string | null = null;
-                                    if (entry?.status === "won") {
-                                      statusColor = "text-emerald-300";
-                                      statusBadge = `+${entry.pointsAwarded}`;
-                                    } else if (entry?.status === "stroke") {
-                                      statusColor = "text-emerald-300";
-                                      statusBadge = `+${entry.pointsAwarded} (stroke)`;
-                                    } else if (entry?.status === "eliminated") {
-                                      statusColor = "text-red-400/60 line-through";
-                                      statusBadge = "X";
-                                    } else if (entry?.status === "not_awarded") {
-                                      statusColor = "text-red-400/60";
-                                    } else if (entry?.status === "alive") {
-                                      statusColor = "text-stone-300";
-                                    }
+                                      const isCurrentUser = member.user_id === currentUserId;
 
-                                    return (
-                                      <li
-                                        key={member.user_id}
-                                        className="flex items-center justify-between gap-2 text-xs"
-                                      >
-                                        <div className="flex items-center gap-2 min-w-0">
-                                          <UserAvatar
-                                            avatarUrl={member.avatar_url}
-                                            firstName={member.first_name}
-                                            lastName={member.last_name}
-                                            size="xs"
-                                          />
-                                          <span className="truncate text-stone-200">
-                                            {name}
-                                          </span>
-                                        </div>
-                                        <div className="flex items-center gap-2 shrink-0">
-                                          <span className={`text-[11px] ${statusColor}`}>
-                                            {displayText}
-                                          </span>
-                                          {statusBadge && (
-                                            <span className={`text-[10px] font-medium ${
-                                              entry?.status === "eliminated" || entry?.status === "not_awarded"
-                                                ? "text-red-400"
-                                                : "text-emerald-400"
-                                            }`}>
-                                              {statusBadge}
+                                      return (
+                                        <li
+                                          key={member.user_id}
+                                          className={`flex items-center justify-between gap-2 text-xs rounded px-1.5 py-0.5 -mx-1.5 ${
+                                            isCurrentUser ? "bg-accent/[0.03] ring-1 ring-inset ring-card-border-hover" : ""
+                                          }`}
+                                        >
+                                          <div className="flex items-center gap-2 min-w-0">
+                                            <UserAvatar
+                                              avatarUrl={member.avatar_url}
+                                              firstName={member.first_name}
+                                              lastName={member.last_name}
+                                              size="xs"
+                                            />
+                                            <span className="truncate text-stone-200">
+                                              {name}
                                             </span>
-                                          )}
-                                        </div>
-                                      </li>
-                                    );
-                                  })}
-                                </ul>
+                                            {isCurrentUser && (
+                                              <span className="text-[9px] px-1 py-px rounded bg-accent/20 text-accent shrink-0">
+                                                You
+                                              </span>
+                                            )}
+                                          </div>
+                                          <div className="flex items-center gap-2 shrink-0">
+                                            <span className={`text-[11px] ${statusColor}`}>
+                                              {displayText}
+                                            </span>
+                                            {statusBadge && (
+                                              <span className={`text-[10px] font-medium ${
+                                                entry?.status === "eliminated" || entry?.status === "not_awarded"
+                                                  ? "text-red-400"
+                                                  : "text-emerald-400"
+                                              }`}>
+                                                {statusBadge}
+                                              </span>
+                                            )}
+                                          </div>
+                                        </li>
+                                      );
+                                    })}
+                                  </ul>
+                                  {isResolved && hiddenCount > 0 && (
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        setExpandedGoodies((prev) => {
+                                          const next = new Set(prev);
+                                          if (next.has(pg.id)) next.delete(pg.id);
+                                          else next.add(pg.id);
+                                          return next;
+                                        });
+                                      }}
+                                      className="mt-2 text-[11px] text-stone-400 hover:text-stone-200 transition-colors"
+                                    >
+                                      {isExpanded ? "Show less" : `Show ${hiddenCount} more`}
+                                    </button>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>
@@ -875,16 +921,51 @@ export default function PoolTabs({
                       const hasResult = goodyResultByType.has(pg.goody_type_id);
                       const hasWinner = allEntries.some((e) => e.entry.status === "won");
                       const hasStroke = allEntries.some((e) => e.entry.status === "stroke");
+                      const hasEliminated = allEntries.some((e) => e.entry.status === "eliminated");
+                      const hasAlive = allEntries.some((e) => e.entry.status === "alive");
 
                       let badgeClass = "border-stone-500/60 bg-stone-500/10 text-stone-400";
                       let badgeText = "Pending";
-                      if (hasResult && (hasWinner || hasStroke || allEntries.some((e) => e.entry.status === "not_awarded"))) {
+                      if (hasWinner || hasStroke) {
                         badgeClass = "border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
                         badgeText = hasStroke ? "Scored (stroke)" : "Scored";
-                      } else if (hasResult) {
-                        badgeClass = "border-stone-500/60 bg-stone-500/10 text-stone-400";
-                        badgeText = "Pending";
+                      } else if (hasResult && allEntries.some((e) => e.entry.status === "not_awarded")) {
+                        badgeClass = "border-emerald-500/60 bg-emerald-500/10 text-emerald-300";
+                        badgeText = "Scored";
+                      } else if (hasAlive || hasEliminated) {
+                        badgeClass = "border-amber-400/60 bg-amber-500/10 text-amber-200";
+                        badgeText = "In Progress";
                       }
+
+                      const isScored = (hasResult && (hasWinner || hasStroke || allEntries.some((e) => e.entry.status === "not_awarded")))
+                        || (!hasResult && (hasWinner || hasStroke));
+
+                      if (!isScored && (hasAlive || hasEliminated)) {
+                        answersForGoody.sort((a, b) => {
+                          const statusA = allEntries.find((e) => e.userId === a.userId)?.entry?.status;
+                          const statusB = allEntries.find((e) => e.userId === b.userId)?.entry?.status;
+                          const orderA = statusA === "alive" || statusA === "pending" || !statusA ? 0 : 1;
+                          const orderB = statusB === "alive" || statusB === "pending" || !statusB ? 0 : 1;
+                          return orderA - orderB;
+                        });
+                      }
+                      const isExpanded = expandedGoodies.has(pg.id);
+                      const winnerAnswers = isScored
+                        ? answersForGoody.filter((a) => {
+                            const entry = allEntries.find((e) => e.userId === a.userId)?.entry;
+                            return entry?.status === "won" || entry?.status === "stroke";
+                          })
+                        : answersForGoody;
+                      const nonWinnerAnswers = isScored
+                        ? answersForGoody.filter((a) => {
+                            const entry = allEntries.find((e) => e.userId === a.userId)?.entry;
+                            return entry?.status !== "won" && entry?.status !== "stroke";
+                          })
+                        : [];
+                      const visibleAnswers = isScored
+                        ? (isExpanded ? [...winnerAnswers, ...nonWinnerAnswers] : winnerAnswers)
+                        : answersForGoody;
+                      const hiddenAnswerCount = isScored ? answersForGoody.length - winnerAnswers.length : 0;
 
                       return (
                         <div
@@ -918,21 +999,22 @@ export default function PoolTabs({
                                 No picks yet for this goodie.
                               </p>
                             ) : (
-                              <ul className="space-y-1.5">
-                                {answersForGoody.map((answer) => {
-                                  const member = members.find(
-                                    (m) => m.user_id === answer.userId
-                                  );
-                                  if (!member) return null;
+                              <>
+                                <ul className="space-y-1.5">
+                                  {visibleAnswers.map((answer) => {
+                                    const member = members.find(
+                                      (m) => m.user_id === answer.userId
+                                    );
+                                    if (!member) return null;
 
-                                  const name =
-                                    formatUserDisplayName(
-                                      member.first_name,
-                                      member.last_name
-                                    ) || "Anonymous";
+                                    const name =
+                                      formatUserDisplayName(
+                                        member.first_name,
+                                        member.last_name
+                                      ) || "Anonymous";
 
-                                  const entry = allEntries.find((e) => e.userId === answer.userId)?.entry;
-                                  const displayText = formatGoodyAnswerValue(pg, answer.value);
+                                    const entry = allEntries.find((e) => e.userId === answer.userId)?.entry;
+                                    const displayText = formatGoodyAnswerValue(pg, answer.value);
 
                                   let statusColor = "text-stone-300";
                                   let statusBadge: string | null = null;
@@ -942,44 +1024,73 @@ export default function PoolTabs({
                                   } else if (entry?.status === "stroke") {
                                     statusColor = "text-emerald-300";
                                     statusBadge = `+${entry.pointsAwarded} (stroke)`;
+                                  } else if (entry?.status === "eliminated") {
+                                    statusColor = "text-red-400/60 line-through";
+                                    statusBadge = "X";
                                   } else if (entry?.status === "not_awarded") {
                                     statusColor = "text-red-400/60 line-through";
                                   }
 
-                                  return (
-                                    <li
-                                      key={`${answer.userId}-${answer.goodyTypeId}`}
-                                      className="flex items-center justify-between gap-2 text-xs"
-                                    >
-                                      <div className="flex items-center gap-2 min-w-0">
-                                        <UserAvatar
-                                          avatarUrl={member.avatar_url}
-                                          firstName={member.first_name}
-                                          lastName={member.last_name}
-                                          size="xs"
-                                        />
-                                        <span className="truncate text-stone-200">
-                                          {name}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center gap-2 shrink-0">
-                                        <span className={`text-[11px] ${statusColor}`}>
-                                          {displayText}
-                                        </span>
-                                        {statusBadge && (
-                                          <span className={`text-[10px] font-medium ${
-                                            entry?.status === "not_awarded"
-                                              ? "text-red-400"
-                                              : "text-emerald-400"
-                                          }`}>
-                                            {statusBadge}
+                                    const isCurrentUser = member.user_id === currentUserId;
+
+                                    return (
+                                      <li
+                                        key={`${answer.userId}-${answer.goodyTypeId}`}
+                                        className={`flex items-center justify-between gap-2 text-xs rounded px-1.5 py-0.5 -mx-1.5 ${
+                                          isCurrentUser ? "bg-accent/[0.03] ring-1 ring-inset ring-card-border-hover" : ""
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2 min-w-0">
+                                          <UserAvatar
+                                            avatarUrl={member.avatar_url}
+                                            firstName={member.first_name}
+                                            lastName={member.last_name}
+                                            size="xs"
+                                          />
+                                          <span className="truncate text-stone-200">
+                                            {name}
                                           </span>
-                                        )}
-                                      </div>
-                                    </li>
-                                  );
-                                })}
-                              </ul>
+                                          {isCurrentUser && (
+                                            <span className="text-[9px] px-1 py-px rounded bg-accent/20 text-accent shrink-0">
+                                              You
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-2 shrink-0">
+                                          <span className={`text-[11px] ${statusColor}`}>
+                                            {displayText}
+                                          </span>
+                                          {statusBadge && (
+                                            <span className={`text-[10px] font-medium ${
+                                              entry?.status === "not_awarded" || entry?.status === "eliminated"
+                                                ? "text-red-400"
+                                                : "text-emerald-400"
+                                            }`}>
+                                              {statusBadge}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </li>
+                                    );
+                                  })}
+                                </ul>
+                                {isScored && hiddenAnswerCount > 0 && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setExpandedGoodies((prev) => {
+                                        const next = new Set(prev);
+                                        if (next.has(pg.id)) next.delete(pg.id);
+                                        else next.add(pg.id);
+                                        return next;
+                                      });
+                                    }}
+                                    className="mt-2 text-[11px] text-stone-400 hover:text-stone-200 transition-colors"
+                                  >
+                                    {isExpanded ? "Show less" : `Show ${hiddenAnswerCount} more`}
+                                  </button>
+                                )}
+                              </>
                             )}
                           </div>
                         </div>
