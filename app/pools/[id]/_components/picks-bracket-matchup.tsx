@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { Team, TournamentGame } from "@/lib/types";
 import TeamIcon from "@/app/_components/team-icon";
@@ -224,6 +224,8 @@ function TeamRow({
   );
 }
 
+const MAX_PICKERS_PER_COL = 10;
+
 function PickerTooltipSection({
   team,
   pickerList,
@@ -238,6 +240,11 @@ function PickerTooltipSection({
   if (pickerList.length === 0) return null;
 
   const sorted = [...pickerList].sort((a, b) => b.pointsAwarded - a.pointsAwarded);
+
+  const columns: PickerDetail[][] = [];
+  for (let i = 0; i < sorted.length; i += MAX_PICKERS_PER_COL) {
+    columns.push(sorted.slice(i, i + MAX_PICKERS_PER_COL));
+  }
 
   const isOut = isWinner === false || isEliminated;
   const teamNameClass = isOut
@@ -259,30 +266,34 @@ function PickerTooltipSection({
           ({pickerList.length})
         </span>
       </div>
-      <div className="space-y-0.5 pl-1">
-        {sorted.map((p, i) => {
-          let nameColor = isOut ? "text-red-300/40" : "text-stone-300";
-          let ptsEl: React.ReactNode = null;
-          if (p.status === "correct") {
-            nameColor = "text-emerald-300";
-            if (p.pointsAwarded > 0) {
-              ptsEl = (
-                <span className="tabular-nums text-emerald-400 text-[10px]">
-                  +{p.pointsAwarded}
-                </span>
-              );
-            }
-          }
+      <div className="flex gap-3">
+        {columns.map((col, ci) => (
+          <div key={ci} className="space-y-0.5">
+            {col.map((p, pi) => {
+              let nameColor = isOut ? "text-red-300/40" : "text-stone-300";
+              let ptsEl: React.ReactNode = null;
+              if (p.status === "correct") {
+                nameColor = "text-emerald-300";
+                if (p.pointsAwarded > 0) {
+                  ptsEl = (
+                    <span className="tabular-nums text-emerald-400 text-[10px]">
+                      +{p.pointsAwarded}
+                    </span>
+                  );
+                }
+              }
 
-          return (
-            <div key={i} className="flex items-center justify-between gap-3">
-              <span className={`truncate ${nameColor} text-[11px]`}>
-                {p.name}
-              </span>
-              {ptsEl}
-            </div>
-          );
-        })}
+              return (
+                <div key={pi} className="flex items-center gap-2">
+                  <span className={`whitespace-nowrap ${nameColor} text-[11px]`}>
+                    {p.name}
+                  </span>
+                  {ptsEl}
+                </div>
+              );
+            })}
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -299,10 +310,12 @@ function PortalTooltip({
 }) {
   const [pos, setPos] = useState<{ top: number; left: number; placement: "above" | "below" } | null>(null);
 
+  const tooltipRef = useRef<HTMLDivElement>(null);
+
   const recompute = useCallback(() => {
     if (!anchorRef.current) return;
     const rect = anchorRef.current.getBoundingClientRect();
-    const tooltipW = 360;
+    const tooltipW = tooltipRef.current?.offsetWidth ?? 360;
     const margin = 6;
 
     let left = rect.left + rect.width / 2 - tooltipW / 2;
@@ -327,11 +340,16 @@ function PortalTooltip({
     };
   }, [open, recompute]);
 
+  useLayoutEffect(() => {
+    if (open && tooltipRef.current) recompute();
+  });
+
   if (!open || !pos) return null;
 
   return createPortal(
     <div
-      className="fixed z-[9999] w-[360px] max-w-[calc(100vw-8px)] rounded-md border px-3 py-2.5 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 pointer-events-none"
+      ref={tooltipRef}
+      className="fixed z-[9999] w-max max-w-[calc(100vw-8px)] rounded-md border px-3 py-2.5 text-[11px] shadow-lg backdrop-blur-sm border-card-border bg-stone-950/95 pointer-events-none"
       style={{
         left: pos.left,
         ...(pos.placement === "above"
@@ -440,20 +458,15 @@ export default function PicksBracketMatchup({
 
       {tooltipSections.length > 0 && (
         <PortalTooltip anchorRef={anchorRef} open={open}>
-          <div className="flex flex-wrap gap-x-5 gap-y-3">
+          <div className="flex gap-x-5 gap-y-3">
             {tooltipSections.map((section) => (
-              <div
+              <PickerTooltipSection
                 key={section.team.id}
-                className="min-w-0"
-                style={{ flex: "1 1 45%" }}
-              >
-                <PickerTooltipSection
-                  team={section.team}
-                  pickerList={section.pickerList}
-                  isWinner={section.isWinner}
-                  isEliminated={section.isEliminated}
-                />
-              </div>
+                team={section.team}
+                pickerList={section.pickerList}
+                isWinner={section.isWinner}
+                isEliminated={section.isEliminated}
+              />
             ))}
           </div>
         </PortalTooltip>

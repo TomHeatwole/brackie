@@ -52,6 +52,8 @@ export interface GoodyScoreEntry {
   bestRegionCorrect?: number;
   /** Best region bracket: total played games in best region */
   bestRegionPlayed?: number;
+  /** Possible points this goody could still earn (set for alive/pending entries with dynamic scoring) */
+  possiblePoints?: number;
 }
 
 export interface BracketScoreSummary {

@@ -260,11 +260,36 @@ export default async function PoolDetailPage({
           if (entry.status === "alive" || entry.status === "pending") {
             const pg = poolGoodiesWithTypes.find((p) => p.goody_type_id === goodyTypeId);
             if (pg) {
+              let possiblePts: number;
               if (pg.scoring_mode === "bracket_upset_points" && pg.goody_types?.key === "dark_horse_champion") {
-                score.possibleGoodyPoints += (pool.round_points?.["6"] ?? 130);
+                const basePts = pool.round_points?.["6"] ?? 130;
+                const userAnswer = allGoodyAnswers.find(a => a.userId === score.userId && a.goodyTypeId === goodyTypeId);
+                const pickedTeamId = userAnswer?.value ? (userAnswer.value as Record<string, unknown>).team_id : null;
+                if (pickedTeamId) {
+                  let aliveSamePickers = 0;
+                  for (const a of allGoodyAnswers) {
+                    if (a.goodyTypeId !== goodyTypeId) continue;
+                    if ((a.value as Record<string, unknown> | null)?.team_id !== pickedTeamId) continue;
+                    const otherEntry = userInputScores.get(a.userId)?.get(goodyTypeId);
+                    if (otherEntry && (otherEntry.status === "alive" || otherEntry.status === "pending")) {
+                      aliveSamePickers++;
+                    }
+                  }
+                  possiblePts = Math.ceil(basePts / Math.max(1, aliveSamePickers));
+                } else {
+                  possiblePts = basePts;
+                }
+              } else if (pg.scoring_mode === "conference_multiplier" && pg.goody_types?.key === "first_conference_out") {
+                const multiplier = pg.scoring_config?.conference_multiplier ?? 4;
+                const userAnswer = allGoodyAnswers.find(a => a.userId === score.userId && a.goodyTypeId === goodyTypeId);
+                const conferenceKey = userAnswer?.value ? (userAnswer.value as Record<string, unknown>).conference_key : null;
+                const teamCount = conferenceKey && tournament?.conference_team_counts?.[String(conferenceKey)];
+                possiblePts = teamCount ? multiplier * teamCount : 0;
               } else {
-                score.possibleGoodyPoints += pg.points;
+                possiblePts = pg.points;
               }
+              entry.possiblePoints = possiblePts;
+              score.possibleGoodyPoints += possiblePts;
             }
           }
         }

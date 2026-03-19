@@ -193,7 +193,10 @@ export default function PoolTabs({
       const entry = perGoody?.[pg.goody_type_id];
       return entry?.status === "alive" || entry?.status === "pending";
     });
-    const goodyTotal = aliveGoodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
+    const goodyTotal = aliveGoodies.reduce((sum, pg) => {
+      const entry = perGoody?.[pg.goody_type_id];
+      return sum + (entry?.possiblePoints ?? pg.points ?? 0);
+    }, 0);
 
     return (
       <div
@@ -224,12 +227,16 @@ export default function PoolTabs({
           </table>
           {aliveGoodies.length > 0 && (
             <div className="mt-1.5 pl-2 border-l border-accent/30">
-              {aliveGoodies.map((pg) => (
-                <div key={pg.id} className="py-0.5 flex justify-between gap-2">
-                  <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
-                  <span className="tabular-nums text-stone-400 shrink-0">{pg.points} pts</span>
-                </div>
-              ))}
+              {aliveGoodies.map((pg) => {
+                const entry = perGoody?.[pg.goody_type_id];
+                const pts = entry?.possiblePoints ?? pg.points ?? 0;
+                return (
+                  <div key={pg.id} className="py-0.5 flex justify-between gap-2">
+                    <span className="text-stone-500 truncate">{pg.goody_types?.name ?? "Goodie"}</span>
+                    <span className="tabular-nums text-stone-400 shrink-0">{pts} pts</span>
+                  </div>
+                );
+              })}
             </div>
           )}
           <table className="w-full text-left mt-1.5">
@@ -590,7 +597,10 @@ export default function PoolTabs({
                       const entry = popupScore.perGoody?.[pg.goody_type_id];
                       return entry?.status === "alive" || entry?.status === "pending";
                     });
-                    const goodyPossible = aliveGoodies.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
+                    const goodyPossible = aliveGoodies.reduce((sum, pg) => {
+                      const entry = popupScore.perGoody?.[pg.goody_type_id];
+                      return sum + (entry?.possiblePoints ?? pg.points ?? 0);
+                    }, 0);
                     return (
                       <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
                         <div className="absolute inset-0 bg-black/40" />
@@ -607,12 +617,16 @@ export default function PoolTabs({
                             </div>
                             {aliveGoodies.length > 0 && (
                               <div className="ml-3 border-l border-accent/30 pl-2 mt-1">
-                                {aliveGoodies.map(pg => (
-                                  <div key={pg.id} className="flex justify-between py-0.5">
-                                    <span className="text-stone-500">{pg.goody_types?.name ?? "Goodie"}</span>
-                                    <span className="text-stone-400 tabular-nums">{pg.points} pts</span>
-                                  </div>
-                                ))}
+                                {aliveGoodies.map(pg => {
+                                  const entry = popupScore.perGoody?.[pg.goody_type_id];
+                                  const pts = entry?.possiblePoints ?? pg.points ?? 0;
+                                  return (
+                                    <div key={pg.id} className="flex justify-between py-0.5">
+                                      <span className="text-stone-500">{pg.goody_types?.name ?? "Goodie"}</span>
+                                      <span className="text-stone-400 tabular-nums">{pts} pts</span>
+                                    </div>
+                                  );
+                                })}
                               </div>
                             )}
                             <div className="flex justify-between border-t border-accent/20 pt-1.5 mt-1.5">

@@ -537,9 +537,11 @@ export default function PicksTable({
                           <span className={`text-stone-300 font-semibold ${isMobile ? '' : 'text-[11px]'}`}>
                             {pg.goody_types?.name ?? "Goodie"}
                           </span>
-                          <span className={`text-accent font-medium ${isMobile ? '' : 'text-[10px]'}`}>
-                            ({pg.points} pts)
-                          </span>
+                          {pg.points > 0 && (
+                            <span className={`text-accent font-medium ${isMobile ? '' : 'text-[10px]'}`}>
+                              ({pg.points} pts)
+                            </span>
+                          )}
                         </div>
                       </th>
                     ))}
