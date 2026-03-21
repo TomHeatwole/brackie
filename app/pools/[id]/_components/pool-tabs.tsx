@@ -101,9 +101,11 @@ export default function PoolTabs({
   const [activeTab, setActiveTabState] = useState<TabKey>(urlTab);
   const [picksView, setPicksView] = useState<"table" | "bracket">("table");
   const [expandedGoodies, setExpandedGoodies] = useState<Set<string>>(new Set());
+  const [collapsedGoodies, setCollapsedGoodies] = useState<Set<string>>(new Set());
   const [, startTransition] = useTransition();
   const isMobile = useIsMobile();
-  const [mobileScorePopup, setMobileScorePopup] = useState<{type: 'goody' | 'possible', bracketId: string} | null>(null);
+  const [mobileScorePopup, setMobileScorePopup] = useState<{type: 'goody' | 'possible', bracketId: string} | {type: 'round', bracketId: string, round: number} | null>(null);
+  const [showMobileDetails, setShowMobileDetails] = useState(false);
 
   useEffect(() => {
     setActiveTabState(urlTab);
@@ -133,6 +135,22 @@ export default function PoolTabs({
     { key: "goodies", label: "Goodies" },
     ...(hasHallOfFame ? [{ key: "hall-of-fame" as TabKey, label: "Hall of Fame" }] : []),
   ];
+
+  function getGoodyPointsLabel(pg: PoolGoodyWithType): string {
+    const mode = pg.scoring_mode ?? "fixed";
+    if (mode === "conference_multiplier" && pg.scoring_config?.conference_multiplier != null) {
+      return `Conf × ${pg.scoring_config.conference_multiplier}`;
+    }
+    if (mode === "bracket_upset_points") {
+      const champBase = pool.round_points?.["6"] ?? 130;
+      if (pool.upset_points_enabled) {
+        const champUpsetMult = pool.upset_multipliers?.["6"] ?? 20;
+        return `${champBase} + (${champUpsetMult} × upset)`;
+      }
+      return `${champBase} pts`;
+    }
+    return `${pg.points} pts`;
+  }
 
   function formatGoodyAnswerValue(
     pg: PoolGoodyWithType,
@@ -485,6 +503,24 @@ export default function PoolTabs({
                   </p>
                 ) : isMobile ? (
                   <>
+                  <div className="flex items-center justify-end gap-2 mb-2 px-0.5">
+                    <span className={`text-[11px] font-medium transition-colors ${showMobileDetails ? "text-accent" : "text-stone-500"}`}>Details</span>
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={showMobileDetails}
+                      onClick={() => setShowMobileDetails((d) => !d)}
+                      className={`relative inline-flex h-[22px] w-[40px] shrink-0 items-center rounded-full transition-colors ${
+                        showMobileDetails ? "bg-accent" : "bg-stone-700"
+                      }`}
+                    >
+                      <span
+                        className={`pointer-events-none inline-block h-[16px] w-[16px] rounded-full bg-white shadow-sm transition-transform ${
+                          showMobileDetails ? "translate-x-[20px]" : "translate-x-[3px]"
+                        }`}
+                      />
+                    </button>
+                  </div>
                   <div className="overflow-x-auto overflow-y-hidden rounded-md border border-card-border">
                     <table className="w-full border-collapse text-[9px]">
                       <thead>
@@ -518,15 +554,47 @@ export default function PoolTabs({
                                 </div>
                               </td>
                               <td className="px-1 py-1 text-center tabular-nums font-bold text-accent">{score.totalPoints}</td>
-                              {[1,2,3,4,5,6].map(r => (
-                                <td key={r} className="px-1 py-1 text-center tabular-nums text-stone-300">{score.perRound[r]?.totalPoints ?? 0}</td>
-                              ))}
+                              {[1,2,3,4,5,6].map(r => {
+                                const roundScore = score.perRound[r];
+                                const hasEvaluated = (roundScore?.evaluatedGames?.length ?? 0) > 0;
+                                return (
+                                  <td
+                                    key={r}
+                                    className={`px-1 py-1 text-center tabular-nums text-stone-300 ${hasEvaluated ? "cursor-pointer active:bg-white/5" : ""}`}
+                                    onClick={() => { if (hasEvaluated) setMobileScorePopup({ type: 'round', bracketId: score.bracketId, round: r }); }}
+                                  >
+                                    <span>{roundScore?.totalPoints ?? 0}</span>
+                                    {showMobileDetails && (
+                                      <div className="text-[7px] leading-tight text-stone-600">
+                                        {roundScore?.gamesCorrect ?? 0}/{roundScore?.gamesPlayed ?? 0}
+                                      </div>
+                                    )}
+                                  </td>
+                                );
+                              })}
                               {hasGoodies && (
                                 <td
                                   className={`px-1 py-1 text-center tabular-nums font-medium cursor-pointer ${(score.totalGoodyPoints ?? 0) > 0 ? "text-emerald-300" : "text-stone-400"}`}
                                   onClick={() => setMobileScorePopup({ type: 'goody', bracketId: score.bracketId })}
                                 >
-                                  {score.totalGoodyPoints ?? 0}
+                                  <span>{score.totalGoodyPoints ?? 0}</span>
+                                  {showMobileDetails && (
+                                    <div className="text-[7px] leading-tight text-stone-600">
+                                      {(() => {
+                                        let won = 0;
+                                        let concluded = 0;
+                                        for (const pg of poolGoodiesWithTypes) {
+                                          const entry = score.perGoody?.[pg.goody_type_id];
+                                          if (!entry) continue;
+                                          if (entry.status === "won" || entry.status === "stroke" || entry.status === "eliminated" || entry.status === "not_awarded") {
+                                            concluded++;
+                                            if (entry.status === "won" || entry.status === "stroke") won++;
+                                          }
+                                        }
+                                        return `${won}/${concluded}`;
+                                      })()}
+                                    </div>
+                                  )}
                                 </td>
                               )}
                               <td
@@ -549,6 +617,58 @@ export default function PoolTabs({
                       ? formatUserDisplayName(popupMember.first_name, popupMember.last_name) || "Anonymous"
                       : "Unknown";
 
+                    if (mobileScorePopup.type === 'round') {
+                      const r = mobileScorePopup.round;
+                      const roundScore = popupScore.perRound[r];
+                      const evaluatedGames = roundScore?.evaluatedGames ?? [];
+                      const correct = evaluatedGames.filter(g => g.status === "correct");
+                      const incorrect = evaluatedGames.filter(g => g.status === "wrong" || g.status === "dead");
+                      const sortedCorrect = [...correct].sort((a, b) => b.pointsAwarded - a.pointsAwarded);
+                      const sortedIncorrect = [...incorrect].sort((a, b) => (b.pointsIfCorrect ?? 0) - (a.pointsIfCorrect ?? 0));
+
+                      return (
+                        <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
+                          <div className="absolute inset-0 bg-black/40" />
+                          <div className="relative w-full max-w-sm max-h-[80vh] flex flex-col rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="absolute top-3 right-3 text-stone-500 hover:text-stone-200 transition-colors p-1"
+                              onClick={() => setMobileScorePopup(null)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            </button>
+                            <div className="font-semibold text-accent mb-3 shrink-0">{popupName} — {ROUND_HOVER_LABELS[r]}</div>
+                            <div className="overflow-y-auto scrollbar-custom-y">
+                              {sortedCorrect.length > 0 && (
+                                <div className="mb-2">
+                                  <div className="font-semibold text-stone-300 text-[11px] mb-1">Correct</div>
+                                  {sortedCorrect.map(g => (
+                                    <div key={g.gameId} className="flex justify-between py-0.5">
+                                      <span className="text-emerald-300 min-w-0 truncate">{g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}</span>
+                                      <span className="text-emerald-200 tabular-nums shrink-0 ml-2">{g.pointsAwarded} pts</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {sortedIncorrect.length > 0 && (
+                                <div>
+                                  <div className="font-semibold text-stone-300 text-[11px] mb-1">Incorrect</div>
+                                  {sortedIncorrect.map(g => (
+                                    <div key={g.gameId} className="text-red-400/80 py-0.5 truncate">
+                                      {g.pickedTeamId ? getTeamLabel(g.pickedTeamId) : "Unpicked"}
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {sortedCorrect.length === 0 && sortedIncorrect.length === 0 && (
+                                <div className="text-stone-500">No picks evaluated yet.</div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }
+
                     if (mobileScorePopup.type === 'goody') {
                       const correct: { name: string; pts: number; stroke: boolean }[] = [];
                       const missed: string[] = [];
@@ -564,30 +684,39 @@ export default function PoolTabs({
                       return (
                         <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
                           <div className="absolute inset-0 bg-black/40" />
-                          <div className="relative w-full max-w-sm rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
-                            <div className="font-semibold text-accent mb-3">{popupName} — Goodies</div>
-                            {correct.length > 0 && (
-                              <div className="mb-2">
-                                <div className="font-semibold text-stone-300 text-[11px] mb-1">Correct</div>
-                                {correct.map(c => (
-                                  <div key={c.name} className="flex justify-between py-0.5">
-                                    <span className="text-emerald-300">{c.name}</span>
-                                    <span className="text-emerald-200 tabular-nums">+{c.pts}{c.stroke ? " (stroke)" : ""}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                            {missed.length > 0 && (
-                              <div>
-                                <div className="font-semibold text-stone-300 text-[11px] mb-1">Missed</div>
-                                {missed.map(n => (
-                                  <div key={n} className="text-red-400/80 py-0.5">{n}</div>
-                                ))}
-                              </div>
-                            )}
-                            {correct.length === 0 && missed.length === 0 && (
-                              <div className="text-stone-500">No goodies concluded yet.</div>
-                            )}
+                          <div className="relative w-full max-w-sm max-h-[80vh] flex flex-col rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className="absolute top-3 right-3 text-stone-500 hover:text-stone-200 transition-colors p-1"
+                              onClick={() => setMobileScorePopup(null)}
+                            >
+                              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                            </button>
+                            <div className="font-semibold text-accent mb-3 shrink-0">{popupName} — Goodies</div>
+                            <div className="overflow-y-auto scrollbar-custom-y">
+                              {correct.length > 0 && (
+                                <div className="mb-2">
+                                  <div className="font-semibold text-stone-300 text-[11px] mb-1">Correct</div>
+                                  {correct.map(c => (
+                                    <div key={c.name} className="flex justify-between py-0.5">
+                                      <span className="text-emerald-300">{c.name}</span>
+                                      <span className="text-emerald-200 tabular-nums">+{c.pts}{c.stroke ? " (stroke)" : ""}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                              {missed.length > 0 && (
+                                <div>
+                                  <div className="font-semibold text-stone-300 text-[11px] mb-1">Missed</div>
+                                  {missed.map(n => (
+                                    <div key={n} className="text-red-400/80 py-0.5">{n}</div>
+                                  ))}
+                                </div>
+                              )}
+                              {correct.length === 0 && missed.length === 0 && (
+                                <div className="text-stone-500">No goodies concluded yet.</div>
+                              )}
+                            </div>
                           </div>
                         </div>
                       );
@@ -604,9 +733,16 @@ export default function PoolTabs({
                     return (
                       <div className="fixed inset-0 z-50 flex items-end justify-center" onClick={() => setMobileScorePopup(null)}>
                         <div className="absolute inset-0 bg-black/40" />
-                        <div className="relative w-full max-w-sm rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
-                          <div className="font-semibold text-accent mb-3">{popupName} — Possible Points</div>
-                          <div className="space-y-1">
+                        <div className="relative w-full max-w-sm max-h-[80vh] flex flex-col rounded-t-xl border-t border-x border-card-border bg-stone-950 px-4 pt-4 pb-6 text-xs shadow-xl" onClick={e => e.stopPropagation()}>
+                          <button
+                            type="button"
+                            className="absolute top-3 right-3 text-stone-500 hover:text-stone-200 transition-colors p-1"
+                            onClick={() => setMobileScorePopup(null)}
+                          >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1 1l12 12M13 1L1 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                          </button>
+                          <div className="font-semibold text-accent mb-3 shrink-0">{popupName} — Possible Points</div>
+                          <div className="space-y-1 overflow-y-auto scrollbar-custom-y">
                             <div className="flex justify-between">
                               <span className="text-stone-400">Bracket</span>
                               <span className="text-stone-200 tabular-nums">{popupScore.possibleBracketPoints} pts</span>
@@ -921,33 +1057,58 @@ export default function PoolTabs({
                           : sortedMembers;
                         const hiddenCount = isResolved ? sortedMembers.length - winners.length : 0;
 
+                        const isCollapsed = collapsedGoodies.has(pg.id);
+
                         return (
                           <div
                             key={pg.id}
-                            className="rounded-md border border-card-border bg-background/60 px-3 py-2"
+                            className="rounded-md border border-card-border bg-background/60"
                           >
-                            <div className="flex items-center justify-between gap-2">
-                              <div className="flex flex-col">
-                                <span className="text-stone-200">
-                                  {pg.goody_types?.name ?? "Goodie"}
-                                </span>
-                                {pg.goody_types?.description && (
-                                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                                    {pg.goody_types.description}
-                                  </p>
-                                )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setCollapsedGoodies((prev) => {
+                                  const next = new Set(prev);
+                                  if (next.has(pg.id)) next.delete(pg.id);
+                                  else next.add(pg.id);
+                                  return next;
+                                });
+                              }}
+                              className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/[0.02] transition-colors rounded-md"
+                            >
+                              <div className="flex items-center gap-2 min-w-0">
+                                <svg
+                                  width="12"
+                                  height="12"
+                                  viewBox="0 0 12 12"
+                                  fill="none"
+                                  className={`shrink-0 text-stone-500 transition-transform ${isCollapsed ? "" : "rotate-90"}`}
+                                >
+                                  <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                                </svg>
+                                <div className="flex flex-col">
+                                  <span className="text-stone-200">
+                                    {pg.goody_types?.name ?? "Goodie"}
+                                  </span>
+                                  {pg.goody_types?.description && (
+                                    <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                                      {pg.goody_types.description}
+                                    </p>
+                                  )}
+                                </div>
                               </div>
-                              <div className="text-right">
+                              <div className="text-right shrink-0">
                                 <span className="block text-xs text-muted-foreground">
-                                  {pg.points} pts{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
+                                  {getGoodyPointsLabel(pg)}{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
                                 </span>
                                 <span className={`mt-0.5 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
                                   {badgeText}
                                 </span>
                               </div>
-                            </div>
+                            </button>
 
-                            <div className="mt-3 border-t border-card-border pt-2">
+                            {!isCollapsed && (
+                            <div className="mx-3 mb-2 border-t border-card-border pt-2">
                               {membersWithBrackets.length === 0 ? (
                                 <p className="text-xs text-muted-foreground">
                                   No brackets submitted yet.
@@ -1069,6 +1230,7 @@ export default function PoolTabs({
                                 </>
                               )}
                             </div>
+                            )}
                           </div>
                         );
                       }
@@ -1132,33 +1294,58 @@ export default function PoolTabs({
                         : answersForGoody;
                       const hiddenAnswerCount = isScored ? answersForGoody.length - winnerAnswers.length : 0;
 
+                      const isGoodyCollapsed = collapsedGoodies.has(pg.id);
+
                       return (
                         <div
                           key={pg.id}
-                          className="rounded-md border border-card-border bg-background/60 px-3 py-2"
+                          className="rounded-md border border-card-border bg-background/60"
                         >
-                          <div className="flex items-center justify-between gap-2">
-                            <div className="flex flex-col">
-                              <span className="text-stone-200">
-                                {pg.goody_types?.name ?? "Goodie"}
-                              </span>
-                              {pg.goody_types?.description && (
-                                <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
-                                  {pg.goody_types.description}
-                                </p>
-                              )}
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setCollapsedGoodies((prev) => {
+                                const next = new Set(prev);
+                                if (next.has(pg.id)) next.delete(pg.id);
+                                else next.add(pg.id);
+                                return next;
+                              });
+                            }}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2 text-left hover:bg-white/[0.02] transition-colors rounded-md"
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <svg
+                                width="12"
+                                height="12"
+                                viewBox="0 0 12 12"
+                                fill="none"
+                                className={`shrink-0 text-stone-500 transition-transform ${isGoodyCollapsed ? "" : "rotate-90"}`}
+                              >
+                                <path d="M4.5 2.5L8 6L4.5 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                              </svg>
+                              <div className="flex flex-col">
+                                <span className="text-stone-200">
+                                  {pg.goody_types?.name ?? "Goodie"}
+                                </span>
+                                {pg.goody_types?.description && (
+                                  <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">
+                                    {pg.goody_types.description}
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                            <div className="text-right">
+                            <div className="text-right shrink-0">
                               <span className="block text-xs text-muted-foreground">
-                                {pg.points} pts{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
+                                {getGoodyPointsLabel(pg)}{pg.stroke_rule_enabled ? " (stroke rule)" : ""}
                               </span>
                               <span className={`mt-0.5 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${badgeClass}`}>
                                 {badgeText}
                               </span>
                             </div>
-                          </div>
+                          </button>
 
-                          <div className="mt-3 border-t border-card-border pt-2">
+                          {!isGoodyCollapsed && (
+                          <div className="mx-3 mb-2 border-t border-card-border pt-2">
                             {answersForGoody.length === 0 ? (
                               <p className="text-xs text-muted-foreground">
                                 No picks yet for this goodie.
@@ -1258,6 +1445,7 @@ export default function PoolTabs({
                               </>
                             )}
                           </div>
+                          )}
                         </div>
                       );
                     })}
