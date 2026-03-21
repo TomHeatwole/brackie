@@ -65,7 +65,7 @@ function computePickStatuses(
   games: TournamentGame[],
   picks: Record<string, string>,
   finalFourMatchups: [string, string][]
-): Map<string, PickStatus> {
+): { statuses: Map<string, PickStatus>; eliminatedTeamIds: Set<string> } {
   const byRoundRegionPos = new Map<string, TournamentGame>();
   const byRoundPos = new Map<string, TournamentGame>();
   const gamesByRound = new Map<number, TournamentGame[]>();
@@ -132,7 +132,7 @@ function computePickStatuses(
     }
   }
 
-  return statuses;
+  return { statuses, eliminatedTeamIds: eliminated };
 }
 
 export default function BracketTree({
@@ -155,10 +155,11 @@ export default function BracketTree({
   const structure = bracketStructureProp ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
 
-  const pickStatuses = useMemo(
-    () => (tournamentActive ? computePickStatuses(games, picks, finalFourMatchups) : undefined),
-    [tournamentActive, games, picks, finalFourMatchups]
-  );
+  const { pickStatuses, eliminatedTeamIds } = useMemo(() => {
+    if (!tournamentActive) return { pickStatuses: undefined, eliminatedTeamIds: undefined };
+    const result = computePickStatuses(games, picks, finalFourMatchups);
+    return { pickStatuses: result.statuses, eliminatedTeamIds: result.eliminatedTeamIds };
+  }, [tournamentActive, games, picks, finalFourMatchups]);
 
   // Persist draft to localStorage when editing and bracketId is set
   useEffect(() => {
@@ -294,6 +295,7 @@ export default function BracketTree({
           readOnly={readOnly}
           renderMatchup={renderMatchup}
           pickStatuses={pickStatuses}
+          eliminatedTeamIds={eliminatedTeamIds}
         />
         {showEditingUI && pickCount === 63 && onSave && !readOnly && (
           <div className="flex justify-center">
@@ -340,6 +342,7 @@ export default function BracketTree({
                 readOnly={readOnly}
                 renderMatchup={renderMatchup}
                 pickStatuses={pickStatuses}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             </div>
 
@@ -357,6 +360,7 @@ export default function BracketTree({
                 readOnly={readOnly}
                 renderMatchup={renderMatchup}
                 pickStatuses={pickStatuses}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             </div>
           </div>
@@ -373,6 +377,7 @@ export default function BracketTree({
               readOnly={readOnly}
               renderMatchup={renderMatchup}
               pickStatuses={pickStatuses}
+              eliminatedTeamIds={eliminatedTeamIds}
             />
             {showEditingUI && pickCount === 63 && onSave && !readOnly && (
               <button
@@ -401,6 +406,7 @@ export default function BracketTree({
                 readOnly={readOnly}
                 renderMatchup={renderMatchup}
                 pickStatuses={pickStatuses}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             </div>
 
@@ -418,6 +424,7 @@ export default function BracketTree({
                 readOnly={readOnly}
                 renderMatchup={renderMatchup}
                 pickStatuses={pickStatuses}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             </div>
           </div>

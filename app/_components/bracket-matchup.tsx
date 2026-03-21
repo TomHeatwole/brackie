@@ -13,6 +13,7 @@ interface Props {
   readOnly: boolean;
   compact?: boolean;
   pickStatus?: PickStatus | null;
+  eliminatedTeamIds?: Set<string>;
 }
 
 function StatusIcon({ status }: { status: "correct" | "wrong" | "dead" }) {
@@ -91,6 +92,7 @@ function TeamSlot({
   onClick,
   readOnly,
   position,
+  eliminatedTeamIds,
 }: {
   team: Team | null;
   isPicked: boolean;
@@ -98,6 +100,7 @@ function TeamSlot({
   onClick: () => void;
   readOnly: boolean;
   position: "top" | "bottom";
+  eliminatedTeamIds?: Set<string>;
 }) {
   const roundedClass = position === "top" ? "rounded-t" : "rounded-b";
   const borderClass = position === "top" ? "border-b-0" : "";
@@ -121,17 +124,28 @@ function TeamSlot({
   }
 
   const canClick = !readOnly && !!team;
+  const isEliminated = !isPicked && !!team && !!eliminatedTeamIds?.has(team.id);
   const styles = isPicked
     ? getPickedStyles(pickStatus)
-    : {
-        bgColor: "var(--card)",
-        borderColor: "var(--card-border)",
-        textColor: "var(--foreground)",
-        seedColor: "var(--muted)",
-        shadow: "none",
-        strikethrough: false,
-        icon: null,
-      };
+    : isEliminated
+      ? {
+          bgColor: "var(--card)",
+          borderColor: "var(--card-border)",
+          textColor: "rgba(252, 165, 165, 0.45)",
+          seedColor: "rgba(252, 165, 165, 0.25)",
+          shadow: "none",
+          strikethrough: true,
+          icon: null,
+        }
+      : {
+          bgColor: "var(--card)",
+          borderColor: "var(--card-border)",
+          textColor: "var(--foreground)",
+          seedColor: "var(--muted)",
+          shadow: "none",
+          strikethrough: false,
+          icon: null,
+        };
 
   return (
     <div
@@ -182,6 +196,7 @@ export default function BracketMatchup({
   onPick,
   readOnly,
   pickStatus,
+  eliminatedTeamIds,
 }: Props) {
   return (
     <div className="flex flex-col">
@@ -192,6 +207,7 @@ export default function BracketMatchup({
         onClick={() => team1 && onPick(team1.id)}
         readOnly={readOnly}
         position="top"
+        eliminatedTeamIds={eliminatedTeamIds}
       />
       <TeamSlot
         team={team2}
@@ -200,6 +216,7 @@ export default function BracketMatchup({
         onClick={() => team2 && onPick(team2.id)}
         readOnly={readOnly}
         position="bottom"
+        eliminatedTeamIds={eliminatedTeamIds}
       />
     </div>
   );

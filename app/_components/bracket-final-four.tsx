@@ -16,6 +16,7 @@ interface Props {
   readOnly: boolean;
   renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
   pickStatuses?: Map<string, PickStatus>;
+  eliminatedTeamIds?: Set<string>;
 }
 
 function getTeamById(teams: Team[], id: string | null): Team | null {
@@ -33,6 +34,7 @@ export default function BracketFinalFour({
   readOnly,
   renderMatchup,
   pickStatuses,
+  eliminatedTeamIds,
 }: Props) {
   const ffGames = games
     .filter((g) => g.round === 5)
@@ -95,6 +97,7 @@ export default function BracketFinalFour({
                 onPick={(teamId) => onPick(ffGames[0].id, teamId)}
                 readOnly={readOnly}
                 pickStatus={pickStatuses?.get(ffGames[0].id)}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             )}
           </div>
@@ -118,6 +121,7 @@ export default function BracketFinalFour({
                 onPick={(teamId) => onPick(champGame.id, teamId)}
                 readOnly={readOnly}
                 pickStatus={pickStatuses?.get(champGame.id)}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             )}
             {champWinner && (
@@ -163,6 +167,7 @@ export default function BracketFinalFour({
                 onPick={(teamId) => onPick(ffGames[1].id, teamId)}
                 readOnly={readOnly}
                 pickStatus={pickStatuses?.get(ffGames[1].id)}
+                eliminatedTeamIds={eliminatedTeamIds}
               />
             )}
           </div>

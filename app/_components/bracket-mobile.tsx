@@ -15,6 +15,7 @@ interface Props {
   readOnly: boolean;
   renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
   pickStatuses?: Map<string, PickStatus>;
+  eliminatedTeamIds?: Set<string>;
 }
 
 type TabType = string | "Final Four";
@@ -104,6 +105,7 @@ function MobileMatchup({
   onPick,
   readOnly,
   pickStatus,
+  eliminatedTeamIds,
 }: {
   team1: Team | null;
   team2: Team | null;
@@ -111,6 +113,7 @@ function MobileMatchup({
   onPick: (teamId: string) => void;
   readOnly: boolean;
   pickStatus?: PickStatus | null;
+  eliminatedTeamIds?: Set<string>;
 }) {
   function TeamRow({ team, isPicked }: { team: Team | null; isPicked: boolean }) {
     if (!team) {
@@ -124,17 +127,28 @@ function MobileMatchup({
     }
 
     const canClick = !readOnly && !!team;
+    const isEliminated = !isPicked && !!team && !!eliminatedTeamIds?.has(team.id);
     const styles = isPicked
       ? getMobilePickedStyles(pickStatus)
-      : {
-          bgColor: "var(--card)",
-          borderColor: "var(--card-border)",
-          textColor: "var(--foreground)",
-          seedColor: "var(--muted)",
-          shadow: "none",
-          strikethrough: false,
-          icon: null,
-        };
+      : isEliminated
+        ? {
+            bgColor: "var(--card)",
+            borderColor: "var(--card-border)",
+            textColor: "rgba(252, 165, 165, 0.45)",
+            seedColor: "rgba(252, 165, 165, 0.25)",
+            shadow: "none",
+            strikethrough: true,
+            icon: null,
+          }
+        : {
+            bgColor: "var(--card)",
+            borderColor: "var(--card-border)",
+            textColor: "var(--foreground)",
+            seedColor: "var(--muted)",
+            shadow: "none",
+            strikethrough: false,
+            icon: null,
+          };
 
     return (
       <button
@@ -174,7 +188,7 @@ function MobileMatchup({
   );
 }
 
-export default function BracketMobile({ teams, games, bracketStructure, picks, onPick, readOnly, renderMatchup, pickStatuses }: Props) {
+export default function BracketMobile({ teams, games, bracketStructure, picks, onPick, readOnly, renderMatchup, pickStatuses, eliminatedTeamIds }: Props) {
   const structure = bracketStructure ?? getBracketStructure(null);
   const { regionsInOrder, finalFourMatchups } = structure;
   const [activeTab, setActiveTab] = useState<TabType>(regionsInOrder[0]);
@@ -303,6 +317,7 @@ export default function BracketMobile({ teams, games, bracketStructure, picks, o
               onPick={(teamId) => onPick(game.id, teamId)}
               readOnly={readOnly}
               pickStatus={pickStatuses?.get(game.id)}
+              eliminatedTeamIds={eliminatedTeamIds}
             />
           );
         })}

@@ -14,6 +14,7 @@ interface Props {
   readOnly: boolean;
   renderMatchup?: (game: TournamentGame, team1: Team | null, team2: Team | null) => React.ReactNode;
   pickStatuses?: Map<string, PickStatus>;
+  eliminatedTeamIds?: Set<string>;
 }
 
 function getTeamById(teams: Team[], id: string | null): Team | null {
@@ -38,6 +39,7 @@ export default function BracketRegion({
   readOnly,
   renderMatchup,
   pickStatuses,
+  eliminatedTeamIds,
 }: Props) {
   const gamesByRound = new Map<number, TournamentGame[]>();
   for (const game of games) {
@@ -83,6 +85,7 @@ export default function BracketRegion({
                   onPick={(teamId) => onPick(game.id, teamId)}
                   readOnly={readOnly}
                   pickStatus={pickStatuses?.get(game.id)}
+                  eliminatedTeamIds={eliminatedTeamIds}
                 />
               )}
             </div>
