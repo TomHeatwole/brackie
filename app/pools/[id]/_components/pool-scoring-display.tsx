@@ -83,15 +83,15 @@ export default function PoolScoringDisplay({
             <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-3">
               Points per correct pick
             </p>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
               {ROUND_KEYS.map((key) => {
                 const pts = pool.round_points?.[key] ?? 0;
                 return (
                   <div
                     key={key}
-                    className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-2.5 py-2 shadow-sm"
+                    className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-3 py-2 shadow-sm"
                   >
-                    <span className="text-[11px] text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
+                    <span className="text-xs text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
                     <span className="text-xs text-stone-400 hidden sm:inline">{ROUND_LABELS_FULL[key]}</span>
                     <span className="shrink-0 flex items-baseline gap-0.5">
                       <span className="text-sm font-bold tabular-nums text-stone-200">
@@ -132,15 +132,15 @@ export default function PoolScoringDisplay({
               </div>
             </div>
             {pool.upset_points_enabled ? (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 {ROUND_KEYS.map((key) => {
                   const mult = pool.upset_multipliers?.[key] ?? 1;
                   return (
                     <div
                       key={key}
-                      className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-2.5 py-2 shadow-sm"
+                      className="flex items-center justify-between rounded-lg border border-card-border bg-stone-900/50 px-3 py-2 shadow-sm"
                     >
-                      <span className="text-[11px] text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
+                      <span className="text-xs text-stone-400 sm:hidden">{ROUND_LABELS[key]}</span>
                       <span className="text-xs text-stone-400 hidden sm:inline">{ROUND_LABELS_FULL[key]}</span>
                       <span className="shrink-0 flex items-baseline gap-0.5">
                         <span className="text-sm font-bold tabular-nums text-stone-200">

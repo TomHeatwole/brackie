@@ -775,7 +775,6 @@ export function scoreBracketsForPool(ctx: PoolScoringContext): BracketScoreSumma
           roundScore.basePoints += basePts;
           roundScore.upsetPoints += upsetBonusIfCorrect;
           roundScore.totalPoints += pointsIfCorrect;
-          possiblePerRound[round] += pointsIfCorrect;
 
           roundScore.evaluatedGames.push({
             gameId: game.id,
