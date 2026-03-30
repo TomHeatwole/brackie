@@ -76,6 +76,7 @@ export interface PoolScoringContext {
   brackets: BracketWithPicks[];
   finalFourMatchups: [string, string][];
   poolGoodies: PoolGoodyWithType[];
+  conferenceTeamCounts?: Record<string, number> | null;
 }
 
 export async function buildPoolScoringContext(
@@ -87,7 +88,7 @@ export async function buildPoolScoringContext(
 
   const tournament = await getTournament(supabase, pool.tournament_id, testMode);
   if (!tournament) {
-    return { pool, games: [], teams: [], brackets: [], finalFourMatchups: [], poolGoodies: options.poolGoodies ?? [] };
+    return { pool, games: [], teams: [], brackets: [], finalFourMatchups: [], poolGoodies: options.poolGoodies ?? [], conferenceTeamCounts: null };
   }
 
   const [games, teams] = await Promise.all([
@@ -102,7 +103,7 @@ export async function buildPoolScoringContext(
 
   const bracketIds = (poolBrackets ?? []).map((pb) => pb.bracket_id);
   if (bracketIds.length === 0) {
-    return { pool, games, teams, brackets: [], finalFourMatchups: getBracketStructure(tournament).finalFourMatchups, poolGoodies: options.poolGoodies ?? [] };
+    return { pool, games, teams, brackets: [], finalFourMatchups: getBracketStructure(tournament).finalFourMatchups, poolGoodies: options.poolGoodies ?? [], conferenceTeamCounts: tournament.conference_team_counts };
   }
 
   const { data: bracketsRows } = await supabase
@@ -111,7 +112,7 @@ export async function buildPoolScoringContext(
     .in("id", bracketIds);
 
   if (!bracketsRows || bracketsRows.length === 0) {
-    return { pool, games, teams, brackets: [], finalFourMatchups: getBracketStructure(tournament).finalFourMatchups, poolGoodies: options.poolGoodies ?? [] };
+    return { pool, games, teams, brackets: [], finalFourMatchups: getBracketStructure(tournament).finalFourMatchups, poolGoodies: options.poolGoodies ?? [], conferenceTeamCounts: tournament.conference_team_counts };
   }
 
   const [{ data: picks1 }, { data: picks2 }] = await Promise.all([
@@ -145,6 +146,7 @@ export async function buildPoolScoringContext(
     brackets,
     finalFourMatchups: getBracketStructure(tournament).finalFourMatchups,
     poolGoodies: options.poolGoodies ?? [],
+    conferenceTeamCounts: tournament.conference_team_counts,
   };
 }
 
@@ -1080,6 +1082,19 @@ export function scoreUserInputGoodies(
     const points = pg.points;
     const strokeEnabled = pg.stroke_rule_enabled;
 
+    const useConferenceMultiplier =
+      goodyKey === "first_conference_out" &&
+      pg.scoring_mode === "conference_multiplier" &&
+      scoringCtx?.conferenceTeamCounts != null;
+    const confMultiplier = pg.scoring_config?.conference_multiplier ?? 4;
+    const confCounts = scoringCtx?.conferenceTeamCounts;
+
+    function conferencePoints(conferenceKey: string): number {
+      if (!useConferenceMultiplier || !confCounts) return points;
+      const teamCount = confCounts[conferenceKey];
+      return teamCount ? confMultiplier * teamCount : points;
+    }
+
     const result = resultsByGoodyType.get(goodyTypeId);
     const tiered = result ? parseTieredResult(result.value) : null;
     const answersForGoody = allGoodyAnswers.filter((a) => a.goodyTypeId === goodyTypeId);
@@ -1100,8 +1115,8 @@ export function scoreUserInputGoodies(
     }
 
     const winnerSet = new Set(tiered.winner);
-    const winnerUsers: string[] = [];
-    const tierUsers = new Map<number, string[]>();
+    const winnerUsers: { userId: string; pick: string }[] = [];
+    const tierUsers = new Map<number, { userId: string; pick: string }[]>();
     const otherUsers: string[] = [];
 
     for (const answer of answersForGoody) {
@@ -1112,7 +1127,7 @@ export function scoreUserInputGoodies(
       }
 
       if (winnerSet.has(userPick)) {
-        winnerUsers.push(answer.userId);
+        winnerUsers.push({ userId: answer.userId, pick: userPick });
       } else if (strokeEnabled) {
         let foundTier = -1;
         for (let i = 0; i < tiered.loserTiers.length; i++) {
@@ -1123,7 +1138,7 @@ export function scoreUserInputGoodies(
         }
         if (foundTier >= 0) {
           const list = tierUsers.get(foundTier) ?? [];
-          list.push(answer.userId);
+          list.push({ userId: answer.userId, pick: userPick });
           tierUsers.set(foundTier, list);
         } else {
           otherUsers.push(answer.userId);
@@ -1140,14 +1155,13 @@ export function scoreUserInputGoodies(
     }
 
     if (winnerUsers.length > 0) {
-      for (const uid of winnerUsers) {
-        ensureUserMap(uid).set(goodyTypeId, { pointsAwarded: points, status: "won" });
+      for (const { userId, pick } of winnerUsers) {
+        ensureUserMap(userId).set(goodyTypeId, { pointsAwarded: conferencePoints(pick), status: "won" });
       }
-      for (const [, users] of tierUsers) setNotAwarded(users);
+      for (const [, users] of tierUsers) setNotAwarded(users.map((u) => u.userId));
       setNotAwarded(otherUsers);
     } else if (strokeEnabled) {
-      // No one picked the winner — walk tiers closest-first for stroke
-      let strokeUsers: string[] = [];
+      let strokeUsers: { userId: string; pick: string }[] = [];
       const sortedTierKeys = [...tierUsers.keys()].sort((a, b) => a - b);
       for (const tierIdx of sortedTierKeys) {
         const users = tierUsers.get(tierIdx) ?? [];
@@ -1155,16 +1169,18 @@ export function scoreUserInputGoodies(
       }
 
       if (strokeUsers.length > 0) {
-        const strokePts = Math.ceil(points / strokeUsers.length);
-        const strokeSet = new Set(strokeUsers);
+        const strokeSet = new Set(strokeUsers.map((u) => u.userId));
+        for (const { userId, pick } of strokeUsers) {
+          const userPts = conferencePoints(pick);
+          const strokePts = Math.ceil(userPts / strokeUsers.length);
+          ensureUserMap(userId).set(goodyTypeId, {
+            pointsAwarded: strokePts,
+            status: "stroke",
+            isStroke: true,
+          });
+        }
         for (const answer of answersForGoody) {
-          if (strokeSet.has(answer.userId)) {
-            ensureUserMap(answer.userId).set(goodyTypeId, {
-              pointsAwarded: strokePts,
-              status: "stroke",
-              isStroke: true,
-            });
-          } else {
+          if (!strokeSet.has(answer.userId)) {
             ensureUserMap(answer.userId).set(goodyTypeId, {
               pointsAwarded: 0,
               status: "not_awarded",
