@@ -243,6 +243,11 @@ function computeChalkSeedForGame(
 
   if (game.round === 1) return null;
 
+  // Rounds 5 (Final Four) and 6 (Championship) are cross-region: if
+  // everything goes chalk, only 1-seeds advance past the Elite Eight,
+  // so the chalk seed for every FF and Championship slot is always 1.
+  if (game.round >= 5) return 1;
+
   const gamesInRound = GAMES_PER_ROUND[game.round];
   const index = game.position;
   if (gamesInRound === undefined) return null;
