@@ -150,7 +150,7 @@ export async function buildPoolScoringContext(
   };
 }
 
-function buildTeamSeedMap(teams: Team[]): Map<string, number> {
+export function buildTeamSeedMap(teams: Team[]): Map<string, number> {
   const map = new Map<string, number>();
   for (const t of teams) {
     map.set(t.id, t.seed);
@@ -158,7 +158,7 @@ function buildTeamSeedMap(teams: Team[]): Map<string, number> {
   return map;
 }
 
-function buildGamesById(games: TournamentGame[]): Map<string, TournamentGame> {
+export function buildGamesById(games: TournamentGame[]): Map<string, TournamentGame> {
   const map = new Map<string, TournamentGame>();
   for (const g of games) {
     map.set(g.id, g);
@@ -166,19 +166,19 @@ function buildGamesById(games: TournamentGame[]): Map<string, TournamentGame> {
   return map;
 }
 
-function getRoundPointsFor(pool: PoolWithDetails, round: number): number {
+export function getRoundPointsFor(pool: PoolWithDetails, round: number): number {
   const key = String(round);
   const roundPoints: RoundPoints = pool.round_points ?? {};
   return roundPoints[key] ?? 0;
 }
 
-function getUpsetMultiplierFor(pool: PoolWithDetails, round: number): number {
+export function getUpsetMultiplierFor(pool: PoolWithDetails, round: number): number {
   const key = String(round);
   const multipliers: UpsetMultipliers = pool.upset_multipliers ?? {};
   return multipliers[key] ?? 0;
 }
 
-function buildGameIndex(games: TournamentGame[]) {
+export function buildGameIndex(games: TournamentGame[]) {
   const byRoundRegionPos = new Map<string, TournamentGame>();
   const byRoundPos = new Map<string, TournamentGame>();
 
@@ -194,7 +194,7 @@ function buildGameIndex(games: TournamentGame[]) {
   return { byRoundRegionPos, byRoundPos };
 }
 
-function getFeederIdsForGame(
+export function getFeederIdsForGame(
   game: TournamentGame,
   ctx: { games: TournamentGame[]; finalFourMatchups: [string, string][] },
   index: ReturnType<typeof buildGameIndex>
@@ -233,7 +233,7 @@ function getFeederIdsForGame(
   return null;
 }
 
-function computeChalkSeedForGame(
+export function computeChalkSeedForGame(
   game: TournamentGame,
   teamSeedsById: Map<string, number>
 ): number | null {
@@ -271,7 +271,7 @@ function computeChalkSeedForGame(
   return chalkSeedForSlot(game.round, index);
 }
 
-function isUpset(
+export function isUpset(
   winnerTeamId: string,
   game: TournamentGame,
   teamSeedsById: Map<string, number>

@@ -63,6 +63,7 @@ interface PoolTabsProps {
   hallOfFame?: HallOfFameEntry[];
   currentUserId?: string;
   bracketStructure?: BracketStructure;
+  isSeasonComplete?: boolean;
 }
 
 export default function PoolTabs({
@@ -81,9 +82,11 @@ export default function PoolTabs({
   hallOfFame = [],
   currentUserId,
   bracketStructure,
+  isSeasonComplete = false,
 }: PoolTabsProps) {
   const hasGoodies = pool.goodies_enabled && poolGoodiesWithTypes.length > 0;
   const hasHallOfFame = hallOfFame.length > 0;
+  const PLACEMENT_ICONS: Record<number, string> = { 0: "🏆", 1: "🥈", 2: "🥉" };
   const teamById = new Map(teams.map((t) => [t.id, t]));
   const gameById = new Map(games.map((g) => [g.id, g]));
   const totalPoolGoodyPoints = poolGoodiesWithTypes.reduce((sum, pg) => sum + (pg.points ?? 0), 0);
@@ -549,7 +552,11 @@ export default function PoolTabs({
                             <tr key={score.bracketId} className={`border-b border-card-border last:border-b-0 ${isCurrentUser ? "bg-accent/[0.03]" : ""}`}>
                               <td className={`sticky left-0 z-10 px-1.5 py-1 border-r border-card-border whitespace-nowrap ${isCurrentUser ? "" : "bg-card"}`}>
                                 <div className="flex items-center gap-1">
-                                  <span className="text-stone-500 tabular-nums w-3 shrink-0 text-right">{index + 1}</span>
+                                  {isSeasonComplete && index < 3 ? (
+                                    <span className="w-3 shrink-0 text-center text-[10px] leading-none">{PLACEMENT_ICONS[index]}</span>
+                                  ) : (
+                                    <span className="text-stone-500 tabular-nums w-3 shrink-0 text-right">{index + 1}</span>
+                                  )}
                                   <span className={`truncate max-w-[65px] ${isCurrentUser ? "text-accent font-medium" : "text-stone-200"}`}>{name}</span>
                                 </div>
                               </td>
@@ -799,9 +806,13 @@ export default function PoolTabs({
                             }`}
                           >
                             <div className="flex items-center gap-2.5 min-w-0 flex-1">
-                              <span className="text-stone-500 font-mono text-sm w-5 shrink-0">
-                                {index + 1}
-                              </span>
+                              {isSeasonComplete && index < 3 ? (
+                                <span className="w-5 shrink-0 text-center text-sm">{PLACEMENT_ICONS[index]}</span>
+                              ) : (
+                                <span className="text-stone-500 font-mono text-sm w-5 shrink-0">
+                                  {index + 1}
+                                </span>
+                              )}
                               <UserAvatar
                                 avatarUrl={member.avatar_url}
                                 firstName={member.first_name}

@@ -14,7 +14,7 @@ import { getGoodyResults } from "@/lib/goodies";
 import { getUserBrackets } from "@/lib/brackets";
 import { getTournament } from "@/lib/tournament";
 import { buildPoolScoringContext, scoreBracketsForPool, scoreUserInputGoodies } from "@/lib/scoring";
-import { getBracketStructure } from "@/lib/types";
+import { getBracketStructure, TOTAL_GAMES } from "@/lib/types";
 import { formatUserDisplayName } from "@/utils/display-name";
 import Navbar from "../../_components/navbar";
 import PoolIcon from "../../_components/pool-icon";
@@ -308,6 +308,23 @@ export default async function PoolDetailPage({
   }
   const activeTeams = scoringContext?.teams ?? [];
   const activeGames = scoringContext?.games ?? [];
+
+  const allGamesCompleted =
+    activeGames.length >= TOTAL_GAMES &&
+    activeGames.every((g) => g.winner_id);
+  const userInputGoodiesNeedingResults = poolGoodiesWithTypes.filter(
+    (pg) =>
+      pg.goody_types?.input_type === "user_input" &&
+      pg.goody_types?.key !== "dark_horse_champion"
+  );
+  const allGoodyResultsEntered =
+    userInputGoodiesNeedingResults.length === 0 ||
+    userInputGoodiesNeedingResults.every((pg) =>
+      goodyResults.some((r) => r.goody_type_id === pg.goody_type_id)
+    );
+  const isSeasonComplete =
+    allGamesCompleted &&
+    (!pool.goodies_enabled || allGoodyResultsEntered);
   const bracketPicks = (scoringContext?.brackets ?? []).map((b) => ({
     bracketId: b.id,
     userId: b.user_id,
@@ -376,6 +393,7 @@ export default async function PoolDetailPage({
               hallOfFame={hallOfFame}
               currentUserId={user.id}
               bracketStructure={tournament ? getBracketStructure(tournament) : undefined}
+              isSeasonComplete={isSeasonComplete}
             />
           ) : (
             <PoolScoringDisplay pool={pool} poolGoodiesWithTypes={poolGoodiesWithTypes} />

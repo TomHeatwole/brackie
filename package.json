@@ -10,7 +10,9 @@
     "save-auth": "tsx scripts/save-auth.ts",
     "check-goodies": "tsx scripts/check-goody-types.ts",
     "screenshot": "tsx scripts/screenshot.ts",
-    "parse-espn": "tsx scripts/parse-espn-scrape.ts"
+    "parse-espn": "tsx scripts/parse-espn-scrape.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@supabase/auth-ui-react": "^0.4.7",
@@ -31,6 +33,7 @@
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.2"
   }
 }
